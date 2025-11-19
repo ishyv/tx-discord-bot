@@ -44,7 +44,7 @@ export async function addManagedChannel(
     ) ?? null;
 
   if (!created) {
-    throw new Error("Failed to find created managed channel after insert.");
+    throw new Error("No se encontro el canal administrado recien creado despues de insertarlo.");
   }
   return created as ManagedChannelRecord;
 }

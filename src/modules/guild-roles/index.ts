@@ -34,11 +34,11 @@ export interface ModerationActionDefinition {
 
 export const DEFAULT_MODERATION_ACTIONS: readonly ModerationActionDefinition[] =
   Object.freeze([
-    { key: "timeout", label: "Timeout" },
-    { key: "kick", label: "Kick" },
-    { key: "ban", label: "Ban" },
-    { key: "warn", label: "Warn" },
-    { key: "purge", label: "Purge" },
+    { key: "timeout", label: "Tiempo fuera" },
+    { key: "kick", label: "Expulsion" },
+    { key: "ban", label: "Baneo" },
+    { key: "warn", label: "Advertencia" },
+    { key: "purge", label: "Purgar" },
   ]);
 
 export interface ResolveRoleActionPermissionInput {
@@ -78,7 +78,7 @@ interface RoleSnapshot {
 
 function normaliseAction(action: string): string {
   const trimmed = action.trim().toLowerCase();
-  if (!trimmed) throw new Error("Action key must be provided.");
+  if (!trimmed) throw new Error("Debe proporcionar una clave de accion.");
   return trimmed.replace(/[\s-]+/g, "_");
 }
 

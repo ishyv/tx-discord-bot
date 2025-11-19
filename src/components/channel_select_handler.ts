@@ -13,7 +13,7 @@ export default class UIChannelSelectHandler extends ComponentCommand {
         const ok = await resolveAndInvoke(ctx.customId, ctx);
         if (!ok) {
             await ctx.write({
-                content: "This channel select menu is no longer active.",
+                content: "Este menú de selección de canales ya no está activo.",
                 flags: MessageFlags.Ephemeral,
             });
         }

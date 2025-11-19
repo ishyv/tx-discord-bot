@@ -14,7 +14,7 @@ import { addWarn, listWarns } from "@/modules/repo";
 
 const options = {
   user: createUserOption({
-    description: "Usuario a warnear",
+    description: "Usuario al que se le aplicara un warn",
     required: true,
   }),
   reason: createStringOption({
@@ -51,7 +51,7 @@ export default class AddWarnCommand extends SubCommand {
     await addWarn(user.id, warn);
 
     const successEmbed = new Embed({
-      title: "Usuario warneado",
+      title: "Warn aplicado",
       description: [
         `Se anadio un warn al usuario **${user.username}**.`,
         "",
@@ -60,7 +60,7 @@ export default class AddWarnCommand extends SubCommand {
       ].join("\n"),
       color: EmbedColors.Green,
       footer: {
-        text: `Warneado por ${ctx.author.username}`,
+        text: `Warn aplicado por ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
       },
     });

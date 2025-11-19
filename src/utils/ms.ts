@@ -95,7 +95,7 @@ export function format(ms: number, long = false): string {
   }
 
   if (parts.length === 0) {
-    return long ? `0 milliseconds` : `0ms`;
+    return long ? `0 milisegundos` : `0ms`;
   }
 
   return parts.join(long ? ", " : " ");
@@ -110,13 +110,13 @@ export function isValid(str: string): boolean {
 
 function longUnitName(short: string, value: number): string {
   const unitMap: Record<string, string> = {
-    ms: "millisecond",
-    s: "second",
-    m: "minute",
-    h: "hour",
-    d: "day",
-    w: "week",
-    y: "year",
+    ms: "milisegundo",
+    s: "segundo",
+    m: "minuto",
+    h: "hora",
+    d: "dia",
+    w: "semana",
+    y: "anio",
   };
 
   const base = unitMap[short] ?? short;

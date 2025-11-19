@@ -51,7 +51,7 @@ export default class ListWarnCommand extends SubCommand {
         const warnId = warn.warn_id.toUpperCase();
 
         return [
-          `**Warn ID**: \`${warnId}\``,
+          `**ID del warn**: \`${warnId}\``,
           `**Razon:** ${warn.reason}`,
           `**Moderador:** ${moderator}`,
           `**Fecha:** ${date}`,

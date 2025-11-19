@@ -58,6 +58,7 @@ export async function requireGuildContext(
 
 export interface ManagedRoleSnapshot {
   key: string;
+  label: string;
   discordRoleId: string | null;
   overrides: Record<string, RoleCommandOverride>;
   limits: Record<string, RoleLimitRecord>;
@@ -94,8 +95,9 @@ export async function fetchManagedRoles(
       rec?.discordId ??
       rec?.id ??
       null;
+    const label = typeof rec?.label === "string" ? rec.label : key;
 
-    return { key, discordRoleId, overrides, limits };
+    return { key, label, discordRoleId, overrides, limits };
   });
 }
 
@@ -108,7 +110,7 @@ export async function findManagedRole(
 }
 
 /* ------------------------------------------------------------------ */
-/* Parsing/formatting helpers (unchanged)                              */
+/* Parsing/formatting helpers                             */
 /* ------------------------------------------------------------------ */
 
 export interface ResolvedAction {

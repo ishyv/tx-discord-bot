@@ -31,10 +31,10 @@ export default class SelfMuteCommand extends Command {
       });
 
     const milliseconds = parse(time) || 0;
-    await ctx.member.timeout(milliseconds, `Comando self-mute | Tiempo: ${time}`);
+    await ctx.member.timeout(milliseconds, `Comando auto-mute | Tiempo: ${time}`);
 
     const successEmbed = new Embed({
-      title: "Self mute",
+      title: "Auto mute",
       description: `
       ✓ **${ctx.author.username}** se dió mute a sí mismo.
       

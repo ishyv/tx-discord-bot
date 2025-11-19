@@ -1,3 +1,8 @@
+/**
+ * Formats detected code blocks on demand.
+ * We wait for a reaction so the user opts in instead of replacing messages automatically.
+ */
+
 import { detectCodeLanguage, toFencedBlock } from "@/modules/code-detection";
 import { onMessageCreate } from "../hooks/messageCreate";
 import { onMessageReactionAdd } from "../hooks/messageReaction";
@@ -25,7 +30,7 @@ onMessageCreate(async (message) => {
 
         if (fenced) {
             // delete original message
-            await message.delete("Auto code formatting");
+            await message.delete("Formato automático de código");
             // send formatted code block
             await message.write({ content: fenced });
 

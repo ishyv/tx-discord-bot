@@ -14,7 +14,7 @@ export default class UIStringSelectHandler extends ComponentCommand {
         const ok = await resolveAndInvoke(ctx.customId, ctx);
         if (!ok) {
             await ctx.write({
-                content: "This string select menu is no longer active.",
+                content: "Este menú de selección ya no está activo.",
                 flags: MessageFlags.Ephemeral,
             });
         }

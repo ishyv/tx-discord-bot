@@ -1,3 +1,9 @@
+/**
+ * Warn identifiers are intentionally short and human-friendly so staff can quote
+ * them in moderation flows without copy/paste.  This module centralises that slug
+ * generation/validation logic to keep the format consistent everywhere.
+ */
+
 import { randomBytes } from "node:crypto";
 
 const CROCKFORD_BASE32_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
@@ -43,4 +49,3 @@ export function isValidWarnId(id: string): boolean {
   return true;
 }
 
-export const WARN_ID_LENGTH = SLUG_LENGTH;

@@ -29,7 +29,7 @@ export async function sendPaginatedMessages(
           : {}),
       });
     } else {
-      throw new Error("Unsupported target for paginated message.");
+      throw new Error("Objetivo no soportado para enviar mensajes paginados.");
     }
   }
 }

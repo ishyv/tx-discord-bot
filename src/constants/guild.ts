@@ -1,5 +1,3 @@
-export const GUILD_ID = "768278151435386900";
-
 export const CHANNELS_ID = {
   // General channels
   help: "916353103534632964",

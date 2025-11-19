@@ -1,3 +1,9 @@
+/**
+ * Closes ticket channels with a short grace period so staff can trigger the flow
+ * from any context.  The transcription and audit logging live in the ticket
+ * system; this component just glues the interaction to those services.
+ */
+
 import {
   AttachmentBuilder,
   ComponentCommand,

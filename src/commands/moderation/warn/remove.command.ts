@@ -13,7 +13,7 @@ import { listWarns, removeWarn } from "@/modules/repo";
 
 const options = {
   user: createUserOption({
-    description: "Usuario a unwarnear",
+    description: "Usuario al que se le removera el warn",
     required: true,
   }),
   warn_id: createStringOption({
@@ -67,11 +67,11 @@ export default class RemoveWarnCommand extends SubCommand {
     }
 
     const successEmbed = new Embed({
-      title: "Usuario unwarneado",
+      title: "Warn eliminado",
       description: `Se removio el warn **${warnId.toUpperCase()}** del usuario **${user.username}**.`,
       color: EmbedColors.Green,
       footer: {
-        text: `Unwarneado por ${ctx.author.username}`,
+        text: `Warn eliminado por ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
       },
     });

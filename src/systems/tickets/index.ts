@@ -1,3 +1,9 @@
+/**
+ * Ticket system utilities coordinate between UI components and the backing repo.
+ * Centralising the constants and builders here keeps the commands/components
+ * lightweight while ensuring every ticket entry point behaves consistently.
+ */
+
 import { getGuildChannels } from "@/modules/guild-channels";
 import { addOpenTicket, listOpenTickets, setPendingTickets } from "@/modules/repo";
 import { Colors } from "@/modules/ui/colors";
@@ -67,6 +73,19 @@ export const TICKET_CATEGORIES: readonly TicketCategory[] = [
   },
 ] as const;
 
+function messageHasTicketSelector(message: any): boolean {
+  if (!message || !Array.isArray(message.components)) return false;
+  return message.components.some(
+    (row: any) =>
+      Array.isArray(row?.components) &&
+      row.components.some(
+        (component: any) =>
+          typeof component?.customId === "string" &&
+          component.customId.startsWith(TICKET_SELECT_CUSTOM_ID),
+      ),
+  );
+}
+
 /**
  * Ensures that the ticket message exists in the designated channel.
  * If the message does not exist, it will be created.
@@ -96,18 +115,22 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
         return [];
       });
     const botId = client.me?.id ?? null;
-    for (const m of remaining) {
-      const hasTicketComponent =
-        Array.isArray(m.components) &&
-        m.components.some((row: any) =>
-          Array.isArray(row?.components) &&
-          row.components.some(
-            (component: any) =>
-              typeof component?.customId === "string" &&
-              component.customId.startsWith(TICKET_SELECT_CUSTOM_ID),
-          ),
-        );
 
+    if (
+      remaining.length === 1 &&
+      botId &&
+      remaining[0]?.author?.id === botId &&
+      messageHasTicketSelector(remaining[0])
+    ) {
+      // client.logger?.debug?.(
+      //   "[tickets] found existing ticket prompt; skipping rewrite",
+      //   { channelId },
+      // );
+      continue;
+    }
+
+    for (const m of remaining) {
+      const hasTicketComponent = messageHasTicketSelector(m);
       if (botId && m.author?.id !== botId && !hasTicketComponent) {
         continue;
       }
