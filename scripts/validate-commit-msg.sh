@@ -26,14 +26,14 @@ fi
 
 printf '[check] revisando commit: "%s"\n' "$commit_msg"
 
-# patron de conventional commits ultra-permisivo:
 # <tipo>(scope opcional): descripcion opcional
 # ejemplos válidos:
 #   git
 #   git(merge)
 #   fix: arreglar bug raro
 #   feat(api): agregar endpoint nuevo
-if ! printf '%s' "$commit_msg" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|git)(\([^)]+\))?(?:: .*)?$'; then
+if ! printf '%s' "$commit_msg" | grep -qE \
+  '^(git(\([^)]+\))?|((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?: .+))$'; then
   printf '[fail] formato raro, spec mínima:\n'
   printf 'usa: <tipo>(scope opcional): descripcion opcional\n'
   printf 'tipos validos: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test, git\n'
