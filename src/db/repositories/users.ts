@@ -189,7 +189,7 @@ export async function adjustUserReputation(
         },
       },
     ],
-    { new: true, lean: true },
+    { new: true, lean: true, updatePipeline: true },
   );
   return Math.max(0, Number(doc?.rep ?? 0));
 }

@@ -7,6 +7,7 @@ import type { ParseClient, ParseMiddlewares } from "seyfert";
 import { Client, extendContext } from "seyfert";
 import { CooldownManager } from "@/modules/cooldown";
 import { GuildLogger } from "@/utils/guildLogger";
+import { fixDb } from "@/db/fixDb";
 import { middlewares } from "./middlewares";
 
 import "./events"; // ! Cargar eventos base (messageCreate, reactions, etc.)
@@ -29,9 +30,16 @@ client.setServices({
   middlewares,
 });
 
-client
-  .start()
-  .then(() => client.uploadCommands({ cachePath: "./commands.json" }));
+async function bootstrap(): Promise<void> {
+  console.log("[bootstrap] Starting bot...");
+  await fixDb();
+  await client.start();
+  await client.uploadCommands({ cachePath: "./commands.json" });
+}
+
+bootstrap().catch((error) => {
+  console.error("[bootstrap] Failed to start bot:", error);
+});
 
 declare module "seyfert" {
   interface UsingClient extends ParseClient<Client<true>> {
@@ -44,8 +52,3 @@ declare module "seyfert" {
   interface RegisteredMiddlewares
     extends ParseMiddlewares<typeof middlewares> {}
 }
-
-
-
-
-

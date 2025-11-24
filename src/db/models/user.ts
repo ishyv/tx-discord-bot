@@ -39,6 +39,7 @@ const UserSchema = new Schema(
   },
 );
 
+// Virtual field to expose 'id' as alias for '_id'
 UserSchema.virtual("id").get(function virtualId(this: { _id: string }) {
   return this._id;
 });
