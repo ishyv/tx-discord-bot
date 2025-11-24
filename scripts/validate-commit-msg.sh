@@ -26,27 +26,21 @@ fi
 
 printf '[check] revisando commit: "%s"\n' "$commit_msg"
 
-# patron de conventional commits
-if ! printf '%s' "$commit_msg" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|git)(\([^)]+\))?: .{1,72}$'; then
-  printf '[fail] formato raro, spec: \n'
-  printf 'usa: <tipo>(scope opcional): descripcion corta\n'
+# patron de conventional commits ultra-permisivo:
+# <tipo>(scope opcional): descripcion opcional
+# ejemplos válidos:
+#   git
+#   git(merge)
+#   fix: arreglar bug raro
+#   feat(api): agregar endpoint nuevo
+if ! printf '%s' "$commit_msg" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|git)(\([^)]+\))?(?:: .*)?$'; then
+  printf '[fail] formato raro, spec mínima:\n'
+  printf 'usa: <tipo>(scope opcional): descripcion opcional\n'
   printf 'tipos validos: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test, git\n'
-  printf 'tu mensaje: "%s"\n' "$commit_msg"
-  exit 1
-fi
-
-# largo maximo 272 chars
-if (( ${#commit_msg} > 272 )); then
-  printf '[fail] muy largo, deberia ser a 272 chars o menos.\n'
-  printf 'largo actual: %d\n' ${#commit_msg}
-  printf 'tu mensaje: "%s"\n' "$commit_msg"
-  exit 1
-fi
-
-# descripcion en modo imperativo
-description="$(printf '%s' "$commit_msg" | sed -E 's/^[a-z]+(\([^)]+\))?: //')"
-if printf '%s' "$description" | grep -qE '^(add|fix|update|change|remove|create)'; then
-  printf '[warn] formato en imperativo: add, fix, update, etc.\n'
+  printf 'ejemplos validos:\n'
+  printf '  git(merge)\n'
+  printf '  fix: arreglar bug raro\n'
+  printf '  feat(api): agregar endpoint nuevo\n'
   printf 'tu mensaje: "%s"\n' "$commit_msg"
   exit 1
 fi
