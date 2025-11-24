@@ -1,0 +1,60 @@
+import { Embed } from "seyfert";
+import { EmbedColors } from "seyfert/lib/common";
+import type { UsingClient } from "seyfert";
+
+import { getGuildChannels } from "@/modules/guild-channels";
+
+export interface ModerationLogPayload {
+  title: string;
+  description?: string;
+  fields?: Array<{ name: string; value: string; inline?: boolean }>;
+  actorId?: string | null;
+  color?: number;
+  footer?: string;
+}
+
+export type ModerationLogChannel = "generalLogs" | "messageLogs" | "pointsLog";
+
+/**
+ * Centralized logger for moderation actions. Logs to console and, when
+ * configured, to the guild's `generalLogs` channel.
+ */
+export async function logModerationAction(
+  client: UsingClient,
+  guildId: string,
+  payload: ModerationLogPayload,
+  channel: ModerationLogChannel = "generalLogs",
+): Promise<void> {
+  const { title, description, fields, actorId, color, footer } = payload;
+
+  client.logger?.info?.("[moderation] action", {
+    guildId,
+    title,
+    actorId,
+  });
+
+  try {
+    const channels = await getGuildChannels(guildId);
+    const logs = channels.core?.[channel];
+    if (!logs?.channelId) return;
+
+    const embed = new Embed({
+      title,
+      description,
+      color: color ?? EmbedColors.Blurple,
+      fields,
+      footer: footer ? { text: footer } : undefined,
+    });
+
+    await client.messages.write(logs.channelId, {
+      content: actorId ? `<@${actorId}>` : undefined,
+      embeds: [embed],
+      allowed_mentions: { parse: [] },
+    });
+  } catch (error) {
+    client.logger?.warn?.("[moderation] failed to log action to channel", {
+      guildId,
+      error,
+    });
+  }
+}

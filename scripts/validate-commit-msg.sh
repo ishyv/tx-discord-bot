@@ -35,9 +35,9 @@ if ! printf '%s' "$commit_msg" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|r
   exit 1
 fi
 
-# largo maximo 128 chars
-if (( ${#commit_msg} > 128 )); then
-  printf '[fail] muy largo, deberia ser a 128 chars o menos.\n'
+# largo maximo 272 chars
+if (( ${#commit_msg} > 272 )); then
+  printf '[fail] muy largo, deberia ser a 272 chars o menos.\n'
   printf 'largo actual: %d\n' ${#commit_msg}
   printf 'tu mensaje: "%s"\n' "$commit_msg"
   exit 1

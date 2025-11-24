@@ -11,6 +11,7 @@ import { EmbedColors } from "seyfert/lib/common";
 import { isValidWarnId } from "@/utils/warnId";
 import { listWarns, removeWarn } from "@/db/repositories";
 import { assertFeatureEnabled } from "@/modules/features";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
@@ -91,6 +92,16 @@ export default class RemoveWarnCommand extends SubCommand {
     });
 
     await ctx.write({ embeds: [successEmbed] });
+
+    await logModerationAction(ctx.client, guildId, {
+      title: "Warn eliminado",
+      description: `Warn ${warnId.toUpperCase()} removido de <@${user.id}>`,
+      fields: [
+        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+        { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
+      ],
+      actorId: ctx.author.id,
+    });
   }
 }
 

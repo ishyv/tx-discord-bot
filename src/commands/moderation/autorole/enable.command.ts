@@ -9,6 +9,7 @@ import {
 import * as repo from "@/db/repositories";
 import { enableRule } from "@/db/repositories";
 import { formatRuleSummary, respondRuleAutocomplete, requireAutoroleContext } from "./shared";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   name: createStringOption({
@@ -48,6 +49,12 @@ export default class AutoroleEnableCommand extends SubCommand {
     await ctx.write({
       content: `Se habilito \`${slug}\`.\n${formatRuleSummary(updated)}`,
     });
+
+    await logModerationAction(ctx.client, context.guildId, {
+      title: "Autorole habilitado",
+      description: formatRuleSummary(updated),
+      actorId: ctx.author.id,
+      fields: [{ name: "Regla", value: `\`${slug}\`` }],
+    });
   }
 }
-

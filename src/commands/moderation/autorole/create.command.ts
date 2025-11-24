@@ -19,6 +19,8 @@ import {
 } from "@/modules/autorole/parsers";
 import type { AutoRoleRule, AutoRoleTrigger } from "@/modules/autorole/types";
 import { createRule, refreshGuildRules } from "@/db/repositories";
+import { runAntiquityChecks } from "@/systems/autorole/antiquity";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 import {
   botCanManageRole,
@@ -157,6 +159,11 @@ export default class AutoroleCreateCommand extends SubCommand {
       createdBy: ctx.author.id,
     });
 
+    if (rule.trigger.type === "ANTIQUITY_THRESHOLD" && rule.enabled) {
+      // Ejecutar un chequeo inmediato para aplicar el rol a miembros existentes.
+      await runAntiquityChecks(ctx.client, context.guildId);
+    }
+
     const embed = new Embed({
       title: "Regla creada",
       color: EmbedColors.Green,
@@ -164,6 +171,16 @@ export default class AutoroleCreateCommand extends SubCommand {
     });
 
     await ctx.write({ embeds: [embed] });
+
+    await logModerationAction(ctx.client, context.guildId, {
+      title: "Autorole creado",
+      description: formatRuleSummary(rule),
+      fields: [
+        { name: "Trigger", value: `\`${ctx.options.trigger}\`` },
+        { name: "Rol", value: `<@&${roleId}>`, inline: true },
+      ],
+      actorId: ctx.author.id,
+    });
   }
 }
 

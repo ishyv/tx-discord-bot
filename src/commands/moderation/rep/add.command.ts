@@ -14,6 +14,7 @@ import {
   normalizeRepAmount,
   requireRepContext,
 } from "./shared";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
@@ -57,6 +58,16 @@ export default class RepAddCommand extends SubCommand {
     await ctx.write({
       content: buildRepChangeMessage("add", amount, target.id, total),
     });
+
+    await logModerationAction(ctx.client, context.guildId, {
+      title: "Reputación agregada",
+      description: `Se agregaron ${amount} puntos a <@${target.id}>`,
+      fields: [
+        { name: "Total", value: `${total}`, inline: true },
+        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+      ],
+      actorId: ctx.author.id,
+    },
+    "pointsLog");
   }
 }
-

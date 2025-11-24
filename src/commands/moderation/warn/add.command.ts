@@ -12,6 +12,7 @@ import type { Warn } from "@/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
 import { addWarn, listWarns } from "@/db/repositories";
 import { assertFeatureEnabled } from "@/modules/features";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
@@ -80,6 +81,16 @@ export default class AddWarnCommand extends SubCommand {
     });
 
     await ctx.write({ embeds: [successEmbed] });
+
+    await logModerationAction(ctx.client, guildId, {
+      title: "Warn aplicado",
+      description: `Se agregó un warn a <@${user.id}>`,
+      fields: [
+        { name: "ID del warn", value: warnId.toUpperCase(), inline: true },
+        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+        { name: "Razón", value: finalReason },
+      ],
+      actorId: ctx.author.id,
+    });
   }
 }
-

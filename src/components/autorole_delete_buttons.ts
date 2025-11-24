@@ -12,6 +12,7 @@ import {
   getDeleteSession,
   type DeleteSession,
 } from "@/systems/autorole/deleteSessions";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const ID_PREFIX = "autorole:delete:";
 
@@ -123,6 +124,12 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
       ruleName: session.slug,
       actorId: ctx.author.id,
     });
+
+    await logModerationAction(ctx.client, session.guildId, {
+      title: "Autorole eliminado",
+      description: `Regla \`${session.slug}\` eliminada`,
+      actorId: ctx.author.id,
+    });
     await disableWithStatus(ctx, session.slug, "Regla eliminada");
   }
 
@@ -148,6 +155,16 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
       actorId: ctx.author.id,
       removedGrants: result.removedGrants,
       roleRevocations: result.roleRevocations,
+    });
+
+    await logModerationAction(ctx.client, session.guildId, {
+      title: "Autorole purgado",
+      description: `Regla \`${session.slug}\` purgada`,
+      fields: [
+        { name: "Razones eliminadas", value: `${result.removedGrants}`, inline: true },
+        { name: "Roles actualizados", value: `${result.roleRevocations}`, inline: true },
+      ],
+      actorId: ctx.author.id,
     });
 
     try {

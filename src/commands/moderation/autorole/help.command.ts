@@ -48,6 +48,11 @@ export default class AutoroleHelpCommand extends SubCommand {
           "- Ejemplo: `onReputationAtLeast 40` otorga el rol desde 40 rep y lo revoca si baja de ese valor.",
           "- Configura un rol por cada rango de reputacion que necesites.",
           "",
+          "**`onAntiquityAtLeast <duracion>`**",
+          "- Otorga el rol a quienes llevan al menos la duracion indicada en el servidor.",
+          "- Ejemplo: `onAntiquityAtLeast 30d` asigna el rol a miembros con 30 dias o mas en el server.",
+          "- Duraciones validas: `<numero>m|h|d|w` (minutos, horas, dias, semanas).",
+          "",
           "Puedes anadir `duration` (por ejemplo `30m`, `1h`, `2d`, `1w`) para que la concesion sea temporal. Sin duracion, la regla sera live y dependera unicamente del trigger.",
         ].join("\n"),
       );

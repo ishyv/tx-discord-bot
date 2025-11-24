@@ -1,3 +1,14 @@
+/**
+ * Autorole repository (Mongo).
+ *
+ * Este modulo encapsula toda la persistencia del sistema de autoroles:
+ * - CRUD de reglas y su proyeccion a la cache en memoria
+ * - Otorgamiento/revocacion (grants) y contadores de reacciones
+ * - Utilidades de mantenimiento (purge, refresh, cache priming)
+ *
+ * Mantener esta capa bien documentada facilita migraciones y depuracion.
+ */
+
 import { connectMongo } from "../client";
 import {
   AutoRoleGrantModel,
@@ -48,6 +59,9 @@ const grantKey = (
 const tallyKey = (guildId: string, messageId: string, emojiKey: string) =>
   `${guildId}:${messageId}:${emojiKey}`;
 
+/**
+ * Map a Mongo rule row to the in-memory trigger shape.
+ */
 function toAutoRoleTrigger(row: AutoRoleRuleDoc): AutoRoleRule["trigger"] {
   const baseArgs = (row.args ?? {}) as Record<string, unknown>;
   switch (row.triggerType) {
@@ -88,6 +102,9 @@ function toAutoRoleTrigger(row: AutoRoleRuleDoc): AutoRoleRule["trigger"] {
   }
 }
 
+/**
+ * Map a Mongo rule row to domain AutoRoleRule.
+ */
 function toAutoRoleRule(row: AutoRoleRuleDoc): AutoRoleRule {
   return {
     guildId: row.guildId,
@@ -102,6 +119,9 @@ function toAutoRoleRule(row: AutoRoleRuleDoc): AutoRoleRule {
   };
 }
 
+/**
+ * Map a Mongo grant row to domain grant reason.
+ */
 function toAutoRoleGrant(row: AutoRoleGrantDoc): AutoRoleGrantReason {
   return {
     guildId: row.guildId,
@@ -115,6 +135,9 @@ function toAutoRoleGrant(row: AutoRoleGrantDoc): AutoRoleGrantReason {
   };
 }
 
+/**
+ * Map a Mongo tally row to domain tally snapshot.
+ */
 function toAutoRoleTally(row: AutoRoleReactionTallyDoc): ReactionTallySnapshot {
   return {
     key: {
@@ -130,9 +153,7 @@ function toAutoRoleTally(row: AutoRoleReactionTallyDoc): ReactionTallySnapshot {
 
 // --- Rules (CRUD) ---
 
-/**
- * Fetch all rules for a specific guild.
- */
+/** Fetch all rules for a specific guild. */
 export async function autoRoleFetchRulesByGuild(
   guildId: string,
 ): Promise<AutoRoleRule[]> {
@@ -141,18 +162,14 @@ export async function autoRoleFetchRulesByGuild(
   return rows.map(toAutoRoleRule);
 }
 
-/**
- * Fetch all rules across all guilds (used for scheduler).
- */
+/** Fetch all rules across all guilds (used for scheduler). */
 export async function autoRoleFetchAllRules(): Promise<AutoRoleRule[]> {
   await connectMongo();
   const rows = await AutoRoleRuleModel.find().lean();
   return rows.map(toAutoRoleRule);
 }
 
-/**
- * Fetch a single rule by name within a guild.
- */
+/** Fetch a single rule by name within a guild. */
 export async function autoRoleFetchRule(
   guildId: string,
   name: string,
@@ -222,9 +239,7 @@ export async function autoRoleDeleteRule(
 
 // --- Grants ---
 
-/**
- * Insert or update a role grant record.
- */
+/** Insert or update a role grant record. */
 export async function autoRoleUpsertGrant(
   input: GrantByRuleInput,
 ): Promise<AutoRoleGrantReason> {
@@ -256,9 +271,7 @@ export async function autoRoleUpsertGrant(
   return toAutoRoleGrant(doc!);
 }
 
-/**
- * Delete a specific grant.
- */
+/** Delete a specific grant. */
 export async function autoRoleDeleteGrant(
   input: RevokeByRuleInput,
 ): Promise<boolean> {
@@ -273,9 +286,7 @@ export async function autoRoleDeleteGrant(
   return (res.deletedCount ?? 0) > 0;
 }
 
-/**
- * List all grants for a specific member and role.
- */
+/** List all grants for a specific member and role. */
 export async function autoRoleListReasonsForMemberRole(
   guildId: string,
   userId: string,
@@ -286,9 +297,7 @@ export async function autoRoleListReasonsForMemberRole(
   return rows.map(toAutoRoleGrant);
 }
 
-/**
- * List all grants associated with a specific rule.
- */
+/** List all grants associated with a specific rule. */
 export async function autoRoleListReasonsForRule(
   guildId: string,
   ruleName: string,
@@ -298,9 +307,7 @@ export async function autoRoleListReasonsForRule(
   return rows.map(toAutoRoleGrant);
 }
 
-/**
- * Count how many grants a user has for a specific role.
- */
+/** Count how many grants a user has for a specific role. */
 export async function autoRoleCountReasonsForRole(
   guildId: string,
   userId: string,
@@ -333,9 +340,7 @@ export async function autoRolePurgeGrantsForGuildRole(
   return res.deletedCount ?? 0;
 }
 
-/**
- * Find a specific grant.
- */
+/** Find a specific grant. */
 export async function autoRoleFindGrant(
   guildId: string,
   userId: string,
@@ -354,9 +359,7 @@ export async function autoRoleFindGrant(
   return row ? toAutoRoleGrant(row) : null;
 }
 
-/**
- * List all timed grants that have expired.
- */
+/** List all timed grants that have expired. */
 export async function autoRoleListDueTimedGrants(
   reference: Date,
 ): Promise<AutoRoleGrantReason[]> {
@@ -370,6 +373,7 @@ export async function autoRoleListDueTimedGrants(
 
 // --- Tallies ---
 
+/** Delete all tallies for a message. */
 export async function autoRoleDeleteTalliesForMessage(
   guildId: string,
   messageId: string,
@@ -388,6 +392,7 @@ export async function autoRoleListTalliesForMessage(
   return rows.map(toAutoRoleTally);
 }
 
+/** Increment a tally for an emoji/message and cache it. */
 export async function autoRoleIncrementReactionTally(
   key: ReactionTallyKey,
   authorId: string,
@@ -413,6 +418,7 @@ export async function autoRoleIncrementReactionTally(
   return snapshot;
 }
 
+/** Decrement a tally; delete if it reaches zero. */
 export async function autoRoleDecrementReactionTally(
   key: ReactionTallyKey,
 ): Promise<ReactionTallySnapshot | null> {
@@ -439,6 +445,7 @@ export async function autoRoleDecrementReactionTally(
   } as any);
 }
 
+/** Read tally from cache/DB. */
 export async function autoRoleReadReactionTally(
   key: ReactionTallyKey,
 ): Promise<ReactionTallySnapshot | null> {
@@ -477,6 +484,7 @@ export async function autoRoleDeleteReactionTally(
 
 // --- Higher level helpers mirroring the Postgres repo ---
 
+/** Re-evaluate and cache enabled rules for all guilds. */
 export async function loadRulesIntoCache(): Promise<void> {
   const all = await autoRoleFetchAllRules();
   const byGuild = new Map<string, AutoRoleRule[]>();
@@ -493,6 +501,7 @@ export async function loadRulesIntoCache(): Promise<void> {
   }
 }
 
+/** Refresh rules and cache for a single guild. */
 export async function refreshGuildRules(
   guildId: string,
 ): Promise<AutoRoleRule[]> {
@@ -565,6 +574,7 @@ interface AutoroleRevokeContext {
   reason: string;
   grantType: "LIVE" | "TIMED";
 }
+
 
 export async function grantByRule({
   client,

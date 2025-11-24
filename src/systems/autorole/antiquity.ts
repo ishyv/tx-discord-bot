@@ -1,5 +1,8 @@
 import type { UsingClient } from "seyfert";
-import { autoRoleFetchAllRules } from "@/db/repositories";
+import {
+  autoRoleFetchAllRules,
+  autoRoleFetchRulesByGuild,
+} from "@/db/repositories";
 import { syncUserAntiquityRoles } from "./service";
 import { isFeatureEnabled } from "@/modules/features";
 
@@ -8,45 +11,71 @@ const INTERVAL = 21600000; // 6 hours
 let timer: NodeJS.Timeout | null = null;
 
 export function startAntiquityScheduler(client: UsingClient) {
-    if (timer) return;
-    timer = setInterval(() => runAntiquityChecks(client), INTERVAL);
-    // Run once on startup after a small delay to not block boot
-    setTimeout(() => runAntiquityChecks(client), 60000);
+  if (timer) return;
+  timer = setInterval(() => runAntiquityChecks(client), INTERVAL);
+  // Run once on startup after a small delay to not block boot
+  setTimeout(() => runAntiquityChecks(client), 60000);
 }
 
 export function stopAntiquityScheduler() {
-    if (timer) {
-        clearInterval(timer);
-        timer = null;
-    }
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
 }
 
-async function runAntiquityChecks(client: UsingClient) {
-    try {
-        const rules = await autoRoleFetchAllRules();
-        const guildsToCheck = new Set<string>();
+/**
+ * Re-evaluates antiquity-based autorole rules. If `guildId` is provided, only
+ * that guild is processed; otherwise every guild with an active rule is
+ * scanned.
+ */
+export async function runAntiquityChecks(
+  client: UsingClient,
+  guildId?: string,
+) {
+  try {
+    const guildsToCheck = new Map<string, string[]>(); // guildId -> rule names
 
-        for (const rule of rules) {
-            if (rule.trigger.type === "ANTIQUITY_THRESHOLD" && rule.enabled) {
-                guildsToCheck.add(rule.guildId);
-            }
+    if (guildId) {
+      const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+      if (!featureEnabled) return;
+
+      const rules = await autoRoleFetchRulesByGuild(guildId);
+      const active = rules.filter(
+        (rule) =>
+          rule.enabled && rule.trigger.type === "ANTIQUITY_THRESHOLD",
+      );
+      if (!active.length) return;
+      guildsToCheck.set(guildId, active.map((r) => r.name));
+    } else {
+      const rules = await autoRoleFetchAllRules();
+      for (const rule of rules) {
+        if (rule.trigger.type !== "ANTIQUITY_THRESHOLD" || !rule.enabled) {
+          continue;
         }
-
-        for (const guildId of guildsToCheck) {
-            try {
-                const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
-                if (!featureEnabled) continue;
-
-                const members = await client.members.list(guildId);
-                for (const member of members) {
-                    await syncUserAntiquityRoles(client, guildId, member);
-                }
-            } catch (error) {
-                client.logger?.error?.(`[autorole] failed to check antiquity for guild ${guildId}`, { error });
-            }
-        }
-    } catch (error) {
-        client.logger?.error?.("[autorole] antiquity scheduler failed", { error });
+        const list = guildsToCheck.get(rule.guildId) ?? [];
+        list.push(rule.name);
+        guildsToCheck.set(rule.guildId, list);
+      }
     }
+
+    for (const [gid] of guildsToCheck) {
+      try {
+        const featureEnabled = await isFeatureEnabled(gid, "autoroles");
+        if (!featureEnabled) continue;
+
+        const members = await client.members.list(gid);
+        for (const member of members) {
+          await syncUserAntiquityRoles(client, gid, member);
+        }
+      } catch (error) {
+        client.logger?.error?.(`[autorole] failed to check antiquity for guild ${gid}`, {
+          error,
+        });
+      }
+    }
+  } catch (error) {
+    client.logger?.error?.("[autorole] antiquity scheduler failed", { error });
+  }
 }
 

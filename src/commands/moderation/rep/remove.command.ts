@@ -14,6 +14,7 @@ import {
   normalizeRepAmount,
   requireRepContext,
 } from "./shared";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
@@ -57,6 +58,16 @@ export default class RepRemoveCommand extends SubCommand {
     await ctx.write({
       content: buildRepChangeMessage("remove", amount, target.id, total),
     });
+
+    await logModerationAction(ctx.client, context.guildId, {
+      title: "Reputación removida",
+      description: `Se removieron ${amount} puntos de <@${target.id}>`,
+      fields: [
+        { name: "Total", value: `${total}`, inline: true },
+        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+      ],
+      actorId: ctx.author.id,
+    },
+    "pointsLog");
   }
 }
-

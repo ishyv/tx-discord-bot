@@ -3,6 +3,7 @@ import type { GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { assertFeatureEnabled } from "@/modules/features";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
@@ -54,5 +55,12 @@ export default class ClearWarnCommand extends SubCommand {
     });
 
     await ctx.write({ embeds: [embed] });
+
+    await logModerationAction(ctx.client, guildId, {
+      title: "Warns eliminados",
+      description: `Se limpiaron ${warns.length} warns de <@${user.id}>`,
+      fields: [{ name: "Moderador", value: `<@${ctx.author.id}>`, inline: true }],
+      actorId: ctx.author.id,
+    });
   }
 }

@@ -13,6 +13,7 @@ import {
   respondRuleAutocomplete,
   requireAutoroleContext,
 } from "./shared";
+import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   name: createStringOption({
@@ -52,6 +53,12 @@ export default class AutoroleDisableCommand extends SubCommand {
     await ctx.write({
       content: `Se deshabilito \`${slug}\`.\n${formatRuleSummary(updated)}`,
     });
+
+    await logModerationAction(ctx.client, context.guildId, {
+      title: "Autorole deshabilitado",
+      description: formatRuleSummary(updated),
+      actorId: ctx.author.id,
+      fields: [{ name: "Regla", value: `\`${slug}\`` }],
+    });
   }
 }
-
