@@ -11,7 +11,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import { refreshGuildRules } from "@/modules/repo";
+import { refreshGuildRules } from "@/db/repositories";
 
 import {
   formatRuleMode,
@@ -70,3 +70,4 @@ export default class AutoroleListCommand extends SubCommand {
     await ctx.write({ embeds });
   }
 }
+

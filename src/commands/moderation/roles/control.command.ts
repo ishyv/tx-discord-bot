@@ -9,7 +9,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import {
   DEFAULT_MODERATION_ACTIONS,
   type RoleCommandOverride,
@@ -254,3 +254,4 @@ export default class RoleControlCommand extends SubCommand {
     }
   }
 }
+

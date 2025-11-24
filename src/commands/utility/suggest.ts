@@ -9,6 +9,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
+import { CHANNELS_ID } from "@/constants/guild";
 import { getGuildChannels } from "@/modules/guild-channels";
 
 const options = {
@@ -50,9 +51,12 @@ export default class SuggestCommand extends Command {
     }
 
     const channels = await getGuildChannels(guildId);
-    const suggest_channel = channels.managed.suggestions;
+    const suggestChannelId =
+      channels.core?.suggestions?.channelId ??
+      channels.managed?.suggestions?.channelId ??
+      CHANNELS_ID.suggestions;
 
-    if (!suggest_channel) {
+    if (!suggestChannelId) {
       console.error("Suggest: no se pudo obtener canal de sugerencias");
       return;
     }
@@ -70,7 +74,7 @@ export default class SuggestCommand extends Command {
       },
     });
 
-    const message = await ctx.client.messages.write(suggest_channel.channelId, {
+    const message = await ctx.client.messages.write(suggestChannelId, {
       embeds: [suggestEmbed],
     });
 

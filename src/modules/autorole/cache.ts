@@ -39,6 +39,7 @@ function ensureCache(guildId: string): GuildRuleCache {
       reactSpecific: new Map(),
       reactedByEmoji: new Map(),
       repThresholds: [],
+      antiquityThresholds: [],
     };
     rulesByGuild.set(guildId, cache);
   }
@@ -54,6 +55,7 @@ export function setGuildRules(
     reactSpecific: new Map(),
     reactedByEmoji: new Map(),
     repThresholds: [],
+    antiquityThresholds: [],
   };
 
   for (const rule of rules) {
@@ -74,6 +76,8 @@ export function upsertRule(rule: AutoRoleRule): void {
   for (const [, list] of cache.reactedByEmoji) {
     filterInPlace(list, (r) => r.name !== rule.name);
   }
+  cache.repThresholds = cache.repThresholds.filter((r) => r.name !== rule.name);
+  cache.antiquityThresholds = cache.antiquityThresholds.filter((r) => r.name !== rule.name);
 
   bucketRule(cache, rule);
 }
@@ -103,6 +107,7 @@ export function removeRule(
     }
   }
   cache.repThresholds = cache.repThresholds.filter((r) => r.name !== ruleName);
+  cache.antiquityThresholds = cache.antiquityThresholds.filter((r) => r.name !== ruleName);
 }
 
 export function getGuildRules(guildId: string): GuildRuleCache {
@@ -138,6 +143,18 @@ function bucketRule(cache: GuildRuleCache, rule: AutoRoleRule) {
             : 0) -
           (b.trigger.type === "REPUTATION_THRESHOLD"
             ? b.trigger.args.minRep
+            : 0),
+      );
+      break;
+    case "ANTIQUITY_THRESHOLD":
+      cache.antiquityThresholds.push(rule);
+      cache.antiquityThresholds.sort(
+        (a, b) =>
+          (a.trigger.type === "ANTIQUITY_THRESHOLD"
+            ? a.trigger.args.durationMs
+            : 0) -
+          (b.trigger.type === "ANTIQUITY_THRESHOLD"
+            ? b.trigger.args.durationMs
             : 0),
       );
       break;

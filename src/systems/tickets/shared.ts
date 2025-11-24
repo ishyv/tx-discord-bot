@@ -1,4 +1,4 @@
-import { removeOpenTicketByChannel, setPendingTickets } from "@/modules/repo";
+import { removeOpenTicketByChannel, setPendingTickets } from "@/db/repositories";
 
 /**
  * Synchronises repository state when a ticket channel is closed.
@@ -23,3 +23,4 @@ export async function closeTicket(guildId: string, channelId: string): Promise<v
     });
   });
 }
+

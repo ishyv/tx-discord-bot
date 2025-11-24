@@ -5,9 +5,7 @@ import "dotenv/config";
 
 import type { ParseClient, ParseMiddlewares } from "seyfert";
 import { Client, extendContext } from "seyfert";
-import { db } from "@/db";
-import type { CooldownManager } from "@/modules/cooldown";
-import * as schemas from "@/schemas";
+import { CooldownManager } from "@/modules/cooldown";
 import { GuildLogger } from "@/utils/guildLogger";
 import { middlewares } from "./middlewares";
 
@@ -15,19 +13,17 @@ import "./events"; // ! Cargar eventos base (messageCreate, reactions, etc.)
 import "./events/listeners"; // ! Cargar listeners de eventos
 
 const context = extendContext((interaction) => ({
-  db: {
-    instance: db,
-    schemas,
-  },
   getGuildLogger: async (): Promise<GuildLogger> => {
     return await new GuildLogger().init(interaction.client);
   },
 }));
 
-const client = new Client({
+const client = new Client<true>({
   context,
   globalMiddlewares: ["moderationLimit"],
 });
+
+client.cooldown = new CooldownManager(client);
 
 client.setServices({
   middlewares,
@@ -39,6 +35,9 @@ client
 
 declare module "seyfert" {
   interface UsingClient extends ParseClient<Client<true>> {
+    cooldown: CooldownManager;
+  }
+  interface Client<Ready extends boolean = boolean> {
     cooldown: CooldownManager;
   }
   interface ExtendContext extends ReturnType<typeof context> {}

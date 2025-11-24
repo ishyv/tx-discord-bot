@@ -6,12 +6,20 @@ import {
   getTicketCategory,
   TICKET_SELECT_CUSTOM_ID,
 } from "@/systems/tickets";
+import { assertFeatureEnabled } from "@/modules/features";
 
 export default class TicketSelectHandler extends ComponentCommand {
   componentType = "StringSelect" as const;
   customId = TICKET_SELECT_CUSTOM_ID;
 
   async run(ctx: ComponentContext<"StringSelect">) {
+    const allowed = await assertFeatureEnabled(
+      ctx as any,
+      "tickets",
+      "El sistema de tickets está deshabilitado actualmente.",
+    );
+    if (!allowed) return;
+
     const selection = ctx.interaction.values?.[0];
     if (!selection) {
       await ctx.write({

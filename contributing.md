@@ -88,24 +88,9 @@ docker-compose up -d
 Configura las variables correspondientes en tu `.env`:
 
 ```env
-DATABASE_URL=postgresql://postgres:PASSWORD@localhost:5432/pyebot
-POSTGRES_DB=pyebot
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=PASSWORD
+USE_PROD_DB=false
+DB_URI="mongodb://localhost:27017/pyebot"
 ```
-
-👉 Lo ideal es **solo cambiar la contraseña** (`POSTGRES_PASSWORD`) y mantener el resto igual.
-
-### 📌 Migraciones con Drizzle
-
-Antes de usar la base de datos, asegurate de correr las migraciones:
-
-```bash
-pnpm drizzle-kit generate
-pnpm drizzle-kit migrate
-```
-
-Esto creará y aplicará los cambios necesarios en la DB.
 
 ---
 

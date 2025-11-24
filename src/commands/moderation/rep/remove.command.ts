@@ -7,7 +7,7 @@ import {
   SubCommand,
 } from "seyfert";
 
-import { adjustUserReputation } from "@/modules/repo";
+import { adjustUserReputation } from "@/db/repositories";
 import { syncUserReputationRoles } from "@/systems/autorole/service";
 import {
   buildRepChangeMessage,
@@ -59,3 +59,4 @@ export default class RepRemoveCommand extends SubCommand {
     });
   }
 }
+

@@ -12,6 +12,7 @@ import type {
   ReactSpecificTrigger,
   ReactedThresholdTrigger,
   ReputationThresholdTrigger,
+  AntiquityThresholdTrigger,
 } from "./types";
 import { isValidThresholdCount, normalizeSnowflake } from "./validation";
 import { parse as parseMs } from "@/utils/ms";
@@ -20,6 +21,7 @@ const CANON_MESSAGE_REACT = "onmessagereactany";
 const CANON_REACT_SPECIFIC = "onreactspecific";
 const CANON_REACTION_THRESHOLD = "onauthorreactionthreshold";
 const CANON_REPUTATION_THRESHOLD = "onreputationatleast";
+const CANON_ANTIQUITY_THRESHOLD = "onantiquityatleast";
 
 const CUSTOM_EMOJI_PATTERN = /^<a?:[a-zA-Z0-9_~]+:(\d{2,})>$/;
 const RAW_ID_PATTERN = /^\d{16,}$/;
@@ -60,8 +62,12 @@ export function parseTrigger(input: string): AutoRoleTrigger {
     return expectReputationThreshold(rest);
   }
 
+  if (head === CANON_ANTIQUITY_THRESHOLD) {
+    return expectAntiquityThreshold(rest);
+  }
+
   throw new TriggerParseError(
-    `Trigger no soportado: "${headRaw}". Usa onMessageReactAny, onReactSpecific u onAuthorReactionThreshold.`,
+    `Trigger no soportado: "${headRaw}". Usa onMessageReactAny, onReactSpecific, onAuthorReactionThreshold, onReputationAtLeast u onAntiquityAtLeast.`,
   );
 }
 
@@ -154,6 +160,31 @@ function expectReputationThreshold(args: string[]): ReputationThresholdTrigger {
     type: "REPUTATION_THRESHOLD",
     args: {
       minRep: value,
+    },
+  };
+}
+
+function expectAntiquityThreshold(args: string[]): AntiquityThresholdTrigger {
+  if (args.length === 0) {
+    throw new TriggerParseError(
+      "El trigger 'onAntiquityAtLeast' requiere una duracion (ej: 1y 6m).",
+    );
+  }
+
+  const raw = args.join(" ");
+  const duration = parseDuration(raw);
+
+  if (!duration || duration < 3600000) {
+    // Minimum 1 hour
+    throw new TriggerParseError(
+      "El trigger 'onAntiquityAtLeast' requiere una duracion valida minima de 1 hora.",
+    );
+  }
+
+  return {
+    type: "ANTIQUITY_THRESHOLD",
+    args: {
+      durationMs: duration,
     },
   };
 }

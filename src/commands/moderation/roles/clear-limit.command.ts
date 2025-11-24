@@ -15,7 +15,7 @@ import {
   requireGuildContext,
   resolveActionInput,
 } from "./shared";
-import { clearRoleLimit } from "@/modules/repo";
+import { clearRoleLimit } from "@/db/repositories";
 
 const options = {
   key: createStringOption({
@@ -110,3 +110,4 @@ export default class RoleClearLimitCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
+

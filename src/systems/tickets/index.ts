@@ -5,8 +5,9 @@
  */
 
 import { getGuildChannels } from "@/modules/guild-channels";
-import { addOpenTicket, listOpenTickets, setPendingTickets } from "@/modules/repo";
+import { addOpenTicket, listOpenTickets, setPendingTickets } from "@/db/repositories";
 import { Colors } from "@/modules/ui/colors";
+import { isFeatureEnabled } from "@/modules/features";
 import {
   ActionRow,
   Button,
@@ -96,6 +97,14 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
   const guilds = await client.guilds.list();
 
   for (const guildId of guilds.map((g) => g.id)) {
+    const ticketsEnabled = await isFeatureEnabled(guildId, "tickets");
+    if (!ticketsEnabled) {
+      client.logger?.info?.("[tickets] dashboard deshabilitado; no se mostrara mensaje", {
+        guildId,
+      });
+      continue;
+    }
+
     const channels = await getGuildChannels(guildId);
     const ticketChannel = channels.core.tickets;
 
@@ -188,6 +197,16 @@ export function buildTicketModal(category: TicketCategory): Modal {
         if (!userId) {
           await ctx.write({
             content: "No pudimos identificar tu usuario. Intentalo nuevamente.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        const ticketsEnabled = await isFeatureEnabled(guildId, "tickets");
+        if (!ticketsEnabled) {
+          await ctx.write({
+            content:
+              "El sistema de tickets está deshabilitado actualmente por los administradores.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -346,3 +365,4 @@ function buildTicketChannelName(username: string | undefined): string {
   const suffix = sanitized || "usuario";
   return `reporte-${suffix}`.slice(0, 100);
 }
+

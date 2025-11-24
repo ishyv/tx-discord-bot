@@ -6,8 +6,8 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import * as repo from "@/modules/repo";
-import { purgeRule } from "@/modules/repo";
+import * as repo from "@/db/repositories";
+import { purgeRule } from "@/db/repositories";
 import { respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 
 const options = {
@@ -46,3 +46,4 @@ export default class AutorolePurgeCommand extends SubCommand {
     });
   }
 }
+

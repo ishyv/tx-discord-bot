@@ -6,8 +6,8 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import * as repo from "@/modules/repo";
-import { enableRule } from "@/modules/repo";
+import * as repo from "@/db/repositories";
+import { enableRule } from "@/db/repositories";
 import { formatRuleSummary, respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 
 const options = {
@@ -50,3 +50,4 @@ export default class AutoroleEnableCommand extends SubCommand {
     });
   }
 }
+

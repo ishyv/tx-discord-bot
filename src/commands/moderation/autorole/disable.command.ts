@@ -6,8 +6,8 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import * as repo from "@/modules/repo";
-import { disableRule } from "@/modules/repo";
+import * as repo from "@/db/repositories";
+import { disableRule } from "@/db/repositories";
 import {
   formatRuleSummary,
   respondRuleAutocomplete,
@@ -54,3 +54,4 @@ export default class AutoroleDisableCommand extends SubCommand {
     });
   }
 }
+

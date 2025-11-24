@@ -1,4 +1,9 @@
-import { integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+export interface Warn {
+  reason: string;
+  warn_id: string; // lowercase Crockford base32 slug
+  moderator: string;
+  timestamp: string; // Date ISO
+}
 
 export interface User {
   id: string;
@@ -8,19 +13,3 @@ export interface User {
   warns: Warn[] | null;
   openTickets: string[] | null;
 }
-
-export interface Warn {
-  reason: string;
-  warn_id: string; // lowercase Crockford base32 slug
-  moderator: string;
-  timestamp: string; // Date ISO
-}
-
-export const users = pgTable("users", {
-  id: varchar("id", { length: 50 }).primaryKey().notNull().unique(),
-  bank: integer("bank").notNull().default(0),
-  cash: integer("cash").notNull().default(0),
-  rep: integer("rep").notNull().default(0),
-  warns: jsonb("warns").$type<Warn[]>().default([]),
-  openTickets: jsonb("open_tickets").$type<string[]>().default([]),
-});

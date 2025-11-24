@@ -1,28 +1,17 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: postgres_db
+  mongo:
+    image: mongo:7
+    container_name: mongo_db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-pyebot}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - postgres_network
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 volumes:
-  postgres_data:
-
-networks:
-  postgres_network:
-    driver: bridge
+  mongo_data:

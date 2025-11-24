@@ -1,5 +1,3 @@
-import { jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { CoreChannelName } from "@/modules/guild-channels/constants";
 
 /** Identifier for a capability we expose to managed roles. */
@@ -54,29 +52,35 @@ export interface GuildChannelsRecord {
   core: Record<CoreChannelName, CoreChannelRecord | null>;
   managed: Record<string, ManagedChannelRecord>;
   ticketMessageId?: string | null;
+  ticketHelperRoles: string[];
 }
 
-/** Default payload used when bootstrapping the roles column. */
-const EMPTY_ROLES: GuildRolesRecord = {};
+export type GuildFeatureFlag =
+  | "tickets"
+  | "automod"
+  | "autoroles"
+  | "warns"
+  | "roles"
+  | "reputation";
 
-/** Default payload used when bootstrapping the channels column. */
-const EMPTY_CHANNELS: GuildChannelsRecord = {
-  core: {} as Record<CoreChannelName, CoreChannelRecord>,
-  managed: {},
-  ticketMessageId: null,
-};
+export type GuildFeaturesRecord = Partial<Record<GuildFeatureFlag, boolean>>;
 
-const EMPTY_PENDING_TICKETS: string[] = [];
+export const DEFAULT_GUILD_FEATURES: Readonly<Record<GuildFeatureFlag, boolean>> =
+  Object.freeze({
+    tickets: true,
+    automod: true,
+    autoroles: true,
+    warns: true,
+    roles: true,
+    reputation: true,
+  });
 
-export const guilds = pgTable("guilds", {
-  id: varchar("id", { length: 50 }).primaryKey().notNull().unique(),
-  roles: jsonb("roles").$type<GuildRolesRecord>().notNull().default(EMPTY_ROLES),
-  channels: jsonb("channels").$type<GuildChannelsRecord>().notNull().default(EMPTY_CHANNELS),
-  pendingTickets: jsonb("pending_tickets").$type<string[]>().notNull().default(EMPTY_PENDING_TICKETS),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export type Guild = InferSelectModel<typeof guilds>;
-export type NewGuild = InferInsertModel<typeof guilds>;
-
+export interface Guild {
+  id: string;
+  roles: GuildRolesRecord;
+  channels: GuildChannelsRecord;
+  pendingTickets: string[];
+  features: GuildFeaturesRecord;
+  createdAt?: Date;
+  updatedAt?: Date;
+}

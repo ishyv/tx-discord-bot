@@ -1,5 +1,3 @@
-
-
 type StructuredCloneFn = <T>(value: T) => T;
 const nativeStructuredClone =
   typeof (globalThis as { structuredClone?: StructuredCloneFn }).structuredClone ===
@@ -61,4 +59,3 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
 }
-

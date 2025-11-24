@@ -1,5 +1,5 @@
-// migrated to use the flat repo at "@/modules/repo"
-import * as repo from "@/modules/repo";
+// Uses the Mongo-backed repository layer at "@/db/repositories"
+import * as repo from "@/db/repositories";
 import type {
   CoreChannelRecord,
   GuildChannelsRecord,
@@ -72,3 +72,4 @@ export {
   CORE_CHANNEL_LABELS,
   type CoreChannelName,
 } from "./constants";
+

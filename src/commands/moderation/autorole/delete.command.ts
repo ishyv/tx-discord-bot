@@ -11,7 +11,7 @@ import {
 import { ButtonStyle } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import {
   clearDeleteSession,
   getDeleteSession,
@@ -173,3 +173,4 @@ function buildDisabledRow(slug: string): ActionRow<Button> {
 
   return new ActionRow<Button>().addComponents(confirm, purge, cancel);
 }
+

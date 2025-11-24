@@ -1,10 +1,14 @@
 import type { UsingClient } from "seyfert";
 
 import { getGuildRules } from "@/modules/autorole/cache";
-import { grantByRule, revokeByRule } from "@/modules/repo";
+import { grantByRule, revokeByRule } from "@/db/repositories";
+import { isFeatureEnabled } from "@/modules/features";
 
 const REP_REASON = (ruleName: string) =>
   `autorole:${ruleName}:rep_threshold`;
+
+const ANTIQUITY_REASON = (ruleName: string) =>
+  `autorole:${ruleName}:antiquity_threshold`;
 
 export async function syncUserReputationRoles(
   client: UsingClient,
@@ -12,6 +16,9 @@ export async function syncUserReputationRoles(
   userId: string,
   rep: number,
 ): Promise<void> {
+  const enabled = await isFeatureEnabled(guildId, "autoroles");
+  if (!enabled) return;
+
   const cache = getGuildRules(guildId);
   if (!cache.repThresholds.length) return;
 
@@ -37,3 +44,44 @@ export async function syncUserReputationRoles(
     }
   }
 }
+
+export async function syncUserAntiquityRoles(
+  client: UsingClient,
+  guildId: string,
+  member: { id: string; joinedAt?: string | Date | null },
+): Promise<void> {
+  const enabled = await isFeatureEnabled(guildId, "autoroles");
+  if (!enabled) return;
+
+  const cache = getGuildRules(guildId);
+  if (!cache.antiquityThresholds.length) return;
+
+  const joinedAt = member.joinedAt ? new Date(member.joinedAt) : null;
+  if (!joinedAt) return;
+
+  const now = Date.now();
+  const antiquity = now - joinedAt.getTime();
+
+  for (const rule of cache.antiquityThresholds) {
+    if (rule.trigger.type !== "ANTIQUITY_THRESHOLD") continue;
+    const meets = antiquity >= rule.trigger.args.durationMs;
+
+    if (meets) {
+      await grantByRule({
+        client,
+        rule,
+        userId: member.id,
+        reason: ANTIQUITY_REASON(rule.name),
+      });
+    } else {
+      await revokeByRule({
+        client,
+        rule,
+        userId: member.id,
+        reason: `${ANTIQUITY_REASON(rule.name)}:fall`,
+        grantType: "LIVE",
+      });
+    }
+  }
+}
+

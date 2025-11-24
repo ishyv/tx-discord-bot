@@ -13,7 +13,7 @@ import {
 import { Button, UI } from "@/modules/ui";
 import { ButtonStyle, MessageFlags, TextInputStyle } from "seyfert/lib/types";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import { DEFAULT_MODERATION_ACTIONS } from "@/modules/guild-roles"; // constants only
 import type { RoleCommandOverride, RoleLimitRecord, LimitWindow } from "@/schemas/guild";
 
@@ -450,3 +450,4 @@ export default class RolesDashboardCommand extends SubCommand {
         await ui.send();
     }
 }
+

@@ -2,7 +2,7 @@ import type { GuildCommandContext } from "seyfert";
 import { Declare, Embed, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import {
   buildModerationSummary,
   fetchManagedRoles,
@@ -62,3 +62,4 @@ export default class RoleListCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
+

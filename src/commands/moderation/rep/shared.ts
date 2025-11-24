@@ -4,6 +4,7 @@ import {
   GUILD_ONLY_MESSAGE,
   requireGuildPermission,
 } from "@/utils/commandGuards";
+import { assertFeatureEnabled } from "@/modules/features";
 
 export interface RepCommandContext {
   guildId: string;
@@ -25,6 +26,13 @@ export async function requireRepContext(
   if (!allowed) {
     return null;
   }
+
+  const enabled = await assertFeatureEnabled(
+    ctx as any,
+    "reputation",
+    "El sistema de reputacion está deshabilitado en este servidor.",
+  );
+  if (!enabled) return null;
 
   return { guildId: ctx.guildId };
 }

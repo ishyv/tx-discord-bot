@@ -9,7 +9,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import { requireGuildContext } from "./shared";
 
 const options = {
@@ -77,3 +77,4 @@ export default class RoleSetCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
+

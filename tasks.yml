@@ -31,8 +31,3 @@ tasks:
     cmd: "docker-compose up -d"
     desc: Start the database
     concurrent: true
-  
-  drizzle:
-    cmd: ["pnpm drizzle-kit generate", "pnpm drizzle-kit migrate"]
-    desc: Run drizzle migrations
-    concurrent: true

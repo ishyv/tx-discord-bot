@@ -6,7 +6,7 @@
 
 import type { AutocompleteInteraction, GuildCommandContext } from "seyfert";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import type {
   AutoRoleRule,
   AutoRoleTrigger,
@@ -71,6 +71,9 @@ export function formatTrigger(trigger: AutoRoleTrigger): string {
     case "REPUTATION_THRESHOLD":
       return "`onReputationAtLeast` " +
         `rep>=${trigger.args.minRep}`;
+    case "ANTIQUITY_THRESHOLD":
+      return "`onAntiquityAtLeast` " +
+        `duration>=${formatDuration(trigger.args.durationMs)}`;
   }
 }
 
@@ -103,7 +106,7 @@ function formatDuration(ms: number): string {
   }
 
   if (!parts.length) {
-  return `${Math.ceil(ms / 1000)}s`;
+    return `${Math.ceil(ms / 1000)}s`;
   }
   return parts.join(" ");
 }
@@ -128,7 +131,7 @@ export async function respondRuleAutocomplete(
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.respond([]);
-  return;
+    return;
   }
 
   const input = interaction.getInput()?.toLowerCase() ?? "";
@@ -166,13 +169,14 @@ export async function botCanManageRole(
     const highest = await botMember.roles.highest(true);
     if (!highest) return false;
 
-  return highest.position > target.position;
+    return highest.position > target.position;
   } catch (error) {
     ctx.client.logger?.error?.("[autorole] manageability check failed", {
       guildId: ctx.guildId,
       roleId,
       error,
     });
-  return false;
+    return false;
   }
 }
+

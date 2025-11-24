@@ -1,10 +1,11 @@
 import type { GuildCommandContext } from "seyfert";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import {
   DEFAULT_MODERATION_ACTIONS,
   type ModerationActionDefinition,
 } from "@/modules/guild-roles"; // only for constants/types
+import { assertFeatureEnabled } from "@/modules/features";
 import type {
   LimitWindow,
   RoleCommandOverride,
@@ -45,6 +46,15 @@ export async function requireGuildContext(
   });
 
   if (!allowed) {
+    return null;
+  }
+
+  const enabled = await assertFeatureEnabled(
+    ctx as any,
+    "roles",
+    "El sistema de roles administrados está deshabilitado en este servidor.",
+  );
+  if (!enabled) {
     return null;
   }
 
@@ -234,3 +244,4 @@ export function buildModerationSummary(
     )}`;
   }).join("\n");
 }
+

@@ -1,9 +1,10 @@
 import { roleRateLimiter } from "./rateLimiter";
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import {
   type RoleCommandOverride,
   type RoleLimitRecord,
 } from "@/schemas/guild";
+import { isFeatureEnabled } from "@/modules/features";
 
 export type { RoleCommandOverride } from "@/schemas/guild";
 
@@ -160,6 +161,14 @@ export async function resolveRoleActionPermission({
   memberRoleIds,
   hasDiscordPermission,
 }: ResolveRoleActionPermissionInput): Promise<ResolveRoleActionPermissionResult> {
+  const rolesFeature = await isFeatureEnabled(guildId, "roles");
+  if (!rolesFeature) {
+    return {
+      allowed: hasDiscordPermission,
+      decision: hasDiscordPermission ? "discord-allow" : "discord-deny",
+    };
+  }
+
   if (!memberRoleIds.length) {
     return {
       allowed: hasDiscordPermission,
@@ -221,6 +230,11 @@ export async function consumeRoleLimits({
   actionKey,
   memberRoleIds,
 }: ConsumeRoleLimitsOptions): Promise<ConsumeLimitResult> {
+  const rolesFeature = await isFeatureEnabled(guildId, "roles");
+  if (!rolesFeature) {
+    return { allowed: true, applied: [] };
+  }
+
   if (!memberRoleIds.length) {
     return { allowed: true, applied: [] };
   }
@@ -286,3 +300,4 @@ export async function consumeRoleLimits({
     applied: consumed.map((e) => e.usage),
   };
 }
+

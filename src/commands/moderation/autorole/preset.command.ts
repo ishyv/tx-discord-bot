@@ -8,48 +8,48 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import { applyReputationPreset } from "@/modules/repo";
+import { applyReputationPreset } from "@/db/repositories";
 import {
   botCanManageRole,
   requireAutoroleContext,
 } from "./shared";
 
 const PRESET_RANKS = [
-  { optionKey: "novatoRole", label: "novato [1]", minRep: 0, slug: "rep-novato" },
-  { optionKey: "iniciateRole", label: "iniciante [2]", minRep: 1, slug: "rep-iniciante" },
-  { optionKey: "regularRole", label: "regular [3]", minRep: 16, slug: "rep-regular" },
-  { optionKey: "avanzadoRole", label: "avanzado [4]", minRep: 40, slug: "rep-avanzado" },
-  { optionKey: "veteranoRole", label: "veterano [5]", minRep: 80, slug: "rep-veterano" },
-  { optionKey: "sabioRole", label: "sabio [6]", minRep: 100, slug: "rep-sabio" },
-  { optionKey: "expertoRole", label: "experto [7]", minRep: 150, slug: "rep-experto" },
+  { optionKey: "novatorole", label: "novato [1]", minRep: 0, slug: "rep-novato" },
+  { optionKey: "iniciaterole", label: "iniciante [2]", minRep: 1, slug: "rep-iniciante" },
+  { optionKey: "regularrole", label: "regular [3]", minRep: 16, slug: "rep-regular" },
+  { optionKey: "avanzadorole", label: "avanzado [4]", minRep: 40, slug: "rep-avanzado" },
+  { optionKey: "veteranorole", label: "veterano [5]", minRep: 80, slug: "rep-veterano" },
+  { optionKey: "sabiorole", label: "sabio [6]", minRep: 100, slug: "rep-sabio" },
+  { optionKey: "expertorole", label: "experto [7]", minRep: 150, slug: "rep-experto" },
 ] as const;
 
 const options = {
-  novatoRole: createRoleOption({
+  novatorole: createRoleOption({
     description: "Rol para novato [1]",
     required: true,
   }),
-  iniciateRole: createRoleOption({
+  iniciaterole: createRoleOption({
     description: "Rol para iniciante [2]",
     required: true,
   }),
-  regularRole: createRoleOption({
+  regularrole: createRoleOption({
     description: "Rol para regular [3]",
     required: true,
   }),
-  avanzadoRole: createRoleOption({
+  avanzadorole: createRoleOption({
     description: "Rol para avanzado [4]",
     required: true,
   }),
-  veteranoRole: createRoleOption({
+  veteranorole: createRoleOption({
     description: "Rol para veterano [5]",
     required: true,
   }),
-  sabioRole: createRoleOption({
+  sabiorole: createRoleOption({
     description: "Rol para sabio [6]",
     required: true,
   }),
-  expertoRole: createRoleOption({
+  expertorole: createRoleOption({
     description: "Rol para experto [7]",
     required: true,
   }),
@@ -124,3 +124,4 @@ export default class AutorolePresetCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
+

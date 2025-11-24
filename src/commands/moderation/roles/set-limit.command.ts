@@ -9,7 +9,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import {
   buildLimitRecord,
   formatLimitRecord,
@@ -118,3 +118,4 @@ export default class RoleSetLimitCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
+

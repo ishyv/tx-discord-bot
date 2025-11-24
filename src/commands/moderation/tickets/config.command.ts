@@ -7,7 +7,7 @@ import {
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
 
 const options = {
@@ -74,3 +74,4 @@ export default class ConfigTicketsCommand extends SubCommand {
     });
   }
 }
+

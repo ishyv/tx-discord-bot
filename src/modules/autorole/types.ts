@@ -48,11 +48,19 @@ export interface ReputationThresholdTrigger {
   };
 }
 
+export interface AntiquityThresholdTrigger {
+  type: "ANTIQUITY_THRESHOLD";
+  args: {
+    durationMs: number;
+  };
+}
+
 export type AutoRoleTrigger =
   | MessageReactAnyTrigger
   | ReactSpecificTrigger
   | ReactedThresholdTrigger
-  | ReputationThresholdTrigger;
+  | ReputationThresholdTrigger
+  | AntiquityThresholdTrigger;
 
 export interface AutoRoleRule {
   guildId: string;
@@ -116,6 +124,7 @@ export interface GuildRuleCache {
   reactSpecific: Map<string, AutoRoleRule[]>;
   reactedByEmoji: Map<string, AutoRoleRule[]>;
   repThresholds: AutoRoleRule[];
+  antiquityThresholds: AutoRoleRule[];
 }
 
 export interface AutoRoleGrantReason {

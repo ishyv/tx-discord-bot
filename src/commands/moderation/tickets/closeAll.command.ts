@@ -4,7 +4,7 @@ import {
     SubCommand,
 } from "seyfert";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import { closeTicket } from "@/systems/tickets/shared";
 import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
 
@@ -69,3 +69,4 @@ export default class ConfigTicketsCommand extends SubCommand {
         });
     }
 }
+

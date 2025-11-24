@@ -10,7 +10,8 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import type { Warn } from "@/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
-import { addWarn, listWarns } from "@/modules/repo";
+import { addWarn, listWarns } from "@/db/repositories";
+import { assertFeatureEnabled } from "@/modules/features";
 
 const options = {
   user: createUserOption({
@@ -30,6 +31,19 @@ const options = {
 @Options(options)
 export default class AddWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
+    const guildId = ctx.guildId;
+    if (!guildId) {
+      await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
+      return;
+    }
+
+    const enabled = await assertFeatureEnabled(
+      ctx as any,
+      "warns",
+      "El sistema de warns está deshabilitado en este servidor.",
+    );
+    if (!enabled) return;
+
     const { user, reason } = ctx.options;
     const existingWarns = await listWarns(user.id);
     const existingIds = new Set(existingWarns.map((warn) => warn.warn_id));
@@ -68,3 +82,4 @@ export default class AddWarnCommand extends SubCommand {
     await ctx.write({ embeds: [successEmbed] });
   }
 }
+

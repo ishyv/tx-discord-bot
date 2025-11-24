@@ -8,6 +8,7 @@ import {
   type ResolveRoleActionPermissionResult,
 } from "@/modules/guild-roles";
 import { collectMemberRoleIds } from "@/utils/commandGuards";
+import { isFeatureEnabled } from "@/modules/features";
 
 function formatSeconds(seconds: number): string {
   const total = Math.max(0, Math.ceil(seconds));
@@ -80,6 +81,11 @@ export const moderationLimit = createMiddleware<void>(async (middle) => {
 
   const guildId = context.guildId;
   if (!guildId) {
+    return middle.next();
+  }
+
+  const rolesFeature = await isFeatureEnabled(guildId, "roles");
+  if (!rolesFeature) {
     return middle.next();
   }
 

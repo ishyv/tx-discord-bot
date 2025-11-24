@@ -6,7 +6,7 @@ import {
   type ComponentContext,
 } from "seyfert";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
-import { deleteRule, purgeRule } from "@/modules/repo";
+import { deleteRule, purgeRule } from "@/db/repositories";
 import {
   clearDeleteSession,
   getDeleteSession,
@@ -206,3 +206,4 @@ function buildDisabledRow(slug: string) {
 
   return new ActionRow<Button>().addComponents(confirm, purge, cancel);
 }
+

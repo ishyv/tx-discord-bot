@@ -34,9 +34,11 @@ import {
   loadRulesIntoCache,
   revokeByRule,
   trackPresence,
-} from "@/modules/repo";
+} from "@/db/repositories";
 import { startTimedGrantScheduler } from "@/systems/autorole/scheduler";
+import { startAntiquityScheduler } from "@/systems/autorole/antiquity";
 import { onGuildRoleDelete } from "@/events/hooks/guildRole";
+import { isFeatureEnabled } from "@/modules/features";
 
 interface ReactionPayload {
   guildId?: string;
@@ -66,12 +68,16 @@ onBotReady(async (_user, client) => {
     client.logger?.error?.("[autorole] failed to load rules", { error });
   });
   startTimedGrantScheduler(client as UsingClient);
+  startAntiquityScheduler(client as UsingClient);
 });
 
 onMessageReactionAdd(async (payload: ReactionPayload, client: UsingClient) => {
   try {
     const guildId = payload.guildId;
     if (!guildId) return;
+
+    const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+    if (!featureEnabled) return;
 
     const userId = payload.userId;
     if (!userId) return;
@@ -154,6 +160,9 @@ onMessageReactionRemove(async (payload: ReactionPayload, client: UsingClient) =>
   try {
     const guildId = payload.guildId;
     if (!guildId) return;
+
+    const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+    if (!featureEnabled) return;
 
     const userId = payload.userId;
     if (!userId) return;
@@ -245,6 +254,10 @@ onMessageDeleteBulk(async (payload, client: UsingClient) => {
   const raw: any = payload;
   const guildId = raw.guildId ?? raw.guild_id;
   if (!guildId) return;
+
+  const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+  if (!featureEnabled) return;
+
   const ids: string[] = raw.ids ?? [];
   for (const id of ids) {
     await handleMessageStateReset(
@@ -260,6 +273,9 @@ onGuildRoleDelete(async (payload, client: UsingClient) => {
   const guildId = raw.guildId ?? raw.guild_id;
   const roleId = raw.roleId ?? raw.role_id ?? raw.role?.id;
   if (!guildId || !roleId) return;
+
+  const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+  if (!featureEnabled) return;
 
   try {
     const rules: AutoRoleRule[] = await autoRoleFetchRulesByGuild(guildId);
@@ -288,6 +304,9 @@ async function handleMessageStateReset(
   reason: string,
 ) {
   if (!guildId) return;
+
+  const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+  if (!featureEnabled) return;
 
   try {
     const cache = getGuildRules(guildId);
@@ -425,3 +444,4 @@ async function resolveMessageAuthorId(
     return null;
   }
 }
+

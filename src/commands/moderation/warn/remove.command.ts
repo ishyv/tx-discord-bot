@@ -9,7 +9,8 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { isValidWarnId } from "@/utils/warnId";
-import { listWarns, removeWarn } from "@/modules/repo";
+import { listWarns, removeWarn } from "@/db/repositories";
+import { assertFeatureEnabled } from "@/modules/features";
 
 const options = {
   user: createUserOption({
@@ -29,6 +30,19 @@ const options = {
 @Options(options)
 export default class RemoveWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
+    const guildId = ctx.guildId;
+    if (!guildId) {
+      await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
+      return;
+    }
+
+    const enabled = await assertFeatureEnabled(
+      ctx as any,
+      "warns",
+      "El sistema de warns está deshabilitado en este servidor.",
+    );
+    if (!enabled) return;
+
     const { user, warn_id } = ctx.options;
     const warnId = warn_id.toLowerCase();
 
@@ -79,3 +93,4 @@ export default class RemoveWarnCommand extends SubCommand {
     await ctx.write({ embeds: [successEmbed] });
   }
 }
+

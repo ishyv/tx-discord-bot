@@ -1,8 +1,9 @@
 import type { UsingClient } from "seyfert";
 
-import * as repo from "@/modules/repo";
+import * as repo from "@/db/repositories";
 import type { AutoRoleRule } from "@/modules/autorole/types";
-import { revokeByRule } from "@/modules/repo";
+import { revokeByRule } from "@/db/repositories";
+import { isFeatureEnabled } from "@/modules/features";
 
 const DEFAULT_INTERVAL_MS = 60_000; //  Tiempo de espera entre barridos
 
@@ -36,6 +37,11 @@ async function sweep(client: UsingClient): Promise<void> {
     const ruleCache = new Map<string, AutoRoleRule>();
 
     for (const grant of due) {
+      const enabled = await isFeatureEnabled(grant.guildId, "autoroles");
+      if (!enabled) {
+        continue;
+      }
+
       const key = `${grant.guildId}:${grant.ruleName}`;
       let rule = ruleCache.get(key);
 
@@ -84,3 +90,4 @@ async function sweep(client: UsingClient): Promise<void> {
     ticking = false;
   }
 }
+

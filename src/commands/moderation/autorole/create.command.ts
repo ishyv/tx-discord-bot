@@ -18,7 +18,7 @@ import {
   parseTrigger,
 } from "@/modules/autorole/parsers";
 import type { AutoRoleRule, AutoRoleTrigger } from "@/modules/autorole/types";
-import { createRule, refreshGuildRules } from "@/modules/repo";
+import { createRule, refreshGuildRules } from "@/db/repositories";
 
 import {
   botCanManageRole,
@@ -266,4 +266,5 @@ async function userCanManageTargetRole(
     return false;
   }
 }
+
 
