@@ -36,13 +36,12 @@ export default class ChannelListCommand extends SubCommand {
 
     const guild_channels_record = await getGuildChannels(guildId);
 
-    const coreLines = CORE_CHANNEL_DEFINITIONS.map((definition) => {
-      const entry = guild_channels_record.core[definition.name];
+    const coreLines = Object.entries(CORE_CHANNEL_DEFINITIONS).map(([name, label]) => {
+      const entry = guild_channels_record.core[name];
       if(!entry) {
-        return `**${definition.name}** (${definition.label}) -> Sin canal`;
+        return `**${name}** (${label}) -> Sin canal`;
       }
-
-      return `**${definition.name}** (${definition.label}) -> ${formatChannelMention(entry.channelId)}`;
+      return `**${name}** (${label}) -> ${formatChannelMention(entry.channelId)}`;
     }).join("\n\n");
 
     const managedEntries = Object.values(guild_channels_record.managed);

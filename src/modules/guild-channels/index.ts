@@ -76,7 +76,6 @@ export async function removeManagedChannel(
 // passthrough exports
 export {
   CORE_CHANNEL_DEFINITIONS,
-  CORE_CHANNEL_LABELS,
   type CoreChannelName,
 } from "./constants";
 

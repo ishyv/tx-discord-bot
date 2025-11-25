@@ -62,20 +62,17 @@ onVoiceStateUpdate(async (payload, client) => {
 });
 
 onChannelCreate(async (channel, client) => {
-  const guildId = channel?.guildId;
-  if (!guildId) return;
 
-  const type = channel?.type;
-  const isVoiceChannel =
-    type === ChannelType.GuildVoice || type === ChannelType.GuildStageVoice;
-  if (!isVoiceChannel) return;
+  // Solo canales de voz
+  if (!(channel.type === ChannelType.GuildVoice)) return;
+  if (!channel.isVoice()) return;
 
   const channelId = channel?.id;
   const channelName = channel?.name ?? channelId ?? "Canal de voz";
 
   await logModerationAction(
     client,
-    guildId,
+    channel.guildId,
     {
       title: "Canal de voz creado",
       description: [

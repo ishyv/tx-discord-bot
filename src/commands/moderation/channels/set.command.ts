@@ -17,15 +17,14 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import {
   CORE_CHANNEL_DEFINITIONS,
-  CORE_CHANNEL_LABELS,
   type CoreChannelName,
   setCoreChannel,
 } from "@/modules/guild-channels";
 import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
 
-const nameChoices = CORE_CHANNEL_DEFINITIONS.map((definition) => ({
-  name: `${definition.name} (${definition.label})`,
-  value: definition.name,
+const nameChoices = Object.entries(CORE_CHANNEL_DEFINITIONS).map(([name, label]) => ({
+  name: `${name} (${label})`,
+  value: name,
 }));
 
 const options = {
@@ -64,7 +63,7 @@ export default class ChannelSetCommand extends SubCommand {
 
     const embed = new Embed({
       title: "Canal actualizado",
-      description: `Se asigno <#${record.channelId}> a **${name}** (${CORE_CHANNEL_LABELS[name]})`,
+      description: `Se asigno <#${record.channelId}> a **${name}** (${CORE_CHANNEL_DEFINITIONS[name]})`,
       color: EmbedColors.Green,
     });
 
