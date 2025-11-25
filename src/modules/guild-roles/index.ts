@@ -1,3 +1,10 @@
+/**
+ * Motivación: centralizar operaciones sobre roles (index) para compartir límites y validaciones entre comandos.
+ *
+ * Idea/concepto: expone managers y rate limiters reutilizables para manipular roles sin violar restricciones de Discord.
+ *
+ * Alcance: helpers y orquestadores; no decide qué roles usar en cada flujo de negocio.
+ */
 import { roleRateLimiter } from "./rateLimiter";
 import * as repo from "@/db/repositories";
 import {

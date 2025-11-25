@@ -1,3 +1,10 @@
+/**
+ * Motivación: detectar y formatear fragmentos de código enviados por usuarios para mejorar la moderación/UX.
+ *
+ * Idea/concepto: reutiliza reglas de detección y transformaciones en un módulo autocontenido.
+ *
+ * Alcance: utilidades de detección; no ejecuta sanciones ni responde por sí mismo.
+ */
 // Módulo minimalista y rápido para detectar si un texto es código y su lenguaje,
 // normalizado a etiquetas de Markdown (```lang).
 // Estrategia: heurísticas ultra rápidas -> fallback a highlight.js con set reducido.

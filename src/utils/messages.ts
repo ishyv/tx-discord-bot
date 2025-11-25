@@ -1,3 +1,10 @@
+/**
+ * Motivación: reutilizar fragmentos y construcciones de mensajes que se repiten en las respuestas del bot.
+ *
+ * Idea/concepto: agrupa helpers puros para componer textos/embeds sin necesidad de copiar plantillas.
+ *
+ * Alcance: utilidades de presentación; no disparan efectos secundarios ni consultan datos externos.
+ */
 import type { Message, UsingClient } from "seyfert";
 
 const DEFAULT_PAGE_LIMIT = 1900; // El limite por mensaje es aprox 2000 carácteres

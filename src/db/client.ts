@@ -1,3 +1,10 @@
+/**
+ * Motivación: encapsular la creación y cierre de la conexión Mongo para reutilizarla en todo el bot.
+ *
+ * Idea/concepto: memoiza la promesa de conexión y lee configuración desde variables de entorno para evitar múltiples pools.
+ *
+ * Alcance: gestiona lifecycle de la conexión; no declara modelos ni ejecuta consultas por sí mismo.
+ */
 import mongoose from "mongoose";
 import "dotenv/config";
 

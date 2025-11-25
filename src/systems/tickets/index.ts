@@ -1,4 +1,11 @@
 /**
+ * Motivación: implementar el sistema tickets (index) para automatizar ese dominio sin duplicar lógica.
+ *
+ * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
+ *
+ * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
+ */
+/**
  * Ticket system utilities coordinate between UI components and the backing repo.
  * Centralising the constants and builders here keeps the commands/components
  * lightweight while ensuring every ticket entry point behaves consistently.

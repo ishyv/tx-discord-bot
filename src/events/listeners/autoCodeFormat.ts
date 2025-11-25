@@ -1,4 +1,11 @@
 /**
+ * Motivación: encapsular la reacción al evento "auto Code Format" para mantener la lógica en un módulo autocontenido.
+ *
+ * Idea/concepto: se suscribe a los hooks correspondientes y coordina servicios o sistemas que deben ejecutarse.
+ *
+ * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
+ */
+/**
  * Formats detected code blocks on demand.
  * We wait for a reaction so the user opts in instead of replacing messages automatically.
  */

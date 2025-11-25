@@ -1,3 +1,10 @@
+/**
+ * Motivación: registrar el comando "moderation / autorole / create" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ *
+ * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
+ *
+ * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ */
 import {
   createRoleOption,
   createStringOption,

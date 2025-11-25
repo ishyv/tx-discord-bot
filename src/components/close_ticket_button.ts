@@ -1,4 +1,11 @@
 /**
+ * Motivación: encapsular el handler de componente "close ticket button" para enrutar customId al sistema de UI sin duplicar filtros ni wiring.
+ *
+ * Idea/concepto: extiende las primitivas de Seyfert para componentes y delega en el registro de UI la resolución del callback adecuado.
+ *
+ * Alcance: filtra y despacha interacciones de este tipo; no define la lógica interna de cada componente ni su contenido visual.
+ */
+/**
  * Closes ticket channels with a short grace period so staff can trigger the flow
  * from any context.  The transcription and audit logging live in the ticket
  * system; this component just glues the interaction to those services.

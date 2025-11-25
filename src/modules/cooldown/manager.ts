@@ -1,3 +1,10 @@
+/**
+ * Motivación: gestionar cooldowns (manager) y evitar abusos en comandos o eventos sin duplicar cálculos de tiempo.
+ *
+ * Idea/concepto: define recursos y un manager que centraliza almacenamiento de enfriamientos y verificación por clave.
+ *
+ * Alcance: controla ventanas temporales; no decide sanciones ni políticas externas que se disparen al exceder límites.
+ */
 import type { AnyContext, SubCommand, UsingClient } from "seyfert";
 import { CacheFrom, type ReturnCache } from "seyfert/lib/cache";
 import { fakePromise, type PickPartial } from "seyfert/lib/common";

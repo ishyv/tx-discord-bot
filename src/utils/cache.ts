@@ -1,3 +1,10 @@
+/**
+ * Motivación: ofrecer una caché en memoria con TTL y persistencia opcional para reducir consultas repetidas dentro del bot.
+ *
+ * Idea/concepto: mantiene un mapa con expiraciones y serialización periódica a disco configurable, evitando acceder a fuentes lentas cuando no hace falta.
+ *
+ * Alcance: pensado para datos efímeros y locales; no reemplaza una base de datos ni maneja sincronización entre procesos.
+ */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 

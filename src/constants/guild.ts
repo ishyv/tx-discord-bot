@@ -1,3 +1,10 @@
+/**
+ * Motivación: centralizar constantes de guild para evitar valores mágicos dispersos en el código.
+ *
+ * Idea/concepto: agrupa configuraciones estáticas en un módulo sin estado para facilitar su reutilización y versionado.
+ *
+ * Alcance: expone valores consumidos por otros módulos; no contiene lógica ni efectos secundarios.
+ */
 export const CHANNELS_ID = {
   // General channels
   help: "916353103534632964",

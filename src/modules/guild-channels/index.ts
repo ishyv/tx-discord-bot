@@ -1,3 +1,10 @@
+/**
+ * Motivación: normalizar el manejo de canales de guild (index) para reducir wiring repetitivo.
+ *
+ * Idea/concepto: agrupa constantes y helpers para crear/consultar canales de forma segura.
+ *
+ * Alcance: utilidades para canales; no configura permisos detallados ni políticas de moderación.
+ */
 // Uses the Mongo-backed repository layer at "@/db/repositories"
 import * as repo from "@/db/repositories";
 import type {

@@ -1,4 +1,11 @@
 /**
+ * Motivación: ofrecer primitivas de interfaz (signals) para manejar el registro y ejecución de componentes interactivos.
+ *
+ * Idea/concepto: mantiene un sistema de señales/sesiones y augmentations para que los handlers de Seyfert resuelvan customIds.
+ *
+ * Alcance: organiza la infraestructura de UI; no define el contenido de cada componente ni sus reglas de negocio.
+ */
+/**
  * Lightweight signal implementation with a proxy-based facade to expose plain field access.
  * Extracted from ui.ts to keep the UI wrapper focused on orchestration logic.
  */

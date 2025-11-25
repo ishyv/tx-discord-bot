@@ -1,4 +1,15 @@
 /**
+ * Motivación: ofrecer una fábrica genérica para crear hooks tipados y así evitar
+ * que cada evento implemente su propio sistema de listeners desde cero.
+ *
+ * Idea/concepto: expone una API on/once/off/emit/clear respaldada por un Set de
+ * callbacks; devuelve funciones reutilizables que encapsulan el wiring
+ * repetitivo de registro y emisión.
+ *
+ * Alcance: construcción de hooks en memoria para eventos internos; no persiste
+ * listeners ni aplica reglas de negocio de ningún dominio concreto.
+ */
+/**
  * Utilidades genericas para crear y manipular "hooks" de eventos asincronicos.
  */
 export type Awaitable<T> = T | Promise<T>;

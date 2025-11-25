@@ -1,3 +1,10 @@
+/**
+ * Motivación: declarar y habilitar características opcionales del bot en un catálogo central.
+ *
+ * Idea/concepto: lista features consumibles por otros módulos para condicionar comportamientos.
+ *
+ * Alcance: definición estática; no ejecuta lógica de cada feature.
+ */
 import { MessageFlags } from "seyfert/lib/types";
 
 import {

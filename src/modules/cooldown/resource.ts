@@ -1,3 +1,10 @@
+/**
+ * Motivación: gestionar cooldowns (resource) y evitar abusos en comandos o eventos sin duplicar cálculos de tiempo.
+ *
+ * Idea/concepto: define recursos y un manager que centraliza almacenamiento de enfriamientos y verificación por clave.
+ *
+ * Alcance: controla ventanas temporales; no decide sanciones ni políticas externas que se disparen al exceder límites.
+ */
 import { BaseResource, type CacheFrom } from "seyfert/lib/cache";
 import type { PickPartial } from "seyfert/lib/common";
 

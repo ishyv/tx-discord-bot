@@ -1,4 +1,11 @@
 /**
+ * Motivación: aportar utilidades (cache) para construir la funcionalidad de autoroles sin duplicar parseo ni validación.
+ *
+ * Idea/concepto: define tipos, caché y validadores que consumen los sistemas y comandos de autorole.
+ *
+ * Alcance: piezas de infraestructura; no programan las reglas de asignación en sí mismas.
+ */
+/**
  * The autorole cache keeps a lightweight in-memory view of rule routing so we can
  * answer reaction events without hitting the database on every emoji.  It mirrors
  * the persistent state stored through the repo module and exposes mutators the

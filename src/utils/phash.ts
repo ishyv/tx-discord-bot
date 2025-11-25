@@ -1,3 +1,10 @@
+/**
+ * Motivación: calcular hashes perceptuales simples para comparar similitud de imágenes sin procesar píxel a píxel.
+ *
+ * Idea/concepto: reduce la imagen, la normaliza y deriva un hash binario/comprimido que permite medir distancia Hamming.
+ *
+ * Alcance: adecuado para detecciones ligeras; no reemplaza algoritmos avanzados de visión ni análisis de alto costo.
+ */
 import sharp from "sharp";
 
 // Basado en https://github.com/btd/sharp-phash

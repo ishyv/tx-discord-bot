@@ -1,3 +1,10 @@
+/**
+ * Motivación: centralizar constantes de automod para evitar valores mágicos dispersos en el código.
+ *
+ * Idea/concepto: agrupa configuraciones estáticas en un módulo sin estado para facilitar su reutilización y versionado.
+ *
+ * Alcance: expone valores consumidos por otros módulos; no contiene lógica ni efectos secundarios.
+ */
 interface IFilter {
   filter: RegExp;
   mute: boolean;

@@ -1,3 +1,10 @@
+/**
+ * Motivación: habilitar OCR local mediante PaddleOCR para extraer texto de imágenes recibidas en el bot.
+ *
+ * Idea/concepto: carga modelos ONNX y diccionarios desde disco, preprocesa la imagen con sharp y serializa las peticiones en una cola para no agotar recursos.
+ *
+ * Alcance: resuelve reconocimiento de texto; no administra descarga de modelos ni define políticas de uso del OCR.
+ */
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";

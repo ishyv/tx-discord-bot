@@ -1,4 +1,11 @@
 /**
+ * Motivación: aportar utilidades (parsers) para construir la funcionalidad de autoroles sin duplicar parseo ni validación.
+ *
+ * Idea/concepto: define tipos, caché y validadores que consumen los sistemas y comandos de autorole.
+ *
+ * Alcance: piezas de infraestructura; no programan las reglas de asignación en sí mismas.
+ */
+/**
  * All text-to-trigger parsing lives here so slash commands and importers can
  * rely on a single truth for accepted syntax.  Keeping the parsing isolated
  * avoids subtle mismatches whenever we tweak autorole semantics.

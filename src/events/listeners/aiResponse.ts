@@ -1,3 +1,10 @@
+/**
+ * Motivación: encapsular la reacción al evento "ai Response" para mantener la lógica en un módulo autocontenido.
+ *
+ * Idea/concepto: se suscribe a los hooks correspondientes y coordina servicios o sistemas que deben ejecutarse.
+ *
+ * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
+ */
 import { onMessageCreate } from "@/events/hooks/messageCreate";
 import { processMessage } from "@/services/ai";
 import { sendPaginatedMessages } from "@/utils/messages";

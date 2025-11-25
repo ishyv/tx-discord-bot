@@ -1,3 +1,10 @@
+/**
+ * Motivación: recuperar mensajes de contexto alrededor de un texto citado para alimentar respuestas contextualizadas.
+ *
+ * Idea/concepto: usa búsqueda por término y límites configurables para extraer partes relevantes del historial.
+ *
+ * Alcance: provee contexto inmediato; no intenta recuperar hilos completos ni persistencia a largo plazo.
+ */
 import type { Message } from "@/utils/userMemory";
 
 /**

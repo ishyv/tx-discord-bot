@@ -1,3 +1,10 @@
+/**
+ * Motivación: definir el modelo user en Mongoose para mantener el esquema de la colección en un único lugar.
+ *
+ * Idea/concepto: declara tipos y restricciones en el schema para mapear documentos de Mongo a la aplicación.
+ *
+ * Alcance: representa la forma de los datos; no implementa reglas de negocio ni flujos de aplicación.
+ */
 import { Schema, model, type InferSchemaType } from "mongoose";
 import type { Warn as DomainWarn } from "@/schemas/user";
 

@@ -1,3 +1,10 @@
+/**
+ * Motivación: implementar el sistema tickets (shared) para automatizar ese dominio sin duplicar lógica.
+ *
+ * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
+ *
+ * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
+ */
 import { removeOpenTicketByChannel, setPendingTickets } from "@/db/repositories";
 
 /**

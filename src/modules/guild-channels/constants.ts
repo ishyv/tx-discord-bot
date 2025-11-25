@@ -1,3 +1,10 @@
+/**
+ * Motivación: normalizar el manejo de canales de guild (constants) para reducir wiring repetitivo.
+ *
+ * Idea/concepto: agrupa constantes y helpers para crear/consultar canales de forma segura.
+ *
+ * Alcance: utilidades para canales; no configura permisos detallados ni políticas de moderación.
+ */
 export type CoreChannelName =
   | "messageLogs"
   | "voiceLogs"
@@ -8,7 +15,8 @@ export type CoreChannelName =
   | "generalLogs"
   | "banSanctions"
   | "staff"
-  | "suggestions";
+  | "suggestions"
+  | "repRequests";
 
 
 export interface CoreChannelDefinition {
@@ -60,6 +68,10 @@ export const CORE_CHANNEL_DEFINITIONS: readonly CoreChannelDefinition[] = [
   {
     name: "suggestions",
     label: "Sugerencias",
+  },
+  {
+    name: "repRequests",
+    label: "Solicitudes de Reputación",
   },
 ] as const;
 

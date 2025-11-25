@@ -1,4 +1,11 @@
 /**
+ * Motivación: definir el contrato de datos autorole para asegurar que el resto del código consuma estructuras consistentes.
+ *
+ * Idea/concepto: usa tipos/interfaces para describir campos esperados y su intención en el dominio.
+ *
+ * Alcance: solo declara formas de datos; no valida en tiempo de ejecución ni persiste información.
+ */
+/**
  * Autorole schema (type-only). These definitions mirror the persisted shapes
  * used by the Mongo repositories so business logic can stay typed without
  * depending on Postgres/Drizzle.

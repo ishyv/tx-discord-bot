@@ -1,3 +1,10 @@
+/**
+ * Motivación: mantener un historial corto por usuario para dar contexto a respuestas de IA sin depender de almacenamiento externo.
+ *
+ * Idea/concepto: usa un Map en memoria con listas de mensajes y operaciones de append/trim que actúan como buffer.
+ *
+ * Alcance: limitado a memoria del proceso y a conversaciones recientes; no es un almacenamiento duradero ni distribuido.
+ */
 export interface Message {
   role: string;
   content: string;

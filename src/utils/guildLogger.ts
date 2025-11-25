@@ -1,3 +1,10 @@
+/**
+ * Motivación: centralizar el logging de acciones en servidores para evitar repetición de configuración de canales y embeds.
+ *
+ * Idea/concepto: inicializa canales de log y expone métodos de alto nivel para distintos tipos de eventos (moderación, voz, invitaciones).
+ *
+ * Alcance: capa de orquestación de logs; no define reglas de negocio ni decide qué eventos se generan.
+ */
 import { Embed, type UsingClient } from "seyfert";
 import type { ColorResolvable } from "seyfert/lib/common";
 import type { APIEmbedField } from "seyfert/lib/types";

@@ -1,3 +1,10 @@
+/**
+ * Motivación: convertir entre milisegundos y formatos legibles para mostrar duraciones en mensajes del bot.
+ *
+ * Idea/concepto: mapea unidades de tiempo a sus valores en ms y compone/parsea cadenas de manera determinista.
+ *
+ * Alcance: pensado para duraciones humanas; no cubre calendarios complejos ni zonas horarias.
+ */
 const timeUnits: Record<string, number> = {
   ms: 1,
   millisecond: 1,

@@ -1,4 +1,11 @@
 /**
+ * Motivación: generar y validar identificadores cortos para warns que el staff pueda comunicar sin fricción.
+ *
+ * Idea/concepto: usa slugs Crockford base32 de longitud fija para balancear legibilidad y baja probabilidad de colisión.
+ *
+ * Alcance: solo cubre la creación y validación de IDs; no administra la persistencia de warns ni su ciclo de vida.
+ */
+/**
  * Warn identifiers are intentionally short and human-friendly so staff can quote
  * them in moderation flows without copy/paste.  This module centralises that slug
  * generation/validation logic to keep the format consistent everywhere.

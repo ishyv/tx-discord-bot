@@ -1,3 +1,10 @@
+/**
+ * Motivación: encapsular las llamadas a Google Gemini y la gestión de memoria contextual para respuestas de IA.
+ *
+ * Idea/concepto: construye prompts combinando mensajes previos, aplica configuraciones de seguridad y persiste memoria volátil por usuario.
+ *
+ * Alcance: produce texto (o imágenes) a partir de la API; no decide flujos de negocio que consumen la respuesta.
+ */
 import {
   type Content,
   type GenerateContentParameters,

@@ -1,3 +1,10 @@
+/**
+ * Motivación: extender tipos de seyfert augmentations para que el código del bot tenga autocompletado y chequeos consistentes.
+ *
+ * Idea/concepto: usa declaraciones de fusión/augmentations para agregar contratos a librerías externas.
+ *
+ * Alcance: solo afecta al tipado; no genera código en tiempo de ejecución.
+ */
 import type { ComponentContext } from "seyfert";
 import type {
   StringSelectMenu,

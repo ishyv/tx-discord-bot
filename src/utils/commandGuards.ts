@@ -1,3 +1,10 @@
+/**
+ * Motivación: agrupar validaciones comunes antes de ejecutar comandos (permisos, canales, configuraciones).
+ *
+ * Idea/concepto: helpers que revisan precondiciones y devuelven respuestas tempranas estándar cuando algo no está habilitado.
+ *
+ * Alcance: verificaciones previas; no ejecutan la lógica del comando ni manipulan estado por sí mismas.
+ */
 
 import type { InteractionGuildMember } from "seyfert";
 import { resolveRoleActionPermission } from "@/modules/guild-roles";

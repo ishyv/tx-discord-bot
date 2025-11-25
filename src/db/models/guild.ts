@@ -1,4 +1,11 @@
-import { Schema, model, type InferSchemaType } from "mongoose";
+/**
+ * Motivación: definir el modelo guild en Mongoose para mantener el esquema de la colección en un único lugar.
+ *
+ * Idea/concepto: declara tipos y restricciones en el schema para mapear documentos de Mongo a la aplicación.
+ *
+ * Alcance: representa la forma de los datos; no implementa reglas de negocio ni flujos de aplicación.
+ */
+import { Schema, model } from "mongoose";
 import type {
   GuildChannelsRecord,
   GuildRolesRecord,
@@ -14,7 +21,7 @@ const EMPTY_CHANNELS: GuildChannelsRecord = {
   ticketHelperRoles: [],
 } as any as GuildChannelsRecord;
 
-const GuildSchema = new Schema(
+export const GuildSchema = new Schema(
   {
     _id: { type: String, required: true }, // Discord guildId
     roles: {
@@ -33,6 +40,15 @@ const GuildSchema = new Schema(
       type: Schema.Types.Mixed,
       default: () => ({ ...DEFAULT_GUILD_FEATURES }),
     },
+    reputation: {
+      type: new Schema(
+        {
+          keywords: { type: [String], default: [] },
+        },
+        { _id: false },
+      ),
+      default: () => ({ keywords: [] }),
+    },
   },
   {
     collection: "guilds",
@@ -50,11 +66,16 @@ GuildSchema.virtual("id").get(function virtualId(this: { _id: string }) {
 // Sanity index for quick lookups by guildId (also the _id).
 GuildSchema.index({ _id: 1 });
 
-export type GuildDoc = InferSchemaType<typeof GuildSchema> & {
+export interface GuildDoc {
+  _id: string;
   id: string;
   roles: GuildRolesRecord;
   channels: GuildChannelsRecord;
   features: GuildFeaturesRecord;
-};
+  reputation: { keywords: string[] };
+  pendingTickets: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export const GuildModel = model<GuildDoc>("Guild", GuildSchema);

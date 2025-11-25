@@ -1,3 +1,10 @@
+/**
+ * Motivación: cargar automáticamente todos los eventos base del bot sin hacerlo archivo por archivo.
+ *
+ * Idea/concepto: recorre el directorio y requiere dinámicamente cada módulo que exporta createEvent.
+ *
+ * Alcance: solo registra eventos; no contiene la lógica de los listeners.
+ */
 import { readdirSync, statSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 

@@ -1,3 +1,10 @@
+/**
+ * Motivación: encapsular la generación de logs de moderación para mantener formato y destinos consistentes.
+ *
+ * Idea/concepto: construye embeds y mensajes estándar a partir de acciones disciplinarias y delega el envío a GuildLogger.
+ *
+ * Alcance: solo da forma a los logs de moderación; no decide sanciones ni gestiona permisos.
+ */
 import { Embed } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import type { UsingClient } from "seyfert";
@@ -13,7 +20,11 @@ export interface ModerationLogPayload {
   footer?: string;
 }
 
-export type ModerationLogChannel = "generalLogs" | "messageLogs" | "pointsLog";
+export type ModerationLogChannel =
+  | "generalLogs"
+  | "messageLogs"
+  | "pointsLog"
+  | "voiceLogs";
 
 /**
  * Centralized logger for moderation actions. Logs to console and, when

@@ -1,4 +1,11 @@
 /**
+ * Motivación: normalizar documentos existentes en Mongo para que respeten los valores por defecto y tipos definidos en los esquemas.
+ *
+ * Idea/concepto: inspecciona cada schema de Mongoose, construye pipelines de updateMany y corrige colecciones sin mantener listas manuales de campos.
+ *
+ * Alcance: se ejecuta en el arranque para sanear datos; no sustituye migraciones estructurales ni manipula la lógica del dominio.
+ */
+/**
  * fixDb: startup normalization for Mongo documents.
  *
  * The goal is to align stored documents with the shapes implied by our Mongoose

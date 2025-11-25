@@ -1,3 +1,10 @@
+/**
+ * Motivación: punto de arranque del bot para inicializar contexto, middlewares y registrar comandos/eventos de Seyfert.
+ *
+ * Idea/concepto: prepara el cliente de Seyfert con extensiones propias (cooldowns, loggers) y carga automática de eventos/listeners antes de iniciar.
+ *
+ * Alcance: orquesta el bootstrap y la subida de comandos; no contiene reglas de negocio ni lógica de cada feature individual.
+ */
 import "@/modules/ui/seyfert-augmentations"; // ! Augmentations must be imported first to take effect
 
 import "module-alias/register";

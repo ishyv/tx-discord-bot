@@ -1,4 +1,11 @@
 /**
+ * Motivación: aportar utilidades (types) para construir la funcionalidad de autoroles sin duplicar parseo ni validación.
+ *
+ * Idea/concepto: define tipos, caché y validadores que consumen los sistemas y comandos de autorole.
+ *
+ * Alcance: piezas de infraestructura; no programan las reglas de asignación en sí mismas.
+ */
+/**
  * This module codifies the shapes used by the autorole system so the rest of the
  * codebase can exchange typed data instead of loose records.  Treat it as the
  * contract between database rows, runtime caches, and the command surface.

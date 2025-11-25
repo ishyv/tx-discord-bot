@@ -1,4 +1,11 @@
 /**
+ * Motivación: encapsular la reacción al evento "autorole" para mantener la lógica en un módulo autocontenido.
+ *
+ * Idea/concepto: se suscribe a los hooks correspondientes y coordina servicios o sistemas que deben ejecutarse.
+ *
+ * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
+ */
+/**
  * Autorole listeners translate raw Discord events into repository updates and
  * scheduler operations.  The heavy lifting lives elsewhere; this layer focuses on
  * wiring payloads into the right helpers and applying guardrails around them.

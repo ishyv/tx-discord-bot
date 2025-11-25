@@ -1,3 +1,10 @@
+/**
+ * Motivación: ofrecer primitivas de interfaz (sessions) para manejar el registro y ejecución de componentes interactivos.
+ *
+ * Idea/concepto: mantiene un sistema de señales/sesiones y augmentations para que los handlers de Seyfert resuelvan customIds.
+ *
+ * Alcance: organiza la infraestructura de UI; no define el contenido de cada componente ni sus reglas de negocio.
+ */
 /** Minutes a callback remains available before being reclaimed. */
 export const TIME_TO_LIVE = 5;
 /** Sweep cadence (ms). */

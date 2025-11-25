@@ -1,3 +1,10 @@
+/**
+ * Motivación: concentrar operaciones de acceso a datos de guilds en una API reutilizable.
+ *
+ * Idea/concepto: envuelve modelos y consultas en funciones claras para que el resto del código no conozca detalles de persistencia.
+ *
+ * Alcance: provee CRUD y helpers de datos; no define reglas de negocio ni validaciones complejas.
+ */
 import { connectMongo } from "../client";
 import { GuildModel, type GuildDoc } from "../models/guild";
 import type {
@@ -70,6 +77,7 @@ export async function ensureGuild(id: string): Promise<GuildDoc> {
         channels: deepClone(EMPTY_CHANNELS),
         pendingTickets: [],
         features: { ...DEFAULT_GUILD_FEATURES },
+        reputation: { keywords: [] },
       },
     },
     { upsert: true, new: true, lean: true },
@@ -117,6 +125,22 @@ export async function deleteGuild(id: string): Promise<boolean> {
   await connectMongo();
   const res = await GuildModel.deleteOne({ _id: id });
   return (res.deletedCount ?? 0) > 0;
+}
+
+/**
+ * Update guild fields.
+ */
+export async function updateGuild(
+  id: string,
+  update: Partial<GuildDoc>,
+): Promise<GuildDoc | null> {
+  await connectMongo();
+  const doc = await GuildModel.findOneAndUpdate(
+    { _id: id },
+    { $set: { ...update, updatedAt: new Date() } },
+    { new: true, lean: true },
+  );
+  return toGuild(doc);
 }
 
 /**

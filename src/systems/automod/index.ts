@@ -1,3 +1,10 @@
+/**
+ * Motivación: implementar el sistema automod (index) para automatizar ese dominio sin duplicar lógica.
+ *
+ * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
+ *
+ * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
+ */
 import type { Message, UsingClient } from "seyfert";
 import { scamFilterList, spamFilterList } from "@/constants/automod";
 import { getGuildChannels } from "@/modules/guild-channels";

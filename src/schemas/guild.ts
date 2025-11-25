@@ -1,3 +1,10 @@
+/**
+ * Motivación: definir el contrato de datos guild para asegurar que el resto del código consuma estructuras consistentes.
+ *
+ * Idea/concepto: usa tipos/interfaces para describir campos esperados y su intención en el dominio.
+ *
+ * Alcance: solo declara formas de datos; no valida en tiempo de ejecución ni persiste información.
+ */
 import type { CoreChannelName } from "@/modules/guild-channels/constants";
 
 /** Identifier for a capability we expose to managed roles. */
@@ -61,7 +68,8 @@ export type GuildFeatureFlag =
   | "autoroles"
   | "warns"
   | "roles"
-  | "reputation";
+  | "reputation"
+  | "reputationDetection";
 
 export type GuildFeaturesRecord = Partial<Record<GuildFeatureFlag, boolean>>;
 
@@ -73,6 +81,7 @@ export const DEFAULT_GUILD_FEATURES: Readonly<Record<GuildFeatureFlag, boolean>>
     warns: true,
     roles: true,
     reputation: true,
+    reputationDetection: true,
   });
 
 export interface Guild {
@@ -81,6 +90,9 @@ export interface Guild {
   channels: GuildChannelsRecord;
   pendingTickets: string[];
   features: GuildFeaturesRecord;
+  reputation: {
+    keywords: string[];
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }

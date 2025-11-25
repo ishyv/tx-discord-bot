@@ -1,3 +1,10 @@
+/**
+ * Motivación: compartir utilidades específicas de la capa de datos sin replicarlas en cada repositorio.
+ *
+ * Idea/concepto: funciones puras que ayudan a manipular documentos, defaults o clones en operaciones de base de datos.
+ *
+ * Alcance: soporte complementario; no abre conexiones ni realiza queries por su cuenta.
+ */
 type StructuredCloneFn = <T>(value: T) => T;
 const nativeStructuredClone =
   typeof (globalThis as { structuredClone?: StructuredCloneFn }).structuredClone ===

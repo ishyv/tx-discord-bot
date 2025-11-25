@@ -1,3 +1,10 @@
+/**
+ * Motivación: exponer un punto de entrada único para la capa de datos del bot.
+ *
+ * Idea/concepto: reexporta modelos, repositorios y utilidades para simplificar las importaciones.
+ *
+ * Alcance: fachada de la capa de persistencia; no agrega lógica adicional.
+ */
 // Mongo backend wiring lives here. Import this module when you want to switch
 // the data layer to MongoDB without touching business logic.
 
