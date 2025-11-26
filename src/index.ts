@@ -17,8 +17,8 @@ import { GuildLogger } from "@/utils/guildLogger";
 import { fixDb } from "@/db/fixDb";
 import { middlewares } from "./middlewares";
 
-import "./events"; // ! Cargar eventos base (messageCreate, reactions, etc.)
-import "./events/listeners"; // ! Cargar listeners de eventos
+import "./events/handlers"; // ! Cargar manejadores de eventos base (messageCreate, reactions, etc.) se encarga de emitir eventos a los listeners
+import "./events/listeners"; // ! Cargar listeners de eventos, se encarga de que los listeners se registren en sus respectivos eventos
 
 const context = extendContext((interaction) => ({
   getGuildLogger: async (): Promise<GuildLogger> => {
@@ -55,7 +55,7 @@ declare module "seyfert" {
   interface Client<Ready extends boolean = boolean> {
     cooldown: CooldownManager;
   }
-  interface ExtendContext extends ReturnType<typeof context> {}
+  interface ExtendContext extends ReturnType<typeof context> { }
   interface RegisteredMiddlewares
-    extends ParseMiddlewares<typeof middlewares> {}
+    extends ParseMiddlewares<typeof middlewares> { }
 }

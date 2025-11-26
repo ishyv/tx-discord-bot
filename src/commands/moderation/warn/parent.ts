@@ -10,6 +10,7 @@ import { AutoLoad, Command, Declare } from "seyfert";
 @Declare({
   name: "warn",
   description: "Manejar los warns de los usuarios",
+  defaultMemberPermissions: ["KickMembers"]
 })
 @AutoLoad()
-export default class WarnParent extends Command {}
+export default class WarnParent extends Command { }

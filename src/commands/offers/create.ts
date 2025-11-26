@@ -28,8 +28,16 @@ export default class OfferCreateCommand extends SubCommand {
       return;
     }
 
-    const existing = await assertNoActiveOffer(ctx.guildId, ctx.author.id);
-    if (existing) {
+    const existingResult = await assertNoActiveOffer(ctx.guildId, ctx.author.id);
+    if (existingResult.isErr()) {
+      await ctx.write({
+        content: "Error verificando ofertas activas.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (existingResult.unwrap()) {
       await ctx.write({
         content:
           "Ya tienes una oferta activa en revisión o con cambios pendientes. Usa `/oferta editar` o `/oferta retirar` antes de crear una nueva.",
@@ -64,61 +72,64 @@ export default class OfferCreateCommand extends SubCommand {
       },
       fields: fieldDefs,
       onSubmit: async ({ data, embed }) => {
-        try {
-          const title = data.title.trim();
-          const description = data.description.trim();
-          if (!title || description.length < 8) {
-            await ctx.followup?.({
-              content: "Necesitas un título y una descripción de al menos 8 caracteres.",
-              flags: MessageFlags.Ephemeral,
-            });
-            return;
-          }
-
-          const get = (key: string): string | null =>
-            data.fields.find((f) => f.key === key)?.value?.trim() || null;
-
-          const details: OfferDetails = {
-            title,
-            description,
-            requirements: get("requirements"),
-            workMode: get("workMode"),
-            salary: get("salary"),
-            contact: get("contact"),
-            labels:
-              (get("labels") ?? "")
-                .split(/[, ]+/)
-                .map((entry) => entry.trim())
-                .filter(Boolean) ?? [],
-                
-            location: get("location"),
-          };
-
-          await createOfferForReview(ctx.client, {
-            guildId: ctx.guildId!,
-            authorId: ctx.author.id,
-            details,
-            authorTag: ctx.author.username,
-            authorAvatar: ctx.author.avatarURL(),
-            userEmbed: embed,
-          });
-
+        const title = data.title.trim();
+        const description = data.description.trim();
+        if (!title || description.length < 8) {
           await ctx.followup?.({
-            content: "Oferta enviada al canal de revisión.",
+            content: "Necesitas un título y una descripción de al menos 8 caracteres.",
             flags: MessageFlags.Ephemeral,
           });
-        } catch (error) {
+          return;
+        }
+
+        const get = (key: string): string | null =>
+          data.fields.find((f) => f.key === key)?.value?.trim() || null;
+
+        const details: OfferDetails = {
+          title,
+          description,
+          requirements: get("requirements"),
+          workMode: get("workMode"),
+          salary: get("salary"),
+          contact: get("contact"),
+          labels:
+            (get("labels") ?? "")
+              .split(/[, ]+/)
+              .map((entry) => entry.trim())
+              .filter(Boolean) ?? [],
+
+          location: get("location"),
+        };
+
+        const result = await createOfferForReview(ctx.client, {
+          guildId: ctx.guildId!,
+          authorId: ctx.author.id,
+          details,
+          authorTag: ctx.author.username,
+          authorAvatar: ctx.author.avatarURL(),
+          userEmbed: embed,
+        });
+
+        if (result.isErr()) {
+          const error = result.error;
           const message = error instanceof Error ? error.message : "Error desconocido creando la oferta.";
+
           await ctx.followup?.({
             content:
               message === "OFFERS_REVIEW_CHANNEL_MISSING"
                 ? "No hay un canal de revisión configurado."
                 : message === "ACTIVE_OFFER_EXISTS"
                   ? "Ya tienes una oferta activa en revisión o con cambios pendientes."
-                : `No se pudo crear la oferta: ${message}`,
+                  : `No se pudo crear la oferta: ${message}`,
             flags: MessageFlags.Ephemeral,
           });
+          return;
         }
+
+        await ctx.followup?.({
+          content: "Oferta enviada al canal de revisión.",
+          flags: MessageFlags.Ephemeral,
+        });
       },
     });
   }

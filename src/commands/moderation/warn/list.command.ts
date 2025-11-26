@@ -23,6 +23,7 @@ const options = {
 @Declare({
   name: "list",
   description: "Ver todos los warns de un usuario",
+  defaultMemberPermissions: ["ViewAuditLog"],
 })
 @Options(options)
 export default class ListWarnCommand extends SubCommand {

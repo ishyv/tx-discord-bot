@@ -9,7 +9,7 @@ import type { Offer, OfferDetails, OfferStatus } from "@/schemas/offers";
 
 export type { Offer, OfferDetails, OfferStatus };
 
-export const OFFER_ACTIVE_STATUSES: OfferStatus[] = [
+export const ACTIVE_STATUSES: OfferStatus[] = [
   "PENDING_REVIEW",
   "CHANGES_REQUESTED",
 ];

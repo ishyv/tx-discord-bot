@@ -34,6 +34,7 @@ const options = {
 @Declare({
   name: "remove",
   description: "Remover un warn a un usuario",
+  defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
 export default class RemoveWarnCommand extends SubCommand {

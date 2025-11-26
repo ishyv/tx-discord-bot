@@ -23,7 +23,16 @@ export default class OfferWithdrawCommand extends SubCommand {
       return;
     }
 
-    const offer = await getActiveOffer(ctx.guildId, ctx.author.id);
+    const offerResult = await getActiveOffer(ctx.guildId, ctx.author.id);
+    if (offerResult.isErr()) {
+      await ctx.write({
+        content: "Error buscando ofertas activas.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const offer = offerResult.unwrap();
     if (!offer) {
       await ctx.write({
         content: "No tienes una oferta activa para retirar.",
@@ -32,7 +41,16 @@ export default class OfferWithdrawCommand extends SubCommand {
       return;
     }
 
-    const updated = await withdrawOffer(ctx.client, offer, ctx.author.id);
+    const updatedResult = await withdrawOffer(ctx.client, offer, ctx.author.id);
+    if (updatedResult.isErr()) {
+      await ctx.write({
+        content: "Error al retirar la oferta.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const updated = updatedResult.unwrap();
     if (!updated) {
       await ctx.write({
         content: "No se pudo retirar la oferta. Intenta nuevamente.",

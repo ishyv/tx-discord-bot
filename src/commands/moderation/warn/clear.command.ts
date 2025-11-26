@@ -22,6 +22,7 @@ const options = {
 @Declare({
   name: "clear",
   description: "Eliminar todos los warns de un usuario",
+  defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
 export default class ClearWarnCommand extends SubCommand {

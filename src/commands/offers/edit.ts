@@ -28,7 +28,16 @@ export default class OfferEditCommand extends SubCommand {
       return;
     }
 
-    const offer = await getActiveOffer(ctx.guildId, ctx.author.id);
+    const offerResult = await getActiveOffer(ctx.guildId, ctx.author.id);
+    if (offerResult.isErr()) {
+      await ctx.write({
+        content: "Error buscando ofertas activas.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const offer = offerResult.unwrap();
     if (!offer) {
       await ctx.write({
         content:
@@ -80,56 +89,59 @@ export default class OfferEditCommand extends SubCommand {
       },
       fields: fieldDefs,
       onSubmit: async ({ data, embed }) => {
-        try {
-          const title = data.title.trim();
-          const description = data.description.trim();
-          if (!title || description.length < 8) {
-            await ctx.followup?.({
-              content: "Necesitas un título y una descripción de al menos 8 caracteres.",
-              flags: MessageFlags.Ephemeral,
-            });
-            return;
-          }
-
-          const get = (key: string): string | null =>
-            data.fields.find((f) => f.key === key)?.value?.trim() || null;
-
-          const details: OfferDetails = {
-            title,
-            description,
-            requirements: get("requirements"),
-            workMode: get("workMode"),
-            salary: get("salary"),
-            contact: get("contact"),
-            labels:
-              (get("labels") ?? "")
-                .split(/[, ]+/)
-                .map((entry) => entry.trim())
-                .filter(Boolean) ?? [],
-            location: get("location"),
-          };
-
-          const updated = await editOfferContent(ctx.client, offer, details, embed);
-
-          if (!updated) {
-            await ctx.followup?.({
-              content: "No se pudo actualizar la oferta. Intenta nuevamente.",
-              flags: MessageFlags.Ephemeral,
-            });
-            return;
-          }
-
+        const title = data.title.trim();
+        const description = data.description.trim();
+        if (!title || description.length < 8) {
           await ctx.followup?.({
-            content: "Oferta actualizada. Volvió a estado *Pendiente de revisión*.",
+            content: "Necesitas un título y una descripción de al menos 8 caracteres.",
             flags: MessageFlags.Ephemeral,
           });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Error desconocido editando la oferta.";
+          return;
+        }
+
+        const get = (key: string): string | null =>
+          data.fields.find((f) => f.key === key)?.value?.trim() || null;
+
+        const details: OfferDetails = {
+          title,
+          description,
+          requirements: get("requirements"),
+          workMode: get("workMode"),
+          salary: get("salary"),
+          contact: get("contact"),
+          labels:
+            (get("labels") ?? "")
+              .split(/[, ]+/)
+              .map((entry) => entry.trim())
+              .filter(Boolean) ?? [],
+          location: get("location"),
+        };
+
+        const updatedResult = await editOfferContent(ctx.client, offer, details, embed);
+
+        if (updatedResult.isErr()) {
+          const message = updatedResult.error instanceof Error ? updatedResult.error.message : "Error desconocido editando la oferta.";
           await ctx.followup?.({
             content: `No se pudo editar la oferta: ${message}`,
             flags: MessageFlags.Ephemeral,
           });
+          return;
         }
+
+        const updated = updatedResult.unwrap();
+
+        if (!updated) {
+          await ctx.followup?.({
+            content: "No se pudo actualizar la oferta. Intenta nuevamente.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        await ctx.followup?.({
+          content: "Oferta actualizada. Volvió a estado *Pendiente de revisión*.",
+          flags: MessageFlags.Ephemeral,
+        });
       },
     });
   }
