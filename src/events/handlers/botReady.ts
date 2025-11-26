@@ -6,7 +6,7 @@
  * Alcance: puente entre Seyfert y el sistema de hooks; no implementa la lógica del evento en sí.
  */
 import { createEvent } from "seyfert";
-import { emitBotReady } from "./hooks/botReady";
+import { emitBotReady } from "./../hooks/botReady";
 
 /**
  * Despacha el evento `botReady` de Seyfert a todos los listeners registrados.

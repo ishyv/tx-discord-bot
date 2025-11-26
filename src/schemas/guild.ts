@@ -57,7 +57,7 @@ export interface ManagedChannelRecord {
 
 export interface GuildChannelsRecord {
   core: Record<CoreChannelName, CoreChannelRecord | null>;
-  managed: Record<string, ManagedChannelRecord>;
+  managed: Record<string, ManagedChannelRecord>; // key=channel alias
   ticketMessageId?: string | null;
   ticketHelperRoles: string[];
 }

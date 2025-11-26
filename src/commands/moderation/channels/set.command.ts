@@ -18,9 +18,10 @@ import { EmbedColors } from "seyfert/lib/common";
 import {
   CORE_CHANNEL_DEFINITIONS,
   type CoreChannelName,
+  removeInvalidChannels,
   setCoreChannel,
 } from "@/modules/guild-channels";
-import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
+import { requireGuildId } from "@/utils/commandGuards";
 
 const nameChoices = Object.entries(CORE_CHANNEL_DEFINITIONS).map(([name, label]) => ({
   name: `${name} (${label})`,
@@ -43,6 +44,8 @@ const options = {
 @Declare({
   name: "set",
   description: "Actualizar uno de los canales requeridos",
+  defaultMemberPermissions: ["ManageChannels"],
+  contexts: ["Guild"],
 })
 @Options(options)
 export default class ChannelSetCommand extends SubCommand {
@@ -50,11 +53,8 @@ export default class ChannelSetCommand extends SubCommand {
     const guildId = await requireGuildId(ctx);
     if (!guildId) return;
 
-    const allowed = await requireGuildPermission(ctx, {
-      guildId,
-      permissions: ["ManageChannels"],
-    });
-    if (!allowed) return;
+    // Remueve los canales invalidos antes de proceder.
+    await removeInvalidChannels(guildId, ctx.client);
 
     const name = ctx.options.name as CoreChannelName;
     const channelId = String(ctx.options.channel.id);

@@ -14,8 +14,8 @@ import {
   createStringOption,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import { removeManagedChannel } from "@/modules/guild-channels";
-import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
+import { removeInvalidChannels, removeManagedChannel } from "@/modules/guild-channels";
+import { requireGuildId } from "@/utils/commandGuards";
 
 const options = {
   id: createStringOption({
@@ -28,6 +28,8 @@ const options = {
 @Declare({
   name: "remove",
   description: "Eliminar un canal opcional",
+  defaultMemberPermissions: ["ManageChannels"],
+  contexts: ["Guild"],
 })
 @Options(options)
 export default class ChannelRemoveCommand extends SubCommand {
@@ -35,17 +37,14 @@ export default class ChannelRemoveCommand extends SubCommand {
     const guildId = await requireGuildId(ctx);
     if (!guildId) return;
 
-    const allowed = await requireGuildPermission(ctx, {
-      guildId,
-      permissions: ["ManageChannels"],
-    });
-    if (!allowed) return;
-
     const identifier = ctx.options.id.trim();
     if (!identifier) {
       await ctx.write({ content: "[!] Debes indicar un identificador valido." });
       return;
     }
+
+    // Remueve los canales invalidos antes de proceder.
+    await removeInvalidChannels(guildId, ctx.client);
 
     const removed = await removeManagedChannel(guildId, identifier);
 

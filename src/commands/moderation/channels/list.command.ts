@@ -11,8 +11,9 @@ import { EmbedColors } from "seyfert/lib/common";
 import {
   CORE_CHANNEL_DEFINITIONS,
   getGuildChannels,
+  removeInvalidChannels,
 } from "@/modules/guild-channels";
-import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
+import { requireGuildId } from "@/utils/commandGuards";
 
 function formatChannelMention(channelId: string): string {
   return channelId ? `<#${channelId}>` : "Sin canal";
@@ -22,17 +23,16 @@ function formatChannelMention(channelId: string): string {
 @Declare({
   name: "list",
   description: "Mostrar el estado de los canales configurados",
+  defaultMemberPermissions: ["ManageChannels"],
+  contexts: ["Guild"],
 })
 export default class ChannelListCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const guildId = await requireGuildId(ctx);
     if (!guildId) return;
 
-    const allowed = await requireGuildPermission(ctx, {
-      guildId,
-      permissions: ["ManageChannels"],
-    });
-    if (!allowed) return;
+    // Remueve los canales invalidos antes de proceder.
+    await removeInvalidChannels(guildId, ctx.client);    
 
     const guild_channels_record = await getGuildChannels(guildId);
 

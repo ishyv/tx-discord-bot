@@ -15,8 +15,8 @@ import {
   createStringOption,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import { addManagedChannel } from "@/modules/guild-channels";
-import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
+import { addManagedChannel, removeInvalidChannels } from "@/modules/guild-channels";
+import { requireGuildId } from "@/utils/commandGuards";
 
 const options = {
   label: createStringOption({
@@ -33,6 +33,8 @@ const options = {
 @Declare({
   name: "add",
   description: "Registrar un canal opcional",
+  defaultMemberPermissions: ["ManageChannels"],
+  contexts: ["Guild"],
 })
 @Options(options)
 export default class ChannelAddCommand extends SubCommand {
@@ -40,11 +42,8 @@ export default class ChannelAddCommand extends SubCommand {
     const guildId = await requireGuildId(ctx);
     if (!guildId) return;
 
-    const allowed = await requireGuildPermission(ctx, {
-      guildId,
-      permissions: ["ManageChannels"],
-    });
-    if (!allowed) return;
+    // Remueve los canales invalidos antes de proceder.
+    await removeInvalidChannels(guildId, ctx.client);
 
     const label = ctx.options.label;
     const channelId = String(ctx.options.channel.id);

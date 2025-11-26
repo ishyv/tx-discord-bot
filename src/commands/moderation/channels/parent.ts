@@ -11,7 +11,7 @@ import { AutoLoad, Command, Declare } from "seyfert";
 @Declare({
   name: "channels",
   description: "Gestionar los canales usados por el bot",
-  defaultMemberPermissions: ["ManageGuild"],
+  defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })

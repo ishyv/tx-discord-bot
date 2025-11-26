@@ -169,13 +169,13 @@ export async function readChannels(id: string): Promise<GuildChannelsRecord> {
  * Update the channels configuration for a guild.
  */
 export async function writeChannels(
-  id: string,
+  guildID: string,
   mutate: ChannelsMutator,
 ): Promise<GuildChannelsRecord> {
-  const current = await readChannels(id);
+  const current = await readChannels(guildID);
   const next = deepClone(mutate(current));
   const doc = await GuildModel.findOneAndUpdate(
-    { _id: id },
+    { _id: guildID },
     { $set: { channels: next, updatedAt: new Date() } },
     { new: true, lean: true },
   );
@@ -348,10 +348,10 @@ export async function updateManagedChannel(
  * Remove a managed channel.
  */
 export async function removeManagedChannel(
-  id: string,
+  guildID: string,
   identifier: string,
 ): Promise<GuildChannelsRecord> {
-  return writeChannels(id, (c) => {
+  return writeChannels(guildID, (c) => {
     const next = deepClone(c);
     const k = resolveManagedKey(next.managed ?? {}, identifier);
     if (k) delete next.managed[k];
