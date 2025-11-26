@@ -42,9 +42,13 @@ const toUser = (doc: UserDoc | null): MongoUser | null => {
     bank: Number(doc.bank ?? 0),
     cash: Number(doc.cash ?? 0),
     rep: Number(doc.rep ?? 0),
-    warns: Array.isArray(doc.warns) ? doc.warns.map((w) => ({ ...w })) : [],
+    warns: Array.isArray(doc.warns)
+      ? doc.warns.map((w: Warn) => ({ ...w }))
+      : [],
     openTickets: Array.isArray(doc.openTickets)
-      ? doc.openTickets.filter((v): v is string => typeof v === "string")
+      ? doc.openTickets.filter(
+        (v: unknown): v is string => typeof v === "string",
+      )
       : [],
   };
 };
@@ -203,7 +207,7 @@ export async function adjustUserReputation(
 
 export async function listWarns(id: string): Promise<Warn[]> {
   const u = await ensureUser(id);
-  return Array.isArray(u.warns) ? u.warns.map((w) => ({ ...w })) : [];
+  return Array.isArray(u.warns) ? u.warns.map((w: Warn) => ({ ...w })) : [];
 }
 
 export async function setWarns(id: string, warns: Warn[]): Promise<Warn[]> {
@@ -213,7 +217,7 @@ export async function setWarns(id: string, warns: Warn[]): Promise<Warn[]> {
     { $set: { warns: warns ?? [] } },
     { new: true, lean: true },
   );
-  return Array.isArray(doc?.warns) ? doc.warns.map((w) => ({ ...w })) : [];
+  return Array.isArray(doc?.warns) ? doc.warns.map((w: Warn) => ({ ...w })) : [];
 }
 
 export async function addWarn(id: string, warn: Warn): Promise<Warn[]> {
@@ -223,7 +227,7 @@ export async function addWarn(id: string, warn: Warn): Promise<Warn[]> {
     { $push: { warns: warn } },
     { new: true, lean: true },
   );
-  return Array.isArray(doc?.warns) ? doc.warns.map((w) => ({ ...w })) : [];
+  return Array.isArray(doc?.warns) ? doc.warns.map((w: Warn) => ({ ...w })) : [];
 }
 
 export async function removeWarn(
@@ -236,7 +240,7 @@ export async function removeWarn(
     { $pull: { warns: { warn_id: warnId } } },
     { new: true, lean: true },
   );
-  return Array.isArray(doc?.warns) ? doc.warns.map((w) => ({ ...w })) : [];
+  return Array.isArray(doc?.warns) ? doc.warns.map((w: Warn) => ({ ...w })) : [];
 }
 
 export async function clearWarns(id: string): Promise<Warn[]> {
@@ -246,7 +250,7 @@ export async function clearWarns(id: string): Promise<Warn[]> {
     { $set: { warns: [] } },
     { new: true, lean: true },
   );
-  return Array.isArray(doc?.warns) ? doc.warns.map((w) => ({ ...w })) : [];
+  return Array.isArray(doc?.warns) ? doc.warns.map((w: Warn) => ({ ...w })) : [];
 }
 
 export async function listOpenTickets(id: string): Promise<string[]> {
@@ -306,8 +310,8 @@ export async function removeOpenTicketByChannel(
     { _id: 1 },
   ).lean();
   const ids = owners
-    .map((o) => o._id)
-    .filter((v): v is string => typeof v === "string");
+    .map((o: { _id: unknown }) => o._id)
+    .filter((v: unknown): v is string => typeof v === "string");
 
   if (ids.length === 0) return;
   await UserModel.updateMany(

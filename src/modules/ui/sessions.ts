@@ -106,16 +106,20 @@ export class SessionRegistry {
 /** Shared registry instance. */
 export const session = new SessionRegistry();
 
-/** Thin helpers */
+/** Registers a session callback and returns its typed id.
+ * Use `getSessionCallback` to retrieve it later.
+ * */
 export const registerSessionCallback = <C, R = unknown>(
     baseId: string,
     cb: Callback<C, R>,
 ): CallbackId<C, R> => session.register(baseId, cb);
 
+/** Retrieves a session callback by its typed id. */
 export const getSessionCallback = <C, R = unknown>(
     id: CallbackId<C, R>,
 ): Callback<C, R> | undefined => session.get(id);
 
+/** Unsafe retrieval by raw string id. */
 export const getSessionCallbackUnsafe = (
     id: string,
 ): ((ctx: unknown) => Promise<unknown>) | undefined => session.getUnsafe(id);

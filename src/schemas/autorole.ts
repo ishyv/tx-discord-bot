@@ -7,8 +7,7 @@
  */
 /**
  * Autorole schema (type-only). These definitions mirror the persisted shapes
- * used by the Mongo repositories so business logic can stay typed without
- * depending on Postgres/Drizzle.
+ * used by the Mongo repositories so business logic can stay typed
  */
 
 export const autoRoleTriggerType = {

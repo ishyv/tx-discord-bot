@@ -52,10 +52,10 @@ export async function connectMongo(
         deprecationErrors: true,
       },
     })
-    .then((conn) => {
+    .then((conn: typeof mongoose) => {
       return conn;
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       connectPromise = null;
       throw err;
     });

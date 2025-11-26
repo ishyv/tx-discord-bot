@@ -25,6 +25,8 @@ export const CORE_CHANNEL_DEFINITIONS: Record<string, string> =
   "staff": "Alertas para el staff",
   "suggestions": "Sugerencias",
   "repRequests": "Solicitudes de Reputación",
+  "offersReview": "Revisión de ofertas laborales",
+  "approvedOffers": "Publicación de ofertas aprobadas",
 };
 
 

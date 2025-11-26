@@ -92,7 +92,7 @@ const resolveDefaultValue = (schemaType: SchemaType): any => {
 
 const defaultsFromSchema = (schema: Schema): Record<string, any> => {
   const defaults: Record<string, any> = {};
-  schema.eachPath((pathKey, schemaType) => {
+  schema.eachPath((pathKey: string, schemaType: SchemaType) => {
     if (pathKey === "_id" || pathKey === "__v") return;
     const def = resolveDefaultValue(schemaType);
     if (def === undefined) return;
@@ -105,7 +105,7 @@ const defaultsFromSchema = (schema: Schema): Record<string, any> => {
 const buildSetStageFromSchema = (schema: Schema): Record<string, any> => {
   const set: Record<string, any> = {};
 
-  schema.eachPath((pathKey, schemaType) => {
+  schema.eachPath((pathKey: string, schemaType: SchemaType) => {
     if (pathKey === "_id" || pathKey === "__v") return;
 
     const defaultValue = resolveDefaultValue(schemaType);
@@ -167,7 +167,6 @@ async function normalizeModel(
 
   await model.updateMany({}, pipeline, {
     strict: false,
-    updatePipeline: true,
   });
 }
 
