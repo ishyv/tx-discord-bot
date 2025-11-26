@@ -98,6 +98,7 @@ function messageHasTicketSelector(message: any): boolean {
  * Ensures that the ticket message exists in the designated channel.
  * If the message does not exist, it will be created.
  * If there are stale messages, they will be deleted.
+ * This will be called automatically on bot startup and when the ticket channel is configured via /tickets config or /channels set.
  * @param client The Discord client instance.
  */
 export async function ensureTicketMessage(client: UsingClient): Promise<void> {

@@ -15,8 +15,17 @@ onMessageCreate(async (message, client) => {
     if (message.author.bot) return;
     if (!message.guildId) return;
 
-    const featureEnabled = await isFeatureEnabled(message.guildId, "reputationDetection");
-    if (!featureEnabled) return;
+    const detectionEnabled = await isFeatureEnabled(
+        message.guildId,
+        "reputationDetection",
+    );
+    if (!detectionEnabled) return;
+
+    const reputationEnabled = await isFeatureEnabled(
+        message.guildId,
+        "reputation",
+    );
+    if (!reputationEnabled) return;
 
     const guild = await getGuild(message.guildId);
     if (!guild || !guild.reputation || !guild.reputation.keywords || guild.reputation.keywords.length === 0) {

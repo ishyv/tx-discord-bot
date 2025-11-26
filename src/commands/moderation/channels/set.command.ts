@@ -22,6 +22,8 @@ import {
   setCoreChannel,
 } from "@/modules/guild-channels";
 import { requireGuildId } from "@/utils/commandGuards";
+import { CoreChannelNames } from "@/modules/guild-channels/constants";
+import { ensureTicketMessage } from "@/systems/tickets";
 
 const nameChoices = Object.entries(CORE_CHANNEL_DEFINITIONS).map(([name, label]) => ({
   name: `${name} (${label})`,
@@ -60,6 +62,14 @@ export default class ChannelSetCommand extends SubCommand {
     const channelId = String(ctx.options.channel.id);
 
     const record = await setCoreChannel(guildId, name, channelId);
+
+    // Cuando se actualiza el canal de tickets, asegurarse de que el mensaje de tickets exista.
+    if (name === CoreChannelNames.Tickets) {
+      await ensureTicketMessage(ctx.client).catch(() => {
+        // no hacer nada si falla; el mensaje se intentará crear en el próximo reinicio o reconfiguración
+      });
+    }
+
 
     const embed = new Embed({
       title: "Canal actualizado",

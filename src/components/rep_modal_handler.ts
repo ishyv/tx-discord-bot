@@ -15,6 +15,7 @@ import { adjustUserReputation } from "@/db/repositories";
 import { syncUserReputationRoles } from "@/systems/autorole/service";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
+import { assertFeatureEnabled } from "@/modules/features";
 
 /**
  * Rehydrate the original embed so the modal response can show who reviewed the request.
@@ -53,6 +54,22 @@ export default class RepModalHandler extends ModalCommand {
         const [_, __, targetId] = ctx.customId.split(":");
         if (!targetId) return;
 
+        const guildId = ctx.guildId;
+        if (!guildId) {
+            await ctx.write({
+                content: "No se pudo determinar el servidor para procesar la solicitud.",
+                flags: MessageFlags.Ephemeral,
+            });
+            return;
+        }
+
+        const enabled = await assertFeatureEnabled(
+            ctx as any,
+            "reputation",
+            "El sistema de reputacion esta deshabilitado en este servidor.",
+        );
+        if (!enabled) return;
+
         const rawAmount = getTextInputValue(ctx, "amount") ?? "";
         const amount = parseInt(rawAmount);
 
@@ -65,7 +82,7 @@ export default class RepModalHandler extends ModalCommand {
         }
 
         const total = await adjustUserReputation(targetId, amount);
-        await syncUserReputationRoles(ctx.client, ctx.guildId!, targetId, total);
+        await syncUserReputationRoles(ctx.client, guildId, targetId, total);
 
         const embed = resolveRequestEmbed(ctx, `Revisado por ${ctx.author.username}`);
         const payload: {
@@ -86,7 +103,7 @@ export default class RepModalHandler extends ModalCommand {
 
         await ctx.editOrReply(payload);
 
-        await logModerationAction(ctx.client, ctx.guildId!, {
+        await logModerationAction(ctx.client, guildId, {
             title: "Solicitud de Reputacion Revisada (Manual)",
             description: `Se ${amount > 0 ? "agrego" : "removio"} ${Math.abs(amount)} punto(s) a <@${targetId}> via solicitud manual.`,
             fields: [

@@ -19,6 +19,7 @@ import { syncUserReputationRoles } from "@/systems/autorole/service";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { CooldownType } from "@/modules/cooldown";
+import { assertFeatureEnabled } from "@/modules/features";
 
 const PENALTY_MS = 1_800_000; // 30 minutes
 
@@ -65,6 +66,22 @@ export default class RepRequestHandler extends ComponentCommand {
     }
 
     if (!targetId) return;
+
+    const guildId = ctx.guildId;
+    if (!guildId) {
+      await ctx.write({
+        content: "No se pudo determinar el servidor para procesar la solicitud.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const enabled = await assertFeatureEnabled(
+      ctx as any,
+      "reputation",
+      "El sistema de reputacion esta deshabilitado en este servidor.",
+    );
+    if (!enabled) return;
 
     if (action === "set") {
       // Show a modal so reviewers can set a custom reputation delta.
@@ -119,7 +136,7 @@ export default class RepRequestHandler extends ComponentCommand {
     if (action === "deny") amount = -1;
 
     const total = await adjustUserReputation(targetId, amount);
-    await syncUserReputationRoles(ctx.client, ctx.guildId!, targetId, total);
+    await syncUserReputationRoles(ctx.client, guildId, targetId, total);
 
     const embed = await resolveRequestEmbed(
       ctx,
@@ -147,14 +164,14 @@ export default class RepRequestHandler extends ComponentCommand {
     } catch (error) {
       ctx.client.logger?.warn?.("[rep] failed to edit response for rep request", {
         error,
-        guildId: ctx.guildId,
+        guildId,
         messageId: ctx.interaction.message?.id,
       });
     }
 
     await logModerationAction(
       ctx.client,
-      ctx.guildId!,
+      guildId,
       {
         title: "Solicitud de Reputacion Revisada",
         description: `Se ${amount > 0 ? "agrego" : "removio"} ${Math.abs(amount)} punto(s) a <@${targetId}> via solicitud.`,

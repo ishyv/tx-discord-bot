@@ -12,6 +12,7 @@ import { AutoLoad, Command, Declare } from "seyfert";
   description: "Configurar y manajar el sistema de tickets",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
+  defaultMemberPermissions: ["ManageChannels"],
 })
 @AutoLoad()
 export default class TicketsParent extends Command {}
