@@ -11,7 +11,7 @@ import {
   type RoleCommandOverride,
   type RoleLimitRecord,
 } from "@/schemas/guild";
-import { isFeatureEnabled } from "@/modules/features";
+import { isFeatureEnabled, Features } from "@/modules/features";
 
 export type { RoleCommandOverride } from "@/schemas/guild";
 
@@ -168,7 +168,7 @@ export async function resolveRoleActionPermission({
   memberRoleIds,
   hasDiscordPermission,
 }: ResolveRoleActionPermissionInput): Promise<ResolveRoleActionPermissionResult> {
-  const rolesFeature = await isFeatureEnabled(guildId, "roles");
+  const rolesFeature = await isFeatureEnabled(guildId, Features.Roles);
   if (!rolesFeature) {
     return {
       allowed: hasDiscordPermission,
@@ -237,7 +237,7 @@ export async function consumeRoleLimits({
   actionKey,
   memberRoleIds,
 }: ConsumeRoleLimitsOptions): Promise<ConsumeLimitResult> {
-  const rolesFeature = await isFeatureEnabled(guildId, "roles");
+  const rolesFeature = await isFeatureEnabled(guildId, Features.Roles);
   if (!rolesFeature) {
     return { allowed: true, applied: [] };
   }

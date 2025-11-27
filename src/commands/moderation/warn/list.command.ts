@@ -11,7 +11,7 @@ import { EmbedColors } from "seyfert/lib/common";
 import type { Warn } from "@/schemas/user";
 import { getMemberName } from "@/utils/guild";
 import { listWarns } from "@/db/repositories";
-import { assertFeatureEnabled } from "@/modules/features";
+import { assertFeatureEnabled, Features } from "@/modules/features";
 
 const options = {
   user: createUserOption({
@@ -36,7 +36,7 @@ export default class ListWarnCommand extends SubCommand {
 
     const enabled = await assertFeatureEnabled(
       ctx as any,
-      "warns",
+      Features.Warns,
       "El sistema de warns está deshabilitado en este servidor.",
     );
     if (!enabled) return;

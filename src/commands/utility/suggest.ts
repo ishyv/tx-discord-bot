@@ -18,6 +18,7 @@ import { EmbedColors } from "seyfert/lib/common";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { CHANNELS_ID } from "@/constants/guild";
 import { getGuildChannels } from "@/modules/guild-channels";
+import { BindDisabled, Features } from "@/modules/features";
 
 const options = {
   suggest: createStringOption({
@@ -42,6 +43,7 @@ const options = {
 })
 @Middlewares(["cooldown"])
 @Options(options)
+@BindDisabled(Features.Suggest)
 export default class SuggestCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
     const { suggest } = ctx.options;
@@ -88,21 +90,28 @@ export default class SuggestCommand extends Command {
     await message.react("✅");
     await message.react("❌");
 
-    const thread = await ctx.client.messages.thread(
-      message.channelId,
-      message.id,
-      {
-        name: `Sugerencia de ${ctx.author.username}`,
-      },
-    );
+    try {
+      const thread = await ctx.client.messages.thread(
+        message.channelId,
+        message.id,
+        {
+          name: `Sugerencia de ${ctx.author.username}`,
+        },
+      );
 
-    await ctx.client.messages.write(thread.id, {
-      content: `<@${ctx.member?.user.id}>`,
-    });
+      await ctx.client.messages.write(thread.id, {
+        content: `<@${ctx.member?.user.id}>`,
+      });
 
-    await ctx.write({
-      content: "✅ Sugerencia enviada correctamente.",
-    });
+      await ctx.write({
+        content: "✅ Sugerencia enviada correctamente.",
+      });
+
+    } catch (error) {
+      ctx.editOrReply({
+        content: "⚠️ Han habido problemas al crear el hilo de la sugerencia. ",
+      });
+    }
   }
 
   onMiddlewaresError(context: CommandContext, error: string) {

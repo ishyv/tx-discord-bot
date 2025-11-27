@@ -45,7 +45,7 @@ import {
 import { startTimedGrantScheduler } from "@/systems/autorole/scheduler";
 import { startAntiquityScheduler } from "@/systems/autorole/antiquity";
 import { onGuildRoleDelete } from "@/events/hooks/guildRole";
-import { isFeatureEnabled } from "@/modules/features";
+import { isFeatureEnabled, Features } from "@/modules/features";
 
 interface ReactionPayload {
   guildId?: string;
@@ -83,7 +83,7 @@ onMessageReactionAdd(async (payload: ReactionPayload, client: UsingClient) => {
     const guildId = payload.guildId;
     if (!guildId) return;
 
-    const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+    const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
     if (!featureEnabled) return;
 
     const userId = payload.userId;
@@ -168,7 +168,7 @@ onMessageReactionRemove(async (payload: ReactionPayload, client: UsingClient) =>
     const guildId = payload.guildId;
     if (!guildId) return;
 
-    const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+    const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
     if (!featureEnabled) return;
 
     const userId = payload.userId;
@@ -262,7 +262,7 @@ onMessageDeleteBulk(async (payload, client: UsingClient) => {
   const guildId = raw.guildId ?? raw.guild_id;
   if (!guildId) return;
 
-  const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+  const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
   if (!featureEnabled) return;
 
   const ids: string[] = raw.ids ?? [];
@@ -281,7 +281,7 @@ onGuildRoleDelete(async (payload, client: UsingClient) => {
   const roleId = raw.roleId ?? raw.role_id ?? raw.role?.id;
   if (!guildId || !roleId) return;
 
-  const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+  const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
   if (!featureEnabled) return;
 
   try {
@@ -312,7 +312,7 @@ async function handleMessageStateReset(
 ) {
   if (!guildId) return;
 
-  const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+  const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
   if (!featureEnabled) return;
 
   try {

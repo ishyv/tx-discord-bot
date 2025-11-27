@@ -1,10 +1,3 @@
-/**
- * Motivación: registrar el comando "moderation / rep / config" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
- */
 import {
     createStringOption,
     Declare,
@@ -16,7 +9,7 @@ import { MessageFlags } from "seyfert/lib/types";
 import { requireRepContext } from "./shared";
 import { updateGuild } from "@/db/repositories";
 import { createBooleanOption } from "seyfert";
-import { setFeatureFlag } from "@/modules/features";
+import { setFeatureFlag, Features } from "@/modules/features";
 
 const options = {
     palabras: createStringOption({
@@ -72,7 +65,7 @@ export class RepConfigDetectionCommand extends SubCommand {
         if (!context) return;
 
         const { enabled } = ctx.options;
-        await setFeatureFlag(context.guildId, "reputationDetection", enabled);
+        await setFeatureFlag(context.guildId, Features.ReputationDetection, enabled);
 
         await ctx.write({
             content: `La deteccion automatica de reputacion ha sido **${enabled ? "habilitada" : "deshabilitada"}**.`,

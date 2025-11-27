@@ -14,7 +14,7 @@
 import { getGuildChannels } from "@/modules/guild-channels";
 import { addOpenTicket, listOpenTickets, setPendingTickets } from "@/db/repositories";
 import { Colors } from "@/modules/ui/colors";
-import { isFeatureEnabled } from "@/modules/features";
+import { isFeatureEnabled, Features } from "@/modules/features";
 import {
   ActionRow,
   Button,
@@ -105,7 +105,7 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
   const guilds = await client.guilds.list();
 
   for (const guildId of guilds.map((g) => g.id)) {
-    const ticketsEnabled = await isFeatureEnabled(guildId, "tickets");
+    const ticketsEnabled = await isFeatureEnabled(guildId, Features.Tickets);
     if (!ticketsEnabled) {
       client.logger?.info?.("[tickets] dashboard deshabilitado; no se mostrara mensaje", {
         guildId,
@@ -210,7 +210,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
           return;
         }
 
-        const ticketsEnabled = await isFeatureEnabled(guildId, "tickets");
+        const ticketsEnabled = await isFeatureEnabled(guildId, Features.Tickets);
         if (!ticketsEnabled) {
           await ctx.write({
             content:
@@ -276,7 +276,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
           .setColor(Colors.info)
           .setTitle(`Ticket - ${category.label}`)
           .setDescription(
-              "Por favor, agrega toda la informacion relevante a tu solicitud mientras esperas..."
+            "Por favor, agrega toda la informacion relevante a tu solicitud mientras esperas..."
           )
           .setFooter({
             text: `Creado por ${ctx.user?.username || "???"}`,

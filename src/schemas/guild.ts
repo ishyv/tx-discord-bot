@@ -43,8 +43,6 @@ export type GuildRolesRecord = Record<string, GuildRoleRecord>;
 
 /** Persisted shape for a required channel entry. */
 export interface CoreChannelRecord {
-  name: CoreChannelName;
-  label: string;
   channelId: string;
 }
 
@@ -62,26 +60,35 @@ export interface GuildChannelsRecord {
   ticketHelperRoles: string[];
 }
 
-export type GuildFeatureFlag =
-  | "tickets"
-  | "automod"
-  | "autoroles"
-  | "warns"
-  | "roles"
-  | "reputation"
-  | "reputationDetection";
+/**
+ * Enumeración de features configurables del servidor.
+ * Cada feature puede ser habilitada o deshabilitada a través del dashboard.
+ */
+export enum Features {
+  Tickets = "tickets",
+  Automod = "automod",
+  Autoroles = "autoroles",
+  Warns = "warns",
+  Roles = "roles",
+  Reputation = "reputation",
+  ReputationDetection = "reputationDetection",
+  Tops = "tops",
+  Suggest = "suggest",
+}
 
-export type GuildFeaturesRecord = Partial<Record<GuildFeatureFlag, boolean>>;
+export type GuildFeaturesRecord = Partial<Record<Features, boolean>>;
 
-export const DEFAULT_GUILD_FEATURES: Readonly<Record<GuildFeatureFlag, boolean>> =
+export const DEFAULT_GUILD_FEATURES: Readonly<Record<Features, boolean>> =
   Object.freeze({
-    tickets: true,
-    automod: true,
-    autoroles: true,
-    warns: true,
-    roles: true,
-    reputation: true,
-    reputationDetection: true,
+    [Features.Tickets]: true,
+    [Features.Automod]: true,
+    [Features.Autoroles]: true,
+    [Features.Warns]: true,
+    [Features.Roles]: true,
+    [Features.Reputation]: true,
+    [Features.ReputationDetection]: true,
+    [Features.Tops]: true,
+    [Features.Suggest]: true,
   });
 
 export interface Guild {

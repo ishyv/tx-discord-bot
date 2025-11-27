@@ -9,7 +9,7 @@ import { MessageFlags } from "seyfert/lib/types";
 
 import {
   DEFAULT_GUILD_FEATURES,
-  type GuildFeatureFlag,
+  Features,
   type GuildFeaturesRecord,
 } from "@/schemas/guild";
 import {
@@ -45,9 +45,10 @@ function getCached(guildId: string): GuildFeaturesRecord | null {
   return entry.features;
 }
 
-export const GUILD_FEATURES: readonly GuildFeatureFlag[] = Object.keys(
-  DEFAULT_GUILD_FEATURES,
-) as GuildFeatureFlag[];
+export { Features };
+export { BindDisabled } from "./decorator";
+
+export const GUILD_FEATURES: readonly Features[] = Object.values(Features);
 
 export async function getFeatureFlags(
   guildId: string,
@@ -61,7 +62,7 @@ export async function getFeatureFlags(
 
 export async function isFeatureEnabled(
   guildId: string,
-  feature: GuildFeatureFlag,
+  feature: Features,
 ): Promise<boolean> {
   const features = await getFeatureFlags(guildId);
   const value = features[feature];
@@ -70,7 +71,7 @@ export async function isFeatureEnabled(
 
 export async function setFeatureFlag(
   guildId: string,
-  feature: GuildFeatureFlag,
+  feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
   const updated = await repoSetFeature(guildId, feature, enabled);
@@ -95,10 +96,12 @@ type WritableContext = {
 /**
  * Ensures a guild feature is enabled for the current context. When disabled,
  * sends an ephemeral notice and returns false so callers can bail out early.
+ * 
+ * @deprecated Use @BindDisabled decorator instead for commands.
  */
 export async function assertFeatureEnabled(
   ctx: WritableContext,
-  feature: GuildFeatureFlag,
+  feature: Features,
   message?: string,
 ): Promise<boolean> {
   const guildId = ctx.guildId ?? undefined;

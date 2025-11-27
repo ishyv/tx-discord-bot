@@ -11,7 +11,7 @@ import {
   autoRoleFetchRulesByGuild,
 } from "@/db/repositories";
 import { syncUserAntiquityRoles } from "./service";
-import { isFeatureEnabled } from "@/modules/features";
+import { isFeatureEnabled, Features } from "@/modules/features";
 
 const INTERVAL = 21600000; // 6 hours
 
@@ -44,7 +44,7 @@ export async function runAntiquityChecks(
     const guildsToCheck = new Map<string, string[]>(); // guildId -> rule names
 
     if (guildId) {
-      const featureEnabled = await isFeatureEnabled(guildId, "autoroles");
+      const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
       if (!featureEnabled) return;
 
       const rules = await autoRoleFetchRulesByGuild(guildId);
@@ -68,7 +68,7 @@ export async function runAntiquityChecks(
 
     for (const [gid] of guildsToCheck) {
       try {
-        const featureEnabled = await isFeatureEnabled(gid, "autoroles");
+        const featureEnabled = await isFeatureEnabled(gid, Features.Autoroles);
         if (!featureEnabled) continue;
 
         const members = await client.members.list(gid);

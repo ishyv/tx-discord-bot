@@ -126,25 +126,29 @@ export async function updateTopConfig(
     typeof patch.intervalMs === "number" && Number.isFinite(patch.intervalMs)
       ? Math.max(1, Math.trunc(patch.intervalMs))
       : undefined;
+
   const safeSize =
     typeof patch.topSize === "number" && Number.isFinite(patch.topSize)
       ? Math.max(1, Math.trunc(patch.topSize))
       : undefined;
 
-  const update: Record<string, unknown> = {};
+  const set: Record<string, unknown> = {
+    guildId,
+    updatedAt: new Date(),
+  };
   if (patch.channelId !== undefined) {
-    update.channelId =
+    set.channelId =
       typeof patch.channelId === "string" && patch.channelId.length > 0
         ? patch.channelId
         : null;
   }
   if (safeInterval !== undefined) {
-    update.intervalMs = safeInterval;
+    set.intervalMs = safeInterval;
   }
   if (safeSize !== undefined) {
-    update.topSize = safeSize;
+    set.topSize = safeSize;
   }
-  if (Object.keys(update).length === 0) {
+  if (Object.keys(set).length === 0) {
     return getTopWindow(guildId);
   }
 
@@ -152,12 +156,10 @@ export async function updateTopConfig(
   const doc = await TopWindowModel.findOneAndUpdate(
     { _id: guildId },
     {
-      $set: { ...update, guildId, updatedAt: new Date() },
+      $set: set,
       $setOnInsert: {
         windowStartedAt: new Date(),
         lastReportAt: null,
-        intervalMs: TOP_DEFAULTS.intervalMs,
-        topSize: TOP_DEFAULTS.topSize,
         emojiCounts: {},
         channelCounts: {},
         reputationDeltas: {},

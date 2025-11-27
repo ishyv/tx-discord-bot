@@ -15,7 +15,7 @@ import { adjustUserReputation } from "@/db/repositories";
 import { syncUserReputationRoles } from "@/systems/autorole/service";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
-import { assertFeatureEnabled } from "@/modules/features";
+import { assertFeatureEnabled, Features } from "@/modules/features";
 import { recordReputationChange } from "@/systems/tops";
 
 /**
@@ -66,7 +66,7 @@ export default class RepModalHandler extends ModalCommand {
 
         const enabled = await assertFeatureEnabled(
             ctx as any,
-            "reputation",
+            Features.Reputation,
             "El sistema de reputacion esta deshabilitado en este servidor.",
         );
         if (!enabled) return;

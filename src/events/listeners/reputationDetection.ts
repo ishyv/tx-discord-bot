@@ -9,7 +9,7 @@ import { onMessageCreate } from "@/events/hooks/messageCreate";
 import { getGuild } from "@/db/repositories";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { sendReputationRequest } from "../../commands/moderation/rep/shared";
-import { isFeatureEnabled } from "@/modules/features";
+import { isFeatureEnabled, Features } from "@/modules/features";
 
 onMessageCreate(async (message, client) => {
     if (message.author.bot) return;
@@ -17,7 +17,7 @@ onMessageCreate(async (message, client) => {
 
     const detectionEnabled = await isFeatureEnabled(
         message.guildId,
-        "reputationDetection",
+        Features.ReputationDetection,
     );
     if (!detectionEnabled) return;
 

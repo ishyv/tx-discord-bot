@@ -63,9 +63,6 @@ GuildSchema.virtual("id").get(function virtualId(this: { _id: string }) {
   return this._id;
 });
 
-// Sanity index for quick lookups by guildId (also the _id).
-GuildSchema.index({ _id: 1 });
-
 export interface GuildDoc {
   _id: string;
   id: string;

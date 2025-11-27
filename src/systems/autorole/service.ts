@@ -9,7 +9,7 @@ import type { UsingClient } from "seyfert";
 
 import { getGuildRules } from "@/modules/autorole/cache";
 import { grantByRule, revokeByRule } from "@/db/repositories";
-import { isFeatureEnabled } from "@/modules/features";
+import { isFeatureEnabled, Features } from "@/modules/features";
 
 const REP_REASON = (ruleName: string) =>
   `autorole:${ruleName}:rep_threshold`;
@@ -23,7 +23,7 @@ export async function syncUserReputationRoles(
   userId: string,
   rep: number,
 ): Promise<void> {
-  const enabled = await isFeatureEnabled(guildId, "autoroles");
+  const enabled = await isFeatureEnabled(guildId, Features.Autoroles);
   if (!enabled) return;
 
   const cache = getGuildRules(guildId);
@@ -57,7 +57,7 @@ export async function syncUserAntiquityRoles(
   guildId: string,
   member: { id: string; joinedAt?: string | Date | null },
 ): Promise<void> {
-  const enabled = await isFeatureEnabled(guildId, "autoroles");
+  const enabled = await isFeatureEnabled(guildId, Features.Autoroles);
   if (!enabled) return;
 
   const cache = getGuildRules(guildId);

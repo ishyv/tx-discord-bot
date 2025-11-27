@@ -19,7 +19,7 @@ import { syncUserReputationRoles } from "@/systems/autorole/service";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { CooldownType } from "@/modules/cooldown";
-import { assertFeatureEnabled } from "@/modules/features";
+import { assertFeatureEnabled, Features } from "@/modules/features";
 import { recordReputationChange } from "@/systems/tops";
 
 const PENALTY_MS = 1_800_000; // 30 minutes
@@ -79,7 +79,7 @@ export default class RepRequestHandler extends ComponentCommand {
 
     const enabled = await assertFeatureEnabled(
       ctx as any,
-      "reputation",
+      Features.Reputation,
       "El sistema de reputacion esta deshabilitado en este servidor.",
     );
     if (!enabled) return;

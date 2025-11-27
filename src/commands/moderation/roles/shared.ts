@@ -12,7 +12,7 @@ import {
   DEFAULT_MODERATION_ACTIONS,
   type ModerationActionDefinition,
 } from "@/modules/guild-roles"; // only for constants/types
-import { assertFeatureEnabled } from "@/modules/features";
+import { assertFeatureEnabled, Features } from "@/modules/features";
 import type {
   LimitWindow,
   RoleCommandOverride,
@@ -58,7 +58,7 @@ export async function requireGuildContext(
 
   const enabled = await assertFeatureEnabled(
     ctx as any,
-    "roles",
+    Features.Roles,
     "El sistema de roles administrados está deshabilitado en este servidor.",
   );
   if (!enabled) {

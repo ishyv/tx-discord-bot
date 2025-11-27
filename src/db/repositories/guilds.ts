@@ -13,9 +13,8 @@ import type {
   GuildRolesRecord,
   ManagedChannelRecord,
   GuildFeaturesRecord,
-  GuildFeatureFlag,
 } from "@/schemas/guild";
-import { DEFAULT_GUILD_FEATURES } from "@/schemas/guild";
+import { DEFAULT_GUILD_FEATURES, Features } from "@/schemas/guild";
 import { deepClone } from "@/db/helpers";
 
 type ChannelsMutator = (current: GuildChannelsRecord) => GuildChannelsRecord;
@@ -34,7 +33,7 @@ const mergeFeatures = (
   return { ...DEFAULT_GUILD_FEATURES, ...(features ?? {}) };
 };
 
-function assertFeatureName(feature: string): asserts feature is GuildFeatureFlag {
+function assertFeatureName(feature: string): asserts feature is Features {
   if (!Object.hasOwn(DEFAULT_GUILD_FEATURES, feature)) {
     throw new Error(`Unknown guild feature: ${feature}`);
   }
@@ -100,7 +99,7 @@ export async function readFeatures(id: string): Promise<GuildFeaturesRecord> {
  */
 export async function setFeature(
   id: string,
-  feature: GuildFeatureFlag,
+  feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
   await connectMongo();
@@ -277,14 +276,8 @@ export async function setCoreChannel(
   return writeChannels(id, (c) => {
     const next = deepClone(c);
     next.core = next.core ?? {};
-    next.core[name as keyof typeof next.core] = {
-      ...(next.core[name as keyof typeof next.core] ?? {
-        name,
-        label: name,
-        channelId: null,
-      }),
-      channelId,
-    } as CoreChannelRecord;
+    const key = name as keyof typeof next.core;
+    next.core[key] = { channelId } as CoreChannelRecord;
     return next;
   });
 }

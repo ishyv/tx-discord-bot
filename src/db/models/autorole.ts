@@ -141,7 +141,6 @@ AutoRoleReactionTallySchema.virtual("id").get(function virtualId(this: { _id: st
   return this._id;
 });
 AutoRoleReactionTallySchema.index({ guildId: 1, emojiKey: 1 });
-AutoRoleReactionTallySchema.index({ guildId: 1, authorId: 1 });
 
 export interface AutoRoleReactionTallyDoc {
   _id: string;

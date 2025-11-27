@@ -9,7 +9,7 @@ import { clearWarns, listWarns } from "@/db/repositories";
 import type { GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import { assertFeatureEnabled } from "@/modules/features";
+import { assertFeatureEnabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
@@ -35,7 +35,7 @@ export default class ClearWarnCommand extends SubCommand {
 
     const enabled = await assertFeatureEnabled(
       ctx as any,
-      "warns",
+      Features.Warns,
       "El sistema de warns está deshabilitado en este servidor.",
     );
     if (!enabled) return;

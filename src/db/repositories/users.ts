@@ -8,6 +8,7 @@
 import { connectMongo } from "../client";
 import { UserModel, type UserDoc } from "../models/user";
 import type { Warn } from "@/schemas/user";
+import { type Result, OkResult, ErrResult } from "@/utils/result";
 
 export type MongoUser = {
   id: string;
@@ -318,4 +319,56 @@ export async function removeOpenTicketByChannel(
     { _id: { $in: ids } },
     { $pull: { openTickets: channelId } },
   );
+}
+
+export async function depositCoins(
+  id: string,
+  amount: number,
+): Promise<Result<MongoUser>> {
+  await ensureUser(id);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return ErrResult(new Error("INVALID_AMOUNT"));
+  }
+
+  // Atomic update: decrement cash, increment bank, BUT only if cash >= amount
+  const doc = await UserModel.findOneAndUpdate(
+    { _id: id, cash: { $gte: amount } },
+    {
+      $inc: { cash: -amount, bank: amount },
+    },
+    { new: true, lean: true },
+  );
+
+  if (!doc) {
+    // If doc is null, it means either user doesn't exist (handled by ensureUser)
+    // or the condition (cash >= amount) failed.
+    return ErrResult(new Error("INSUFFICIENT_FUNDS"));
+  }
+
+  return OkResult(toUser(doc)!);
+}
+
+export async function withdrawCoins(
+  id: string,
+  amount: number,
+): Promise<Result<MongoUser>> {
+  await ensureUser(id);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return ErrResult(new Error("INVALID_AMOUNT"));
+  }
+
+  // Atomic update: decrement bank, increment cash, BUT only if bank >= amount
+  const doc = await UserModel.findOneAndUpdate(
+    { _id: id, bank: { $gte: amount } },
+    {
+      $inc: { bank: -amount, cash: amount },
+    },
+    { new: true, lean: true },
+  );
+
+  if (!doc) {
+    return ErrResult(new Error("INSUFFICIENT_FUNDS"));
+  }
+
+  return OkResult(toUser(doc)!);
 }

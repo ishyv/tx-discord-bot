@@ -55,7 +55,7 @@ const options = {
 };
 
 @Declare({
-  name: "dashboard",
+  name: "features",
   description: "Habilita o deshabilita las features principales del bot",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],

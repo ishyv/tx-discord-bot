@@ -17,7 +17,7 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import { isValidWarnId } from "@/utils/warnId";
 import { listWarns, removeWarn } from "@/db/repositories";
-import { assertFeatureEnabled } from "@/modules/features";
+import { assertFeatureEnabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
@@ -47,7 +47,7 @@ export default class RemoveWarnCommand extends SubCommand {
 
     const enabled = await assertFeatureEnabled(
       ctx as any,
-      "warns",
+      Features.Warns,
       "El sistema de warns está deshabilitado en este servidor.",
     );
     if (!enabled) return;
