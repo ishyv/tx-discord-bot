@@ -13,8 +13,10 @@ export * from "./models/user";
 export * from "./models/guild";
 export * from "./models/autorole";
 export * from "./models/offers";
+export * from "./models/tops";
 
 export * as MongoUsersRepo from "./repositories/users";
 export * as MongoGuildsRepo from "./repositories/guilds";
 export * as MongoAutoroleRepo from "./repositories/autorole";
 export * as MongoOffersRepo from "./repositories/offers";
+export * as MongoTopsRepo from "./repositories/tops";

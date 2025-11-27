@@ -119,6 +119,32 @@ export async function setFeature(
 }
 
 /**
+ * Set all feature flags to a single value.
+ */
+export async function setAllFeatures(
+  id: string,
+  enabled: boolean,
+): Promise<GuildFeaturesRecord> {
+  await connectMongo();
+  const updates: Record<string, boolean> = {};
+  for (const key of Object.keys(DEFAULT_GUILD_FEATURES)) {
+    updates[`features.${key}`] = enabled;
+  }
+
+  const doc = await GuildModel.findOneAndUpdate(
+    { _id: id },
+    {
+      $set: {
+        ...updates,
+        updatedAt: new Date(),
+      },
+    },
+    { new: true, lean: true, projection: { features: 1 } },
+  );
+  return mergeFeatures(doc?.features as GuildFeaturesRecord);
+}
+
+/**
  * Delete a guild document.
  */
 export async function deleteGuild(id: string): Promise<boolean> {

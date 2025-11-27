@@ -20,6 +20,7 @@ import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { CooldownType } from "@/modules/cooldown";
 import { assertFeatureEnabled } from "@/modules/features";
+import { recordReputationChange } from "@/systems/tops";
 
 const PENALTY_MS = 1_800_000; // 30 minutes
 
@@ -136,6 +137,7 @@ export default class RepRequestHandler extends ComponentCommand {
     if (action === "deny") amount = -1;
 
     const total = await adjustUserReputation(targetId, amount);
+    await recordReputationChange(ctx.client, guildId, targetId, amount);
     await syncUserReputationRoles(ctx.client, guildId, targetId, total);
 
     const embed = await resolveRequestEmbed(

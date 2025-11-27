@@ -16,6 +16,7 @@ import { syncUserReputationRoles } from "@/systems/autorole/service";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { assertFeatureEnabled } from "@/modules/features";
+import { recordReputationChange } from "@/systems/tops";
 
 /**
  * Rehydrate the original embed so the modal response can show who reviewed the request.
@@ -82,6 +83,7 @@ export default class RepModalHandler extends ModalCommand {
         }
 
         const total = await adjustUserReputation(targetId, amount);
+        await recordReputationChange(ctx.client, guildId, targetId, amount);
         await syncUserReputationRoles(ctx.client, guildId, targetId, total);
 
         const embed = resolveRequestEmbed(ctx, `Revisado por ${ctx.author.username}`);

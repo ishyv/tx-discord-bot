@@ -20,6 +20,7 @@ import {
   getFeatureFlags,
   GUILD_FEATURES,
   setFeatureFlag,
+  setAllFeatureFlags,
 } from "@/modules/features";
 import {
   autoRoleFetchRulesByGuild,
@@ -41,6 +42,14 @@ const options = {
   }),
   enabled: createBooleanOption({
     description: "true = habilitar, false = deshabilitar",
+    required: false,
+  }),
+  enable_all: createBooleanOption({
+    description: "Habilita todas las features",
+    required: false,
+  }),
+  disable_all: createBooleanOption({
+    description: "Deshabilita todas las features",
     required: false,
   }),
 };
@@ -66,6 +75,35 @@ export default class FeatureDashboardCommand extends Command {
 
     const feature = ctx.options.feature;
     const enabledInput = ctx.options.enabled;
+    const enableAll = ctx.options.enable_all === true;
+    const disableAll = ctx.options.disable_all === true;
+
+    if (enableAll && disableAll) {
+      await ctx.write({
+        content: "No puedes habilitar y deshabilitar todo al mismo tiempo.",
+      });
+      return;
+    }
+
+    if (enableAll || disableAll) {
+      const value = enableAll && !disableAll;
+      const updated = await setAllFeatureFlags(guildId, value);
+      if (disableAll) {
+        await this.applySideEffects(ctx, guildId, "autoroles", false);
+      }
+
+      const embed = new Embed({
+        title: value ? "Todas las features habilitadas" : "Todas las features deshabilitadas",
+        color: value ? EmbedColors.Green : EmbedColors.Red,
+        fields: GUILD_FEATURES.map((f) => ({
+          name: f,
+          value: updated[f] ? "✅ Activado" : "⛔ Desactivado",
+          inline: true,
+        })),
+      });
+      await ctx.write({ embeds: [embed] });
+      return;
+    }
 
     if (!feature || enabledInput === undefined) {
       const features = await getFeatureFlags(guildId);

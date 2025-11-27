@@ -15,6 +15,7 @@ import {
 import {
   readFeatures as repoReadFeatures,
   setFeature as repoSetFeature,
+  setAllFeatures as repoSetAllFeatures,
 } from "@/db/repositories/guilds";
 
 const CACHE_TTL_MS = 30_000;
@@ -73,6 +74,15 @@ export async function setFeatureFlag(
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
   const updated = await repoSetFeature(guildId, feature, enabled);
+  setCache(guildId, updated);
+  return updated;
+}
+
+export async function setAllFeatureFlags(
+  guildId: string,
+  enabled: boolean,
+): Promise<GuildFeaturesRecord> {
+  const updated = await repoSetAllFeatures(guildId, enabled);
   setCache(guildId, updated);
   return updated;
 }

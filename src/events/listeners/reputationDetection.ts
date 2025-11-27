@@ -21,12 +21,6 @@ onMessageCreate(async (message, client) => {
     );
     if (!detectionEnabled) return;
 
-    const reputationEnabled = await isFeatureEnabled(
-        message.guildId,
-        "reputation",
-    );
-    if (!reputationEnabled) return;
-
     const guild = await getGuild(message.guildId);
     if (!guild || !guild.reputation || !guild.reputation.keywords || guild.reputation.keywords.length === 0) {
         return;

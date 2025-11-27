@@ -70,7 +70,6 @@ export default class ChannelSetCommand extends SubCommand {
       });
     }
 
-
     const embed = new Embed({
       title: "Canal actualizado",
       description: `Se asigno <#${record.channelId}> a **${name}** (${CORE_CHANNEL_DEFINITIONS[name]})`,

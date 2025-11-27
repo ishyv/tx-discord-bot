@@ -22,6 +22,7 @@ import {
   requireRepContext,
 } from "./shared";
 import { logModerationAction } from "@/utils/moderationLogger";
+import { recordReputationChange } from "@/systems/tops";
 
 const options = {
   user: createUserOption({
@@ -55,6 +56,7 @@ export default class RepAddCommand extends SubCommand {
 
     const target = ctx.options.user;
     const total = await adjustUserReputation(target.id, amount);
+    await recordReputationChange(ctx.client, context.guildId, target.id, amount);
     await syncUserReputationRoles(
       ctx.client,
       context.guildId,
