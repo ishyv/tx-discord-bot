@@ -28,7 +28,7 @@ const context = extendContext((interaction) => ({
 
 const client = new Client<true>({
   context,
-  globalMiddlewares: ["moderationLimit"],
+  globalMiddlewares: ["featureToggle", "moderationLimit"],
 });
 
 client.cooldown = new CooldownManager(client);

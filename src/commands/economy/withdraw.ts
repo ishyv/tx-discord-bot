@@ -3,6 +3,7 @@ import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { withdrawCoins, getUser } from "@/db/repositories/users";
 import { parseSmartAmount } from "@/utils/economy";
 import { EmbedColors } from "seyfert/lib/common";
+import { BindDisabled, Features } from "@/modules/features";
 
 const options = {
     amount: createStringOption({
@@ -21,6 +22,7 @@ const options = {
     interval: 5000,
     uses: { default: 1 },
 })
+@BindDisabled(Features.Economy)
 export default class WithdrawCommand extends Command {
     async run(ctx: CommandContext<typeof options>) {
         const { amount: rawAmount } = ctx.options;

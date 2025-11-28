@@ -6,9 +6,11 @@
  * Alcance: validación previa y control de flujo; no ejecuta la lógica de los comandos ni persiste datos.
  */
 import CooldownMiddleware from "./cooldown";
+import { featureToggleMiddleware } from "./featureToggle";
 import { moderationLimit } from "./moderationLimit";
 
 export const middlewares = {
   cooldown: CooldownMiddleware,
   moderationLimit,
+  featureToggle: featureToggleMiddleware,
 };

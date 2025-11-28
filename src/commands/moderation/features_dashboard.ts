@@ -27,7 +27,7 @@ import {
   disableRule,
   refreshGuildRules,
 } from "@/db/repositories";
-import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
+import { requireGuildId } from "@/utils/commandGuards";
 
 const featureChoices = GUILD_FEATURES.map((feature) => ({
   name: feature,
@@ -66,12 +66,6 @@ export default class FeatureDashboardCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = await requireGuildId(ctx);
     if (!guildId) return;
-
-    const allowed = await requireGuildPermission(ctx, {
-      guildId,
-      permissions: ["ManageGuild"],
-    });
-    if (!allowed) return;
 
     const feature = ctx.options.feature;
     const enabledInput = ctx.options.enabled;

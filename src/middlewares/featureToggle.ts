@@ -11,10 +11,9 @@ import { MessageFlags } from "seyfert/lib/types";
 import { isFeatureEnabled } from "@/modules/features";
 import type { BindDisabledProps } from "@/modules/features/decorator";
 
-export default createMiddleware<void>(async ({ context, next, stop }) => {
-    // Verificar si el comando tiene la propiedad `disabled` del decorador
-    const disabledProps = (context as any)?.metadata?.disabled as BindDisabledProps | undefined;
-
+export const featureToggleMiddleware = createMiddleware<void>(async ({ context, next, stop }) => {
+    // El decorador @BindDisabled agrega la propiedad `disabled` en la instancia del comando.
+    const disabledProps = (context as any)?.command?.disabled as BindDisabledProps | undefined;
     if (!disabledProps) {
         // El comando no tiene @BindDisabled, continuar normalmente
         return next();
@@ -26,9 +25,7 @@ export default createMiddleware<void>(async ({ context, next, stop }) => {
         return next();
     }
 
-    // Verificar si la feature está habilitada
     const enabled = await isFeatureEnabled(guildId, disabledProps.feature);
-
     if (enabled) {
         return next();
     }

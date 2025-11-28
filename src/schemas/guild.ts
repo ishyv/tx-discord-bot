@@ -74,6 +74,7 @@ export enum Features {
   ReputationDetection = "reputationDetection",
   Tops = "tops",
   Suggest = "suggest",
+  Economy = "economy",
 }
 
 export type GuildFeaturesRecord = Partial<Record<Features, boolean>>;
@@ -89,6 +90,7 @@ export const DEFAULT_GUILD_FEATURES: Readonly<Record<Features, boolean>> =
     [Features.ReputationDetection]: true,
     [Features.Tops]: true,
     [Features.Suggest]: true,
+    [Features.Economy]: true,
   });
 
 export interface Guild {
