@@ -9,6 +9,7 @@ import { Embed, type UsingClient } from "seyfert";
 import type { ColorResolvable } from "seyfert/lib/common";
 import type { APIEmbedField } from "seyfert/lib/types";
 import { CHANNELS_ID } from "@/constants/guild";
+import { getGuildChannels } from "@/modules/guild-channels";
 
 type EmbedOptions = {
   title?: string;
@@ -23,9 +24,11 @@ type EmbedOptions = {
 
 export class GuildLogger {
   private client!: UsingClient;
+  private guildId?: string;
 
-  async init(client: UsingClient) {
+  async init(client: UsingClient, guildId?: string) {
     this.client = client;
+    this.guildId = guildId;
     return this;
   }
 
@@ -45,35 +48,61 @@ export class GuildLogger {
     return embed;
   }
 
+  private async resolveChannel(key: keyof typeof CHANNELS_ID): Promise<string | null> {
+    if (!this.guildId) return CHANNELS_ID[key] ?? null;
+
+    try {
+      const channels = await getGuildChannels(this.guildId);
+      // Try to find in core channels, then managed, then fallback to constant
+      // Note: mapping keys from CHANNELS_ID to schema keys might be needed if they differ.
+      // Assuming keys match for now or using specific logic.
+
+      // The schema has specific keys like 'messageLogs', 'voiceLogs', etc.
+      // CHANNELS_ID has 'messageLogs', 'voiceLogs', etc.
+
+      // @ts-ignore -- dynamic access
+      const core = channels.core?.[key]?.channelId;
+      if (core) return core;
+
+      return CHANNELS_ID[key] ?? null;
+    } catch (error) {
+      console.warn(`[GuildLogger] Failed to resolve channel for ${key}`, error);
+      return CHANNELS_ID[key] ?? null;
+    }
+  }
+
   private async sendLog(
-    channelId: string,
+    key: keyof typeof CHANNELS_ID,
     options: EmbedOptions,
   ): Promise<void> {
+    const channelId = await this.resolveChannel(key);
+    if (!channelId) return;
+
     const embed = this.buildEmbed(options);
     await this.client.messages.write(channelId, { embeds: [embed] });
   }
 
   async messageLog(options: EmbedOptions) {
-    return this.sendLog(CHANNELS_ID.messageLogs, options);
+    return this.sendLog("messageLogs", options);
   }
 
   async voiceLog(options: EmbedOptions) {
-    return this.sendLog(CHANNELS_ID.voiceLogs, options);
+    return this.sendLog("voiceLogs", options);
   }
 
   async ticketLog(options: EmbedOptions) {
-    return this.sendLog(CHANNELS_ID.ticketLogs, options);
+    return this.sendLog("ticketLogs", options);
   }
 
   async pointLog(options: EmbedOptions) {
-    return this.sendLog(CHANNELS_ID.pointsLog, options);
+    return this.sendLog("pointsLog", options);
   }
 
   async generalLog(options: EmbedOptions) {
-    return this.sendLog(CHANNELS_ID.generalLogs, options);
+    return this.sendLog("generalLogs", options);
   }
 
   async banSanctionLog(options: EmbedOptions) {
-    return this.sendLog(CHANNELS_ID.banSanctions, options);
+    return this.sendLog("banSanctions", options);
   }
 }

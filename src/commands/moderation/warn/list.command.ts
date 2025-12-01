@@ -8,10 +8,10 @@
 import type { Guild, GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import type { Warn } from "@/schemas/user";
+import type { Warn } from "@/db/models/user.schema";
 import { getMemberName } from "@/utils/guild";
 import { listWarns } from "@/db/repositories";
-import { assertFeatureEnabled, Features } from "@/modules/features";
+import { BindDisabled, Features } from "@/modules/features";
 
 const options = {
   user: createUserOption({
@@ -26,6 +26,7 @@ const options = {
   defaultMemberPermissions: ["ViewAuditLog"],
 })
 @Options(options)
+@BindDisabled(Features.Warns)
 export default class ListWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
@@ -33,13 +34,6 @@ export default class ListWarnCommand extends SubCommand {
       await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
       return;
     }
-
-    const enabled = await assertFeatureEnabled(
-      ctx as any,
-      Features.Warns,
-      "El sistema de warns está deshabilitado en este servidor.",
-    );
-    if (!enabled) return;
 
     const { user } = ctx.options;
 

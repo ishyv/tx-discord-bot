@@ -11,12 +11,9 @@ import {
   DEFAULT_GUILD_FEATURES,
   Features,
   type GuildFeaturesRecord,
-} from "@/schemas/guild";
-import {
-  readFeatures as repoReadFeatures,
-  setFeature as repoSetFeature,
-  setAllFeatures as repoSetAllFeatures,
-} from "@/db/repositories/guilds";
+} from "@/db/models/guild.schema";
+
+import { withGuild } from "@/db/repositories/with_guild";
 
 const CACHE_TTL_MS = 30_000;
 const featureCache = new Map<
@@ -55,10 +52,14 @@ export async function getFeatureFlags(
 ): Promise<GuildFeaturesRecord> {
   const cached = getCached(guildId);
   if (cached) return cached;
-  const features = await repoReadFeatures(guildId);
+
+  const fetched = await import("@/db/repositories/with_guild").then(m => m.getGuild(guildId));
+  const features = { ...DEFAULT_GUILD_FEATURES, ...(fetched?.features ?? {}) };
+
   setCache(guildId, features);
   return features;
 }
+
 
 export async function isFeatureEnabled(
   guildId: string,
@@ -74,7 +75,10 @@ export async function setFeatureFlag(
   feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  const updated = await repoSetFeature(guildId, feature, enabled);
+  const updated = await withGuild(guildId, (guild) => {
+    guild.features[feature] = enabled;
+    return guild.features;
+  });
   setCache(guildId, updated);
   return updated;
 }
@@ -83,7 +87,12 @@ export async function setAllFeatureFlags(
   guildId: string,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  const updated = await repoSetAllFeatures(guildId, enabled);
+  const updated = await withGuild(guildId, (guild) => {
+    for (const key of GUILD_FEATURES) {
+      guild.features[key] = enabled;
+    }
+    return guild.features;
+  });
   setCache(guildId, updated);
   return updated;
 }

@@ -12,14 +12,14 @@
  */
 
 import type {
-  AutoRoleGrant,
-  AutoRoleReactionTally,
-  AutoRoleRule as AutoRoleRuleRow,
-} from "@/schemas/autorole";
+  AutoRoleGrantData as AutoRoleGrant,
+  AutoRoleReactionTallyData as AutoRoleReactionTally,
+  AutoRoleRuleData as AutoRoleRuleRow,
+} from "@/db/models/autorole.schema";
 import {
   autoRoleTriggerType,
   roleGrantType,
-} from "@/schemas/autorole";
+} from "@/db/models/autorole.schema";
 
 export const AUTO_ROLE_TRIGGER_TYPES = autoRoleTriggerType.enumValues;
 export const AUTO_ROLE_GRANT_TYPES = roleGrantType.enumValues;

@@ -5,15 +5,9 @@
  *
  * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
  */
-/**
- * Formats detected code blocks on demand.
- * We wait for a reaction so the user opts in instead of replacing messages automatically.
- */
-
 import { detectCodeLanguage, toFencedBlock } from "@/modules/code-detection";
-import { onMessageCreate } from "../hooks/messageCreate";
-import { onMessageReactionAdd } from "../hooks/messageReaction";
-
+import { onMessageCreate } from "@/events/hooks/messageCreate";
+import { onMessageReactionAdd } from "@/events/hooks/messageReaction";
 
 // Reacción a añadir cuando se detecta código
 // Cuando se añade esta reacción, se activa un listener para que cuando

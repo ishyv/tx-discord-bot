@@ -7,7 +7,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { requireRepContext } from "./shared";
-import { updateGuild } from "@/db/repositories";
+import { withGuild } from "@/db/repositories/with_guild";
 import { createBooleanOption } from "seyfert";
 import { setFeatureFlag, Features } from "@/modules/features";
 
@@ -32,10 +32,9 @@ export default class RepConfigKeywordsCommand extends SubCommand {
         const { palabras } = ctx.options;
         const keywords = palabras.split(",").map((w) => w.trim()).filter(Boolean);
 
-        await updateGuild(context.guildId, {
-            reputation: {
-                keywords,
-            },
+        await withGuild(context.guildId, (guild) => {
+            guild.reputation.keywords = keywords;
+            return guild.reputation;
         });
 
         await ctx.write({

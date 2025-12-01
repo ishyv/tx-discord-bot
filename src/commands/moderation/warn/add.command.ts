@@ -15,10 +15,10 @@ import {
 	SubCommand,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import type { Warn } from "@/schemas/user";
+import type { Warn } from "@/db/models/user.schema";
 import { generateWarnId } from "@/utils/warnId";
 import { addWarn, listWarns } from "@/db/repositories";
-import { assertFeatureEnabled, Features } from "@/modules/features";
+import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
@@ -38,6 +38,7 @@ const options = {
 	defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
+@BindDisabled(Features.Warns)
 export default class AddWarnCommand extends SubCommand {
 	async run(ctx: GuildCommandContext<typeof options>) {
 		const guildId = ctx.guildId;
@@ -45,13 +46,6 @@ export default class AddWarnCommand extends SubCommand {
 			await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
 			return;
 		}
-
-		const enabled = await assertFeatureEnabled(
-			ctx as any,
-			Features.Warns,
-			"El sistema de warns está deshabilitado en este servidor.",
-		);
-		if (!enabled) return;
 
 		const { user, reason } = ctx.options;
 		const existingWarns = await listWarns(user.id);

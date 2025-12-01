@@ -1,42 +1,45 @@
 /**
- * Motivación: registrar el comando "fun / embedplay" dentro de la categoría fun para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Exposes the interactive embed designer for quick testing.
+ * Responsibility: launch the designer and echo the resulting embed and JSON back to the user.
  */
 import { Command, Declare, type CommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { startEmbedDesigner } from "@/modules/prefabs/embedDesigner";
 
+const EPHEMERAL = MessageFlags.Ephemeral;
+
 @Declare({
   name: "embedplay",
-  description: "Probar el diseñador de embeds interactivo",
+  description: "Probar el disenador de embeds interactivo",
   contexts: ["Guild"],
 })
 export default class EmbedPlayCommand extends Command {
   async run(ctx: CommandContext) {
+    const sendFollowup = async (
+      content: string,
+      embeds: any[] = [],
+    ): Promise<void> => {
+      if (!ctx.followup) return;
+      await ctx.followup({
+        content,
+        embeds,
+        components: [],
+        flags: EPHEMERAL,
+      });
+    };
+
     await startEmbedDesigner(ctx, {
       userId: ctx.author.id,
-      content: "Diseña un embed y lo devolveré como JSON.",
+      content: "Disena un embed y se devolvera como JSON.",
       onSubmit: async ({ embed }) => {
+        console.log("[embedplay] Embed generado:", embed);
 
-        console.log("[ EMBED DESIGNER ] Embed generado:", embed);
+        await sendFollowup("Embed generado:", [embed]);
 
-        await ctx.followup?.({
-          content: "Embed generado:",
-          embeds: [embed],
-          components: [],
-          flags: MessageFlags.Ephemeral,
-        });
-
-        const embed_json = embed.toJSON(); 
-
-        await ctx.followup?.({
-          content: "```json\n" + JSON.stringify(embed_json, null, 2) + "\n```",
-          components: [],
-          flags: MessageFlags.Ephemeral,
-        });
+        const embedJson = embed.toJSON();
+        await sendFollowup(
+          "```json\n" + JSON.stringify(embedJson, null, 2) + "\n```",
+        );
       },
     });
   }

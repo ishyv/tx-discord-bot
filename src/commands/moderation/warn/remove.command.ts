@@ -17,7 +17,7 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import { isValidWarnId } from "@/utils/warnId";
 import { listWarns, removeWarn } from "@/db/repositories";
-import { assertFeatureEnabled, Features } from "@/modules/features";
+import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
@@ -37,6 +37,7 @@ const options = {
   defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
+@BindDisabled(Features.Warns)
 export default class RemoveWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
@@ -44,13 +45,6 @@ export default class RemoveWarnCommand extends SubCommand {
       await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
       return;
     }
-
-    const enabled = await assertFeatureEnabled(
-      ctx as any,
-      Features.Warns,
-      "El sistema de warns está deshabilitado en este servidor.",
-    );
-    if (!enabled) return;
 
     const { user, warn_id } = ctx.options;
     const warnId = warn_id.toLowerCase();

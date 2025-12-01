@@ -6,7 +6,32 @@
  * Alcance: representa la forma de los datos; no implementa reglas de negocio ni flujos de aplicación.
  */
 import { Schema, model, type InferSchemaType } from "mongoose";
-import { offerStatus } from "@/schemas/offers";
+
+/** Estados que recorre una oferta durante su ciclo de vida. */
+export const offerStatus = {
+  enumValues: [
+    "PENDING_REVIEW",
+    "APPROVED",
+    "REJECTED",
+    "CHANGES_REQUESTED",
+    "WITHDRAWN",
+  ] as const,
+};
+
+export type OfferStatus = (typeof offerStatus.enumValues)[number];
+
+/** Datos que el autor provee para construir el embed de la oferta. */
+export interface OfferDetails {
+  title: string;
+  description: string;
+  requirements?: string | null;
+  workMode?: string | null;
+  duration?: string | null;
+  salary?: string | null;
+  contact?: string | null;
+  labels?: string[] | null;
+  location?: string | null;
+}
 
 const OfferDetailsSchema = new Schema(
   {
@@ -50,7 +75,6 @@ OfferSchema.virtual("id").get(function virtualId(this: { _id: string }) {
   return this._id;
 });
 
-OfferSchema.index({ guildId: 1, authorId: 1 });
 OfferSchema.index({ status: 1, guildId: 1 });
 OfferSchema.index(
   { guildId: 1, authorId: 1 },
@@ -63,5 +87,24 @@ OfferSchema.index(
 );
 
 export type OfferDoc = InferSchemaType<typeof OfferSchema> & { id: string };
+
+export type OfferData = {
+  _id: string;
+  id: string;
+  guildId: string;
+  authorId: string;
+  status: OfferStatus;
+  details: OfferDetails;
+  embed: any;
+  reviewMessageId: string | null;
+  reviewChannelId: string | null;
+  publishedMessageId: string | null;
+  publishedChannelId: string | null;
+  rejectionReason: string | null;
+  changesNote: string | null;
+  lastModeratorId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export const OfferModel = model<OfferDoc>("Offer", OfferSchema);

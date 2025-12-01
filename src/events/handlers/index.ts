@@ -25,6 +25,10 @@ for (const entry of readdirSync(eventsDirectory)) {
   if (fileName.startsWith("index.")) continue;
   if (fileName.endsWith(".d.ts")) continue;
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic event registration
-  require(fullPath);
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic event registration
+    require(fullPath);
+  } catch (error) {
+    console.error(`[events] Failed to load handler ${fileName}:`, error);
+  }
 }

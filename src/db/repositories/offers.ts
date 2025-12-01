@@ -5,9 +5,9 @@
  *
  * Alcance: provee CRUD y helpers de datos; captura errores de base de datos y los normaliza.
  */
-import { connectMongo } from "../client";
-import { OfferModel, type OfferDoc } from "../models/offers";
-import type { Offer, OfferDetails, OfferStatus } from "@/schemas/offers";
+import { connectMongo } from "@/db/client";
+import { OfferModel, type OfferDoc } from "@/db/models/offers.schema";
+import type { OfferData as Offer, OfferDetails, OfferStatus } from "@/db/models/offers.schema";
 import { type Result, OkResult, ErrResult } from "@/utils/result";
 
 const ACTIVE_STATUSES: OfferStatus[] = ["PENDING_REVIEW", "CHANGES_REQUESTED"];
@@ -16,11 +16,12 @@ const ACTIVE_STATUSES: OfferStatus[] = ["PENDING_REVIEW", "CHANGES_REQUESTED"];
 const mapOffer = (doc: OfferDoc | null): Offer | null => {
   if (!doc) return null;
   return {
-    id: doc._id,
+    _id: doc._id.toString(),
+    id: doc._id.toString(),
     guildId: doc.guildId,
     authorId: doc.authorId,
     status: doc.status as OfferStatus,
-    details: doc.details as OfferDetails,
+    details: doc.details as unknown as OfferDetails,
     embed: doc.embed,
     reviewMessageId: doc.reviewMessageId ?? null,
     reviewChannelId: doc.reviewChannelId ?? null,
@@ -29,8 +30,8 @@ const mapOffer = (doc: OfferDoc | null): Offer | null => {
     rejectionReason: doc.rejectionReason ?? null,
     changesNote: doc.changesNote ?? null,
     lastModeratorId: doc.lastModeratorId ?? null,
-    createdAt: doc.createdAt ?? undefined,
-    updatedAt: doc.updatedAt ?? undefined,
+    createdAt: doc.createdAt ?? new Date(),
+    updatedAt: doc.updatedAt ?? new Date(),
   };
 };
 

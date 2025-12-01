@@ -6,13 +6,14 @@
  *
  * Alcance: solo define el decorador; la validación real ocurre en el middleware.
  */
-import type { Features } from "@/schemas/guild";
+import type { Features } from "@/db/models/guild.schema";
 
-/**
- * Props para el decorador BindDisabled.
- */
 export interface BindDisabledProps {
-    feature: Features;
+  feature: Features;
+}
+
+export interface FeatureBoundCommand {
+  disabled?: BindDisabledProps;
 }
 
 /**
@@ -31,9 +32,21 @@ export interface BindDisabledProps {
  * }
  * ```
  */
-export function BindDisabled(feature: Features) {
-    return <T extends new (...args: any[]) => {}>(target: T) =>
-        class extends target {
-            disabled = { feature };
-        };
+type FeatureBoundConstructor = {
+  prototype: FeatureBoundCommand;
+};
+
+export function BindDisabled(feature: Features): ClassDecorator {
+  return (target) => {
+    (target as FeatureBoundConstructor).prototype.disabled = { feature };
+  };
+}
+
+/**
+ * Extrae la feature vinculada desde la instancia del comando.
+ */
+export function getBoundFeature(command: unknown): Features | null {
+  if (!command || typeof command !== "object") return null;
+  const disabled = (command as FeatureBoundCommand).disabled;
+  return disabled?.feature ?? null;
 }

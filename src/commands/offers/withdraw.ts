@@ -8,6 +8,7 @@
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { withdrawOffer, getActiveOffer } from "@/modules/offers";
+import { ensureGuildContext } from "./shared";
 
 @Declare({
   name: "retirar",
@@ -15,15 +16,10 @@ import { withdrawOffer, getActiveOffer } from "@/modules/offers";
 })
 export default class OfferWithdrawCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
-    if (!ctx.guildId) {
-      await ctx.write({
-        content: "Este comando solo funciona dentro de un servidor.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+    const guildId = await ensureGuildContext(ctx);
+    if (!guildId) return;
 
-    const offerResult = await getActiveOffer(ctx.guildId, ctx.author.id);
+    const offerResult = await getActiveOffer(guildId, ctx.author.id);
     if (offerResult.isErr()) {
       await ctx.write({
         content: "Error buscando ofertas activas.",

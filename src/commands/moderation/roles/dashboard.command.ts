@@ -22,7 +22,7 @@ import { ButtonStyle, MessageFlags, TextInputStyle } from "seyfert/lib/types";
 
 import * as repo from "@/db/repositories";
 import { DEFAULT_MODERATION_ACTIONS } from "@/modules/guild-roles"; // constants only
-import type { RoleCommandOverride, RoleLimitRecord, LimitWindow } from "@/schemas/guild";
+import type { RoleCommandOverride, RoleLimitRecord, LimitWindow } from "@/db/models/guild.schema";
 
 type DashboardRole = {
     key: string;

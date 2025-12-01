@@ -1,71 +1,121 @@
-/**
- * Motivación: concentrar operaciones de acceso a datos de users en una API reutilizable.
- *
- * Idea/concepto: envuelve modelos y consultas en funciones claras para que el resto del código no conozca detalles de persistencia.
- *
- * Alcance: provee CRUD y helpers de datos; no define reglas de negocio ni validaciones complejas.
- */
-import { connectMongo } from "../client";
-import { UserModel, type UserDoc } from "../models/user";
-import type { Warn } from "@/schemas/user";
-import { type Result, OkResult, ErrResult } from "@/utils/result";
-
-export type MongoUser = {
-  id: string;
-  bank: number;
-  cash: number;
-  rep: number;
-  warns: Warn[];
-  openTickets: string[];
-};
+import { connectMongo } from "@/db/client";
+import { UserModel, type UserData, type Warn } from "@/db/models/user.schema";
+import type { CurrencyInventory } from "@/modules/economy/currency";
+import type { UserInventory } from "@/modules/inventory/items";
+import type { CoinValue } from "@/modules/economy/currencies/coin";
+import { applyTransaction, type Transaction } from "@/modules/economy/transactions";
+import { ErrResult, OkResult, type Result } from "@/utils/result";
 
 type UserPatch = Partial<{
-  bank: number;
-  cash: number;
   rep: number;
   warns: Warn[];
   openTickets: string[];
+  currency: CurrencyInventory;
+  inventory: UserInventory;
 }>;
 
-const defaultUser = (): MongoUser => ({
-  id: "",
-  bank: 0,
-  cash: 0,
+const ZERO_COINS: CoinValue = { hand: 0, bank: 0, use_total_on_subtract: false };
+
+function normalizeCoins(value: unknown): CoinValue {
+  const coins = (value as CoinValue) ?? ZERO_COINS;
+  const hand = Number.isFinite((coins as any).hand) ? Math.trunc((coins as any).hand) : 0;
+  const bank = Number.isFinite((coins as any).bank) ? Math.trunc((coins as any).bank) : 0;
+  return {
+    hand: Math.max(0, hand),
+    bank: Math.max(0, bank),
+    use_total_on_subtract: Boolean((coins as any).use_total_on_subtract),
+  };
+}
+
+function normalizeCurrency(currency: CurrencyInventory | undefined): CurrencyInventory {
+  const normalized: CurrencyInventory = { ...(currency ?? {}) };
+  normalized.coins = normalizeCoins((normalized as any).coins);
+  return normalized;
+}
+
+const defaultUser = (): UserData => ({
+  _id: "",
   rep: 0,
   warns: [],
   openTickets: [],
+  currency: normalizeCurrency({}),
+  inventory: {},
 });
 
-const toUser = (doc: UserDoc | null): MongoUser | null => {
+const toUser = (doc: UserData | null): UserData | null => {
   if (!doc) return null;
   return {
-    id: doc._id,
-    bank: Number(doc.bank ?? 0),
-    cash: Number(doc.cash ?? 0),
+    _id: doc._id,
+
     rep: Number(doc.rep ?? 0),
+
     warns: Array.isArray(doc.warns)
       ? doc.warns.map((w: Warn) => ({ ...w }))
       : [],
+
     openTickets: Array.isArray(doc.openTickets)
       ? doc.openTickets.filter(
         (v: unknown): v is string => typeof v === "string",
       )
       : [],
+
+    currency: normalizeCurrency(doc.currency),
+    inventory: doc.inventory ?? {},
   };
 };
 
-const sanitizeTickets = (tickets: string[]): string[] =>
+const sanitizeTickets = (tickets: string[] | undefined): string[] =>
   Array.from(
     new Set(
       (tickets ?? []).filter(
-        (value): value is string => typeof value === "string" && value.length > 0,
+        (value): value is string =>
+          typeof value === "string" && value.length > 0,
       ),
     ),
   );
 
-export async function getUser(id: string): Promise<MongoUser | null> {
+/**
+ * Construye el doc inicial para insertar un usuario nuevo.
+ */
+function buildUserCreateDoc(id: string, init: UserPatch = {}): UserData {
+  const base = defaultUser();
+
+  return {
+    _id: id,
+
+    rep: init.rep ?? base.rep,
+
+    warns: Array.isArray(init.warns) ? init.warns : base.warns,
+    openTickets: sanitizeTickets(init.openTickets ?? base.openTickets),
+
+    currency: normalizeCurrency(init.currency ?? base.currency),
+    inventory: init.inventory ?? base.inventory,
+  } as UserData;
+}
+
+/**
+ * Normaliza un patch para actualizar en Mongo.
+ * Solo incluye campos definidos (no metemos undefined en la DB).
+ */
+function buildUserUpdateDoc(patch: UserPatch): Partial<UserData> {
+  const update: Partial<UserData> = {};
+
+  if (patch.rep !== undefined) update.rep = patch.rep;
+
+  if (patch.warns !== undefined) update.warns = patch.warns;
+  if (patch.openTickets !== undefined) {
+    update.openTickets = sanitizeTickets(patch.openTickets);
+  }
+
+  if (patch.currency !== undefined) update.currency = normalizeCurrency(patch.currency);
+  if (patch.inventory !== undefined) update.inventory = patch.inventory;
+
+  return update;
+}
+
+export async function getUser(id: string): Promise<UserData | null> {
   await connectMongo();
-  const doc = await UserModel.findById(id).lean();
+  const doc = await UserModel.findById(id).lean<UserData>();
   return toUser(doc);
 }
 
@@ -75,61 +125,82 @@ export async function userExists(id: string): Promise<boolean> {
   return !!exists;
 }
 
+/**
+ * Devuelve el usuario; si no existe, lo crea con defaults + init.
+ */
 export async function ensureUser(
   id: string,
   init: UserPatch = {},
-): Promise<MongoUser> {
+): Promise<UserData> {
   await connectMongo();
-  const onInsert: Partial<UserDoc> = { _id: id };
-  if (typeof init.bank === "number") onInsert.bank = init.bank;
-  if (typeof init.cash === "number") onInsert.cash = init.cash;
-  if (typeof init.rep === "number") onInsert.rep = init.rep;
-  if (Array.isArray(init.warns)) onInsert.warns = init.warns as any;
-  if (Array.isArray(init.openTickets)) onInsert.openTickets = init.openTickets;
 
-  const doc = await UserModel.findOneAndUpdate(
-    { _id: id },
-    { $setOnInsert: onInsert },
-    { upsert: true, new: true, lean: true },
-  );
-  const mapped = toUser(doc);
-  if (!mapped) throw new Error(`ensureUser failed (id=${id})`);
-  return mapped;
+  // 1. Intentamos leer
+  const found = await UserModel.findById(id).lean<UserData>();
+  const mapped = toUser(found);
+  if (mapped) return mapped;
+
+  // 2. No existe -> lo creamos
+  const createDoc = buildUserCreateDoc(id, init);
+  const created = await UserModel.create(createDoc);
+
+  const raw =
+    typeof (created as any).toObject === "function"
+      ? (created as any).toObject()
+      : created;
+
+  const createdMapped = toUser(raw);
+  if (!createdMapped) {
+    throw new Error(`ensureUser failed (id=${id})`);
+  }
+  return createdMapped;
 }
 
+/**
+ * Upsert "de verdad": asegura que el user exista y luego aplica el patch.
+ * No usamos operadores raros, solo:
+ *  - ensureUser -> get or create
+ *  - updateUser -> actualiza campos
+ */
 export async function upsertUser(
   id: string,
   patch: UserPatch = {},
-): Promise<MongoUser> {
+): Promise<UserData> {
   await connectMongo();
-  const update: Record<string, unknown> = {};
-  if (typeof patch.bank === "number") update.bank = patch.bank;
-  if (typeof patch.cash === "number") update.cash = patch.cash;
-  if (typeof patch.rep === "number") update.rep = patch.rep;
-  if (Array.isArray(patch.warns)) update.warns = patch.warns;
-  if (Array.isArray(patch.openTickets)) update.openTickets = patch.openTickets;
 
-  const doc = await UserModel.findOneAndUpdate(
-    { _id: id },
-    {
-      $set: update,
-      $setOnInsert: { _id: id },
-    },
-    { upsert: true, new: true, lean: true },
+  const existing = await ensureUser(id); // siempre devuelve algo
+
+  const update = buildUserUpdateDoc(patch);
+  if (Object.keys(update).length === 0) {
+    // Nada que actualizar
+    return existing;
+  }
+
+  const doc = await UserModel.findByIdAndUpdate(
+    id,
+    { $set: update },
+    { new: true, lean: true },
   );
-  return toUser(doc) ?? { ...defaultUser(), id };
+
+  return toUser(doc) ?? existing;
 }
 
+/**
+ * Actualiza un usuario existente (no hace upsert).
+ */
 export async function updateUser(
   id: string,
   patch: UserPatch,
-): Promise<MongoUser | null> {
+): Promise<UserData | null> {
   await connectMongo();
-  if (!patch || Object.keys(patch).length === 0) return getUser(id);
 
-  const doc = await UserModel.findOneAndUpdate(
-    { _id: id },
-    { $set: patch },
+  const update = buildUserUpdateDoc(patch);
+  if (Object.keys(update).length === 0) {
+    return getUser(id);
+  }
+
+  const doc = await UserModel.findByIdAndUpdate(
+    id,
+    { $set: update },
     { new: true, lean: true },
   );
   return toUser(doc);
@@ -141,23 +212,6 @@ export async function removeUser(id: string): Promise<boolean> {
   return (res.deletedCount ?? 0) > 0;
 }
 
-export async function bumpBalance(
-  id: string,
-  delta: { bank?: number; cash?: number },
-): Promise<MongoUser | null> {
-  await ensureUser(id);
-  const inc: Record<string, number> = {};
-  if (typeof delta.bank === "number") inc.bank = delta.bank;
-  if (typeof delta.cash === "number") inc.cash = delta.cash;
-  if (Object.keys(inc).length === 0) return getUser(id);
-
-  const doc = await UserModel.findOneAndUpdate(
-    { _id: id },
-    { $inc: inc },
-    { new: true, lean: true, upsert: true },
-  );
-  return toUser(doc);
-}
 
 export async function getUserReputation(id: string): Promise<number> {
   const user = await ensureUser(id);
@@ -321,54 +375,28 @@ export async function removeOpenTicketByChannel(
   );
 }
 
-export async function depositCoins(
-  id: string,
-  amount: number,
-): Promise<Result<MongoUser>> {
-  await ensureUser(id);
-  if (!Number.isInteger(amount) || amount <= 0) {
-    return ErrResult(new Error("INVALID_AMOUNT"));
+/**
+ * Aplica una transaccion de monedas/inventario al usuario usando el motor comun.
+ */
+export async function transaction(
+  userId: string,
+  tx: Transaction,
+): Promise<Result<UserData>> {
+  const user = await ensureUser(userId);
+  const currentCurrency = normalizeCurrency(user.currency);
+
+  const result = applyTransaction(currentCurrency, tx);
+  if (result.isErr()) {
+    return ErrResult(result.error);
   }
 
-  // Atomic update: decrement cash, increment bank, BUT only if cash >= amount
+  const nextCurrency = normalizeCurrency(result.unwrap());
+  await connectMongo();
   const doc = await UserModel.findOneAndUpdate(
-    { _id: id, cash: { $gte: amount } },
-    {
-      $inc: { cash: -amount, bank: amount },
-    },
+    { _id: userId },
+    { $set: { currency: nextCurrency } },
     { new: true, lean: true },
   );
-
-  if (!doc) {
-    // If doc is null, it means either user doesn't exist (handled by ensureUser)
-    // or the condition (cash >= amount) failed.
-    return ErrResult(new Error("INSUFFICIENT_FUNDS"));
-  }
-
-  return OkResult(toUser(doc)!);
-}
-
-export async function withdrawCoins(
-  id: string,
-  amount: number,
-): Promise<Result<MongoUser>> {
-  await ensureUser(id);
-  if (!Number.isInteger(amount) || amount <= 0) {
-    return ErrResult(new Error("INVALID_AMOUNT"));
-  }
-
-  // Atomic update: decrement bank, increment cash, BUT only if bank >= amount
-  const doc = await UserModel.findOneAndUpdate(
-    { _id: id, bank: { $gte: amount } },
-    {
-      $inc: { bank: -amount, cash: amount },
-    },
-    { new: true, lean: true },
-  );
-
-  if (!doc) {
-    return ErrResult(new Error("INSUFFICIENT_FUNDS"));
-  }
-
-  return OkResult(toUser(doc)!);
+  const mapped = toUser(doc);
+  return mapped ? OkResult(mapped) : ErrResult(new Error("USER_NOT_FOUND"));
 }

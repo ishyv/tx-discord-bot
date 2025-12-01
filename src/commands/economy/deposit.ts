@@ -1,9 +1,17 @@
 import { Command, Declare, Options, createStringOption, type CommandContext } from "seyfert";
+import { MessageFlags } from "seyfert/lib/types";
+import { transaction, ensureUser } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
-import { depositCoins, getUser } from "@/db/repositories/users";
-import { parseSmartAmount } from "@/utils/economy";
 import { EmbedColors } from "seyfert/lib/common";
 import { BindDisabled, Features } from "@/modules/features";
+import {
+  formatCoins,
+  normalizeBalances,
+  parseAmountOrReply,
+  replyMissingUser,
+  toBalanceLike,
+  readCoins,
+} from "./shared";
 
 const options = {
   amount: createStringOption({
@@ -28,50 +36,55 @@ export default class DepositCommand extends Command {
     const { amount: rawAmount } = ctx.options;
     const userId = ctx.author.id;
 
-    // 1. Get current user state to calculate smart amount
-    const user = await getUser(userId);
+    const user = await ensureUser(userId);
     if (!user) {
+      await replyMissingUser(ctx);
+      return;
+    }
+
+    const coins = readCoins(user.currency);
+    const amount = await parseAmountOrReply(ctx, rawAmount, coins.hand);
+    if (amount === null) return;
+
+    if (amount > coins.hand) {
       await ctx.write({
-        content: "No se encontró tu perfil de usuario.",
-        flags: 64,
+        content: "No tienes suficientes coins en mano para depositar esa cantidad.",
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    // 2. Parse amount
-    const amount = parseSmartAmount(rawAmount, user.cash);
-
-    if (amount <= 0) {
-      await ctx.write({
-        content: "Cantidad inválida. Debes especificar un número positivo, 'all' o un porcentaje válido.",
-        flags: 64,
-      });
-      return;
-    }
-
-    // 3. Perform deposit
-    const result = await depositCoins(userId, amount);
+    const result = await transaction(userId, {
+      costs: [
+        {
+          currencyId: "coins",
+          value: { hand: amount, bank: 0, use_total_on_subtract: false },
+        },
+      ],
+      rewards: [
+        {
+          currencyId: "coins",
+          value: { hand: 0, bank: amount, use_total_on_subtract: false },
+        },
+      ],
+    });
 
     if (result.isErr()) {
-      const error = result.error;
-      const message =
-        error.message === "INSUFFICIENT_FUNDS"
-          ? "No tienes suficientes coins en mano para depositar esa cantidad."
-          : "Ocurrió un error al procesar el depósito.";
-
       await ctx.write({
-        content: message,
-        flags: error.message === "INSUFFICIENT_FUNDS" ? undefined : 64,
+        content: "Ocurrió un error al procesar el depósito.",
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const updatedUser = result.unwrap();
+    const updatedUser = normalizeBalances(toBalanceLike(result.unwrap()));
     await ctx.write({
       embeds: [
         {
           color: EmbedColors.Green,
-          description: `✅ Has depositado **${amount}** coins.\n\n💳 **Banco:** ${updatedUser.bank}\n🖐️ **Mano:** ${updatedUser.cash}`,
+          description: `✅ Has depositado **${formatCoins(amount)}** coins.\n\n💳 **Banco:** ${formatCoins(
+            updatedUser.bank,
+          )}\n🖐️ **Mano:** ${formatCoins(updatedUser.hand)}`,
         },
       ],
     });

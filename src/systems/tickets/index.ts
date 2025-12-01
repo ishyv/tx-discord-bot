@@ -12,7 +12,8 @@
  */
 
 import { getGuildChannels } from "@/modules/guild-channels";
-import { addOpenTicket, listOpenTickets, setPendingTickets } from "@/db/repositories";
+import { addOpenTicket, listOpenTickets } from "@/db/repositories";
+import { withGuild } from "@/db/repositories/with_guild";
 import { Colors } from "@/modules/ui/colors";
 import { isFeatureEnabled, Features } from "@/modules/features";
 import {
@@ -267,8 +268,9 @@ export function buildTicketModal(category: TicketCategory): Modal {
         }
 
         // Marcar el ticket como abierto en la base de datos
-        await setPendingTickets(guildId, (pending) => {
-          return [...pending, ticketChannel.id];
+        await withGuild(guildId, (guild) => {
+          guild.pendingTickets.push(ticketChannel.id);
+          return guild.pendingTickets;
         });
         await addOpenTicket(userId, ticketChannel.id);
 

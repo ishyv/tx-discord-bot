@@ -6,9 +6,9 @@
  * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
  */
 import { onMessageCreate } from "@/events/hooks/messageCreate";
-import { getGuild } from "@/db/repositories";
+import { getGuild } from "@/db/repositories/with_guild";
 import { getGuildChannels } from "@/modules/guild-channels";
-import { sendReputationRequest } from "../../commands/moderation/rep/shared";
+import { sendReputationRequest } from "@/commands/moderation/rep/shared";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
 onMessageCreate(async (message, client) => {

@@ -179,11 +179,12 @@ export async function createOfferForReview(
 		});
 	const statusEmbed = buildStatusEmbed(
 		{
+			_id: id,
 			id,
 			guildId: params.guildId,
 			authorId: params.authorId,
 			status: "PENDING_REVIEW",
-			details: params.details,
+			details: params.details as any,
 			embed: userEmbed.toJSON(),
 			reviewMessageId: null,
 			reviewChannelId: null,

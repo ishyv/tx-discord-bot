@@ -20,9 +20,26 @@ import { middlewares } from "./middlewares";
 import "./events/handlers"; // ! Cargar manejadores de eventos base (messageCreate, reactions, etc.) se encarga de emitir eventos a los listeners
 import "./events/listeners"; // ! Cargar listeners de eventos, se encarga de que los listeners se registren en sus respectivos eventos
 
+
+// Scopes to debug
+// import { startDebugRepl } from "./modules/debug/debugRepl";
+// import * as invMod from '@/modules/inventory'
+// import * as ecoMod from '@/modules/economy'
+
+// startDebugRepl({
+//   port: 6767,
+//   prompt: "fenatilo> ",
+//   scope: {
+//     invMod,
+//     ecoMod,
+//   },
+// });
+
+
+
 const context = extendContext((interaction) => ({
   getGuildLogger: async (): Promise<GuildLogger> => {
-    return await new GuildLogger().init(interaction.client);
+    return await new GuildLogger().init(interaction.client, interaction.guildId);
   },
 }));
 

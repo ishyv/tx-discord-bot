@@ -10,6 +10,34 @@
  */
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 
+export interface TopWindowRecord {
+  guildId: string;
+  channelId: string | null;
+  intervalMs: number;
+  topSize: number;
+  windowStartedAt: Date;
+  lastReportAt: Date | null;
+  emojiCounts: Record<string, number>;
+  channelCounts: Record<string, number>;
+  reputationDeltas: Record<string, number>;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface TopReportRecord {
+  id: string;
+  guildId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  intervalMs: number;
+  emojiCounts: Record<string, number>;
+  channelCounts: Record<string, number>;
+  reputationDeltas: Record<string, number>;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 const DEFAULT_TOP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 const DEFAULT_TOP_SIZE = 10;
 
@@ -46,6 +74,8 @@ export type TopWindowDoc = InferSchemaType<typeof TopWindowSchema> & {
   id: string;
 };
 
+export type TopWindowData = TopWindowRecord;
+
 export const TopWindowModel = model<TopWindowDoc>("TopWindow", TopWindowSchema);
 
 const TopReportSchema = new Schema(
@@ -77,6 +107,8 @@ TopReportSchema.index({ periodEnd: 1 });
 export type TopReportDoc = InferSchemaType<typeof TopReportSchema> & {
   id: string;
 };
+
+export type TopReportData = TopReportRecord;
 
 export const TopReportModel = model<TopReportDoc>("TopReport", TopReportSchema);
 

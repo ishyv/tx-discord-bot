@@ -14,6 +14,7 @@ import {
   Middlewares,
   Options,
 } from "seyfert";
+import { MessageFlags } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { CHANNELS_ID } from "@/constants/guild";
@@ -46,27 +47,31 @@ const options = {
 @BindDisabled(Features.Suggest)
 export default class SuggestCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const { suggest } = ctx.options;
-
-    if (!suggest) {
-      console.error("Suggest: no se pudo obtener sugerencia.");
+    const suggestion = ctx.options.suggest?.trim();
+    if (!suggestion) {
+      await ctx.write({
+        content: "Necesitas escribir una sugerencia antes de enviarla.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
     const guildId = ctx.guildId;
     if (!guildId) {
-      console.error("Suggest: no se pudo obtener ID de la guild.");
+      await ctx.write({
+        content: "Este comando solo funciona dentro de un servidor.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
-    const channels = await getGuildChannels(guildId);
-    const suggestChannelId =
-      channels.core?.suggestions?.channelId ??
-      channels.managed?.suggestions?.channelId ??
-      CHANNELS_ID.suggestions;
-
+    const suggestChannelId = await resolveSuggestChannel(guildId);
     if (!suggestChannelId) {
-      console.error("Suggest: no se pudo obtener canal de sugerencias");
+      await ctx.write({
+        content:
+          "No hay un canal de sugerencias configurado. Un administrador puede configurarlo en el panel.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -76,10 +81,10 @@ export default class SuggestCommand extends Command {
         name: ctx.author.username,
         icon_url: ctx.author.avatarURL(),
       },
-      description: `${suggest}`,
+      description: suggestion,
       color: EmbedColors.Aqua,
       footer: {
-        text: `Puedes votar a favor o en contra de esta sugerencia.`,
+        text: "Puedes votar a favor o en contra de esta sugerencia.",
       },
     });
 
@@ -106,10 +111,11 @@ export default class SuggestCommand extends Command {
       await ctx.write({
         content: "✅ Sugerencia enviada correctamente.",
       });
-
     } catch (error) {
-      ctx.editOrReply({
-        content: "⚠️ Han habido problemas al crear el hilo de la sugerencia. ",
+      console.error("[Suggest] Error creando hilo de sugerencia:", error);
+      await ctx.editOrReply({
+        content: "⚠️ Ocurrió un problema al crear el hilo de la sugerencia.",
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -117,6 +123,16 @@ export default class SuggestCommand extends Command {
   onMiddlewaresError(context: CommandContext, error: string) {
     context.editOrReply({ content: error });
   }
+}
+
+async function resolveSuggestChannel(guildId: string): Promise<string | null> {
+  const channels = await getGuildChannels(guildId);
+  return (
+    channels.core?.suggestions?.channelId ??
+    channels.managed?.suggestions?.channelId ??
+    CHANNELS_ID.suggestions ??
+    null
+  );
 }
 
 

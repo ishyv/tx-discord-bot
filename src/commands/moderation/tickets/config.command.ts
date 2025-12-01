@@ -14,7 +14,8 @@ import {
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
 
-import * as repo from "@/db/repositories";
+import { ensureGuild } from "@/db/repositories/with_guild";
+import { getCoreChannel, setCoreChannel } from "@/modules/guild-channels";
 import { requireGuildId } from "@/utils/commandGuards";
 import { CoreChannelNames } from "@/modules/guild-channels/constants";
 import { ensureTicketMessage } from "@/systems/tickets";
@@ -57,17 +58,17 @@ export default class ConfigTicketsCommand extends SubCommand {
     if (!guildId) return;
 
     // Ensure guild row exists
-    await repo.ensureGuild(guildId);
+    await ensureGuild(guildId);
 
     // Save core channels using the flat repo
-    await repo.setCoreChannel(guildId, CoreChannelNames.Tickets, channel.id);
-    await repo.setCoreChannel(guildId, CoreChannelNames.TicketLogs, logChannel.id);
-    await repo.setCoreChannel(guildId, CoreChannelNames.TicketCategory, category.id);
+    await setCoreChannel(guildId, CoreChannelNames.Tickets, channel.id);
+    await setCoreChannel(guildId, CoreChannelNames.TicketLogs, logChannel.id);
+    await setCoreChannel(guildId, CoreChannelNames.TicketCategory, category.id);
 
     // Debug: read back stored values
-    const ticketChannel = await repo.getCoreChannel(guildId, CoreChannelNames.Tickets);
-    const ticketLogs = await repo.getCoreChannel(guildId, CoreChannelNames.TicketLogs);
-    const ticketCategory = await repo.getCoreChannel(guildId, CoreChannelNames.TicketCategory);
+    const ticketChannel = await getCoreChannel(guildId, CoreChannelNames.Tickets);
+    const ticketLogs = await getCoreChannel(guildId, CoreChannelNames.TicketLogs);
+    const ticketCategory = await getCoreChannel(guildId, CoreChannelNames.TicketCategory);
 
     console.log("Datos guardados en la base de datos:");
     console.log("Canal de tickets:", ticketChannel);

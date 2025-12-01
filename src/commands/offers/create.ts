@@ -7,12 +7,14 @@
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import type { OfferDetails } from "@/modules/offers";
 import { assertNoActiveOffer, createOfferForReview } from "@/modules/offers";
+import { startEmbedDesigner } from "@/modules/prefabs/embedDesigner";
 import {
-  type EmbedFieldDefinition,
-  startEmbedDesigner,
-} from "@/modules/prefabs/embedDesigner";
+  OFFER_FIELD_DEFINITIONS,
+  ensureGuildContext,
+  parseOfferDetails,
+  buildDesignerFields,
+} from "./shared";
 
 @Declare({
   name: "crear",
@@ -20,15 +22,10 @@ import {
 })
 export default class OfferCreateCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
-    if (!ctx.guildId) {
-      await ctx.write({
-        content: "Este comando solo funciona dentro de un servidor.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+    const guildId = await ensureGuildContext(ctx);
+    if (!guildId) return;
 
-    const existingResult = await assertNoActiveOffer(ctx.guildId, ctx.author.id);
+    const existingResult = await assertNoActiveOffer(guildId, ctx.author.id);
     if (existingResult.isErr()) {
       await ctx.write({
         content: "Error verificando ofertas activas.",
@@ -46,15 +43,6 @@ export default class OfferCreateCommand extends SubCommand {
       return;
     }
 
-    const fieldDefs: EmbedFieldDefinition[] = [
-      { key: "requirements", label: "Requisitos", placeholder: "Tecnologías, experiencia, stack" },
-      { key: "workMode", label: "Modalidad", placeholder: "Remoto, híbrido, presencial" },
-      { key: "salary", label: "Rango salarial", placeholder: "Ej: USD 2000-3000" },
-      { key: "contact", label: "Contacto", placeholder: "DM, email, formulario" },
-      { key: "labels", label: "Etiquetas", placeholder: "#junior #backend #devops" },
-      { key: "location", label: "Ubicación / zona horaria", placeholder: "Argentina (GMT-3)" },
-    ];
-
     await startEmbedDesigner(ctx, {
       userId: ctx.author.id,
       content:
@@ -63,46 +51,21 @@ export default class OfferCreateCommand extends SubCommand {
         title: "Título del puesto",
         description: "Describe el rol, responsabilidades y contexto.",
         footer: "Oferta de trabajo (se enviará a revisión)",
-        fields: fieldDefs.map((field) => ({
-          key: field.key,
-          label: field.label,
-          value: "",
-          inline: field.inline,
-        })),
+        fields: buildDesignerFields(),
       },
-      fields: fieldDefs,
+      fields: OFFER_FIELD_DEFINITIONS,
       onSubmit: async ({ data, embed }) => {
-        const title = data.title.trim();
-        const description = data.description.trim();
-        if (!title || description.length < 8) {
+        const { details, error } = parseOfferDetails(data);
+        if (!details) {
           await ctx.followup?.({
-            content: "Necesitas un título y una descripción de al menos 8 caracteres.",
+            content: error ?? "Datos de oferta incompletos.",
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        const get = (key: string): string | null =>
-          data.fields.find((f) => f.key === key)?.value?.trim() || null;
-
-        const details: OfferDetails = {
-          title,
-          description,
-          requirements: get("requirements"),
-          workMode: get("workMode"),
-          salary: get("salary"),
-          contact: get("contact"),
-          labels:
-            (get("labels") ?? "")
-              .split(/[, ]+/)
-              .map((entry) => entry.trim())
-              .filter(Boolean) ?? [],
-
-          location: get("location"),
-        };
-
         const result = await createOfferForReview(ctx.client, {
-          guildId: ctx.guildId!,
+          guildId,
           authorId: ctx.author.id,
           details,
           authorTag: ctx.author.username,

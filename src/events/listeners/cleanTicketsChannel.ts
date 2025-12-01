@@ -6,7 +6,7 @@
  * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
  */
 import { ensureTicketMessage } from "@/systems/tickets";
-import { onBotReady } from "../hooks/botReady";
+import { onBotReady } from "@/events/hooks/botReady";
 
 onBotReady((_, client) => {
     ensureTicketMessage(client).catch((err) => {

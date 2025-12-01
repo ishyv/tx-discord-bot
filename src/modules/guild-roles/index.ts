@@ -6,14 +6,14 @@
  * Alcance: helpers y orquestadores; no decide qué roles usar en cada flujo de negocio.
  */
 import { roleRateLimiter } from "./rateLimiter";
-import * as repo from "@/db/repositories";
+import { getGuild } from "@/db/repositories/with_guild";
 import {
   type RoleCommandOverride,
   type RoleLimitRecord,
-} from "@/schemas/guild";
+} from "@/db/models/guild.schema";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
-export type { RoleCommandOverride } from "@/schemas/guild";
+export type { RoleCommandOverride } from "@/db/models/guild.schema";
 
 export interface RoleLimitUsage {
   roleKey: string;
@@ -77,8 +77,9 @@ export interface ConsumeRoleLimitsOptions {
 /* Helpers to read role data from repo and normalize to snapshots      */
 /* ------------------------------------------------------------------ */
 
-interface RoleSnapshot {
+export interface RoleSnapshot {
   key: string;
+  label: string;
   discordRoleId: string | null;
   overrides: Record<string, RoleCommandOverride>;
   limits: Record<string, RoleLimitRecord>;
@@ -94,9 +95,10 @@ function normaliseKey(k: string) {
   return normaliseAction(k);
 }
 
-async function listGuildRoleSnapshots(guildId: string): Promise<RoleSnapshot[]> {
-  const rolesObj = await repo.readRoles(guildId); // JSON map: { [roleKey]: { discordRoleId?, reach/overrides?, limits? } }
-  const entries = Object.entries(rolesObj ?? {});
+export async function listGuildRoleSnapshots(guildId: string): Promise<RoleSnapshot[]> {
+  const guild = await getGuild(guildId);
+  const rolesObj = guild?.roles ?? {};
+  const entries = Object.entries(rolesObj);
   return entries.map(([key, rec]: [string, any]) => {
     const overrides = (rec?.overrides ?? rec?.reach ?? {}) as Record<
       string,
@@ -120,8 +122,11 @@ async function listGuildRoleSnapshots(guildId: string): Promise<RoleSnapshot[]> 
       normLimits[normaliseKey(lk)] = lv as RoleLimitRecord;
     }
 
+    const label = typeof rec?.label === "string" ? rec.label : key;
+
     return {
       key,
+      label,
       discordRoleId,
       overrides: normOverrides,
       limits: normLimits,
@@ -308,3 +313,53 @@ export async function consumeRoleLimits({
   };
 }
 
+import { withGuild } from "@/db/repositories/with_guild";
+
+export async function clearRoleLimit(
+  guildId: string,
+  roleKey: string,
+  actionKey: string,
+): Promise<void> {
+  await withGuild(guildId, (guild) => {
+    if (!guild.roles) return;
+    const role = guild.roles[roleKey];
+    if (!role || !role.limits) return;
+
+    const action = normaliseAction(actionKey);
+    delete role.limits[action];
+  });
+}
+
+export async function getManagedRole(guildId: string, key: string): Promise<RoleSnapshot | null> {
+  const roles = await listGuildRoleSnapshots(guildId);
+  return roles.find(r => r.key === key) ?? null;
+}
+
+export async function resetRoleOverrides(guildId: string, roleKey: string): Promise<void> {
+  await withGuild(guildId, (guild) => {
+    if (!guild.roles?.[roleKey]) return;
+    guild.roles[roleKey].reach = {};
+  });
+}
+
+export async function getRoleOverrides(guildId: string, roleKey: string): Promise<Record<string, RoleCommandOverride>> {
+  const guild = await getGuild(guildId);
+  return (guild?.roles?.[roleKey]?.reach as Record<string, RoleCommandOverride>) ?? {};
+}
+
+export async function setRoleOverride(
+  guildId: string,
+  roleKey: string,
+  actionKey: string,
+  override: RoleCommandOverride
+): Promise<void> {
+  await withGuild(guildId, (guild) => {
+    if (!guild.roles) guild.roles = {};
+    if (!guild.roles[roleKey]) return; // Don't create if not exists
+    if (!guild.roles[roleKey].reach) guild.roles[roleKey].reach = {};
+
+    // Normalize action key
+    const action = normaliseAction(actionKey);
+    guild.roles[roleKey].reach[action] = override;
+  });
+}

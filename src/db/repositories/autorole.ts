@@ -16,7 +16,7 @@
  * Mantener esta capa bien documentada facilita migraciones y depuracion.
  */
 
-import { connectMongo } from "../client";
+import { connectMongo } from "@/db/client";
 import {
   AutoRoleGrantModel,
   AutoRoleReactionTallyModel,
@@ -24,7 +24,7 @@ import {
   type AutoRoleGrantDoc,
   type AutoRoleReactionTallyDoc,
   type AutoRoleRuleDoc,
-} from "../models/autorole";
+} from "@/db/models/autorole.schema";
 import {
   clearPresence,
   clearPresenceForMessage,
@@ -53,7 +53,7 @@ import type {
 import type { UsingClient } from "seyfert";
 import { enqueueRoleGrant, enqueueRoleRevoke } from "@/systems/autorole/roleOps";
 import { format as formatMs } from "@/utils/ms";
-import { ensureGuild } from "./guilds";
+import { ensureGuild } from "./with_guild";
 
 const ruleKey = (guildId: string, name: string) => `${guildId}:${name}`;
 const grantKey = (

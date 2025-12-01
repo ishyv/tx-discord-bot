@@ -18,13 +18,13 @@
 import type { Model, PipelineStage, Schema, SchemaType } from "mongoose";
 
 import { connectMongo } from "./client";
-import { GuildModel } from "./models/guild";
+import { GuildModel } from "./models/guild.schema";
 import {
   AutoRoleGrantModel,
   AutoRoleReactionTallyModel,
   AutoRoleRuleModel,
-} from "./models/autorole";
-import { UserModel } from "./models/user";
+} from "./models/autorole.schema";
+import { UserModel } from "./models/user.schema";
 import { deepClone } from "@/db/helpers";
 
 type PrimitiveType =

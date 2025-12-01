@@ -12,12 +12,12 @@ import {
   DEFAULT_MODERATION_ACTIONS,
   type ModerationActionDefinition,
 } from "@/modules/guild-roles"; // only for constants/types
-import { assertFeatureEnabled, Features } from "@/modules/features";
+import { Features } from "@/modules/features";
 import type {
   LimitWindow,
   RoleCommandOverride,
   RoleLimitRecord,
-} from "@/schemas/guild";
+} from "@/db/models/guild.schema";
 import {
   GUILD_ONLY_MESSAGE,
   requireGuildPermission,
@@ -56,12 +56,12 @@ export async function requireGuildContext(
     return null;
   }
 
-  const enabled = await assertFeatureEnabled(
-    ctx as any,
-    Features.Roles,
-    "El sistema de roles administrados está deshabilitado en este servidor.",
-  );
+  const enabled = await import("@/modules/features").then(m => m.isFeatureEnabled(guildId, Features.Roles));
   if (!enabled) {
+    await ctx.write({
+      content: "El sistema de roles administrados está deshabilitado en este servidor.",
+      flags: 64,
+    });
     return null;
   }
 
@@ -73,49 +73,14 @@ export async function requireGuildContext(
 /* Roles snapshots from repo.readRoles()                               */
 /* ------------------------------------------------------------------ */
 
-export interface ManagedRoleSnapshot {
-  key: string;
-  label: string;
-  discordRoleId: string | null;
-  overrides: Record<string, RoleCommandOverride>;
-  limits: Record<string, RoleLimitRecord>;
-}
+import { listGuildRoleSnapshots, type RoleSnapshot } from "@/modules/guild-roles";
 
-const normKey = (k: string) => k.trim().toLowerCase().replace(/[\s-]+/g, "_");
+export type ManagedRoleSnapshot = RoleSnapshot;
 
 export async function fetchManagedRoles(
   guildId: string,
 ): Promise<ManagedRoleSnapshot[]> {
-  const rolesObj = (await repo.readRoles(guildId)) as Record<string, any>;
-  const entries = Object.entries(rolesObj ?? {});
-  return entries.map(([key, rec]): ManagedRoleSnapshot => {
-    const rawOverrides =
-      (rec?.overrides as Record<string, RoleCommandOverride>) ??
-      (rec?.reach as Record<string, RoleCommandOverride>) ??
-      {};
-    const rawLimits =
-      (rec?.limits as Record<string, RoleLimitRecord>) ?? {};
-
-    const overrides: Record<string, RoleCommandOverride> = {};
-    for (const [k, v] of Object.entries(rawOverrides)) {
-      overrides[normKey(k)] = v as RoleCommandOverride;
-    }
-
-    const limits: Record<string, RoleLimitRecord> = {};
-    for (const [k, v] of Object.entries(rawLimits)) {
-      limits[normKey(k)] = v as RoleLimitRecord;
-    }
-
-    const discordRoleId =
-      rec?.discordRoleId ??
-      rec?.discord_role_id ??
-      rec?.discordId ??
-      rec?.id ??
-      null;
-    const label = typeof rec?.label === "string" ? rec.label : key;
-
-    return { key, label, discordRoleId, overrides, limits };
-  });
+  return listGuildRoleSnapshots(guildId);
 }
 
 export async function findManagedRole(
@@ -251,4 +216,3 @@ export function buildModerationSummary(
     )}`;
   }).join("\n");
 }
-

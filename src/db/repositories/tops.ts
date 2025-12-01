@@ -6,10 +6,10 @@
  *
  * Alcance: CRUD de configuraciones/ventanas y snapshots históricos; no genera embeds ni envía mensajes.
  */
-import { connectMongo } from "../client";
-import { TOP_DEFAULTS, TopReportModel, TopWindowModel } from "../models/tops";
-import { deepClone } from "../helpers";
-import type { TopReportRecord, TopWindowRecord } from "@/schemas/tops";
+import { connectMongo } from "@/db/client";
+import { TOP_DEFAULTS, TopReportModel, TopWindowModel } from "@/db/models/tops.schema";
+import { deepClone } from "@/db/helpers";
+import type { TopReportRecord, TopWindowRecord } from "@/db/models/tops.schema";
 
 const EMPTY_COUNTS: Record<string, number> = {};
 

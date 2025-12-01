@@ -9,32 +9,22 @@
 import { createMiddleware } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { isFeatureEnabled } from "@/modules/features";
-import type { BindDisabledProps } from "@/modules/features/decorator";
+import { getBoundFeature } from "@/modules/features/decorator";
 
 export const featureToggleMiddleware = createMiddleware<void>(async ({ context, next, stop }) => {
-    // El decorador @BindDisabled agrega la propiedad `disabled` en la instancia del comando.
-    const disabledProps = (context as any)?.command?.disabled as BindDisabledProps | undefined;
-    if (!disabledProps) {
-        // El comando no tiene @BindDisabled, continuar normalmente
-        return next();
-    }
+  const boundFeature = getBoundFeature((context as { command?: unknown })?.command);
+  if (!boundFeature) return next();
 
-    const guildId = context.guildId;
-    if (!guildId) {
-        // No es un comando de servidor, continuar normalmente
-        return next();
-    }
+  const guildId = context.guildId;
+  if (!guildId) return next();
 
-    const enabled = await isFeatureEnabled(guildId, disabledProps.feature);
-    if (enabled) {
-        return next();
-    }
+  const enabled = await isFeatureEnabled(guildId, boundFeature);
+  if (enabled) return next();
 
-    // Feature deshabilitada, detener ejecución
-    await context.write({
-        content: `Esta característica (\`${disabledProps.feature}\`) está deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.`,
-        flags: MessageFlags.Ephemeral,
-    });
+  await context.write({
+    content: `Esta característica (\`${boundFeature}\`) está deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.`,
+    flags: MessageFlags.Ephemeral,
+  });
 
-    return stop("Feature disabled");
+  return stop("Feature disabled");
 });

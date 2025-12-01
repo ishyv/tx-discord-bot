@@ -16,10 +16,14 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/db/repositories";
+
 import {
   DEFAULT_MODERATION_ACTIONS,
   type RoleCommandOverride,
+  getManagedRole,
+  resetRoleOverrides,
+  getRoleOverrides,
+  setRoleOverride,
 } from "@/modules/guild-roles";
 import {
   requireGuildContext,
@@ -170,7 +174,7 @@ export default class RoleControlCommand extends SubCommand {
     }
 
     // Read role once to check existence and show metadata later
-    const roleRec = await repo.getRole(context.guildId, key);
+    const roleRec = await getManagedRole(context.guildId, key);
     if (!roleRec) {
       await ctx.write({ content: "[!] No existe una configuracion con esa clave." });
       return;
@@ -198,8 +202,8 @@ export default class RoleControlCommand extends SubCommand {
 
     try {
       if (reset) {
-        await repo.resetRoleOverrides(context.guildId, key);
-        const overrides = (await repo.getRoleOverrides(context.guildId, key)) as Record<string, RoleCommandOverride>;
+        await resetRoleOverrides(context.guildId, key);
+        const overrides = await getRoleOverrides(context.guildId, key);
         const embed = createSummaryEmbed(
           "Overrides reiniciados",
           EmbedColors.Green,
@@ -219,8 +223,8 @@ export default class RoleControlCommand extends SubCommand {
         }
 
         if (overrideInput) {
-          await repo.setRoleOverride(context.guildId, key, resolvedAction.key, overrideInput);
-          const overrides = (await repo.getRoleOverrides(context.guildId, key)) as Record<string, RoleCommandOverride>;
+          await setRoleOverride(context.guildId, key, resolvedAction.key, overrideInput);
+          const overrides = await getRoleOverrides(context.guildId, key);
           const embed = buildUpdateEmbed(
             key,
             resolvedAction.definition.label ?? resolvedAction.key,
@@ -233,7 +237,7 @@ export default class RoleControlCommand extends SubCommand {
         }
 
         // Just show the current override for that action
-        const overrides = (await repo.getRoleOverrides(context.guildId, key)) as Record<string, RoleCommandOverride>;
+        const overrides = await getRoleOverrides(context.guildId, key);
         const current = overrides[resolvedAction.key] ?? "inherit";
         const embed = new Embed({
           title: `Override actual - ${resolvedAction.definition.label}`,
@@ -247,7 +251,7 @@ export default class RoleControlCommand extends SubCommand {
       }
 
       // No specific action: show summary
-      const overrides = (await repo.getRoleOverrides(context.guildId, key)) as Record<string, RoleCommandOverride>;
+      const overrides = await getRoleOverrides(context.guildId, key);
       const embed = buildSummaryEmbed(key, roleId, overrides);
       await ctx.write({ embeds: [embed] });
     } catch (error) {
@@ -261,4 +265,3 @@ export default class RoleControlCommand extends SubCommand {
     }
   }
 }
-

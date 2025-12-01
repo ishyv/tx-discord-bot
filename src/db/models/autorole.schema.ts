@@ -16,6 +16,27 @@ export type AutoRoleTriggerType =
 
 export type AutoRoleGrantType = "LIVE" | "TIMED";
 
+export type AutoRoleRuleArgs =
+  | { type: "MESSAGE_REACT_ANY"; args: Record<string, never> }
+  | { type: "REACT_SPECIFIC"; args: { messageId: string; emojiKey: string } }
+  | { type: "REACTED_THRESHOLD"; args: { emojiKey: string; count: number } }
+  | { type: "REPUTATION_THRESHOLD"; args: { minRep: number } }
+  | { type: "ANTIQUITY_THRESHOLD"; args: { durationMs: number } };
+
+export const autoRoleTriggerType = {
+  enumValues: [
+    "MESSAGE_REACT_ANY",
+    "REACT_SPECIFIC",
+    "REACTED_THRESHOLD",
+    "REPUTATION_THRESHOLD",
+    "ANTIQUITY_THRESHOLD",
+  ] as const,
+};
+
+export const roleGrantType = {
+  enumValues: ["LIVE", "TIMED"] as const,
+};
+
 const AutoRoleRuleSchema = new Schema(
   {
     _id: { type: String, required: true }, // composite key guildId:name
@@ -59,7 +80,7 @@ export interface AutoRoleRuleDoc {
   guildId: string;
   name: string;
   triggerType: AutoRoleTriggerType;
-  args: Record<string, unknown>;
+  args: AutoRoleRuleArgs["args"];
   roleId: string;
   durationMs: number | null;
   enabled: boolean;
@@ -67,6 +88,8 @@ export interface AutoRoleRuleDoc {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+export type AutoRoleRuleData = AutoRoleRuleDoc;
 export const AutoRoleRuleModel = model<AutoRoleRuleDoc>(
   "AutoRoleRule",
   AutoRoleRuleSchema,
@@ -114,6 +137,7 @@ export interface AutoRoleGrantDoc {
   createdAt?: Date;
   updatedAt?: Date;
 }
+export type AutoRoleGrantData = AutoRoleGrantDoc;
 export const AutoRoleGrantModel = model<AutoRoleGrantDoc>(
   "AutoRoleGrant",
   AutoRoleGrantSchema,
@@ -152,6 +176,7 @@ export interface AutoRoleReactionTallyDoc {
   count: number;
   updatedAt?: Date;
 }
+export type AutoRoleReactionTallyData = AutoRoleReactionTallyDoc;
 export const AutoRoleReactionTallyModel = model<AutoRoleReactionTallyDoc>(
   "AutoRoleReactionTally",
   AutoRoleReactionTallySchema,

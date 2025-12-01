@@ -22,7 +22,7 @@ import {
   requireGuildContext,
   resolveActionInput,
 } from "./shared";
-import { clearRoleLimit } from "@/db/repositories";
+import { clearRoleLimit } from "@/modules/guild-roles";
 
 const options = {
   key: createStringOption({

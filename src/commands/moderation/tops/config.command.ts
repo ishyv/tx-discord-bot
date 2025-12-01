@@ -22,7 +22,7 @@ import {
   resetTopWindow,
   updateTopConfig,
 } from "@/db/repositories";
-import { TOP_DEFAULTS } from "@/db/models/tops";
+import { TOP_DEFAULTS } from "@/db/models/tops.schema";
 import { requireGuildId } from "@/utils/commandGuards";
 import * as duration from "@/utils/ms";
 

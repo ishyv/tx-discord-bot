@@ -24,6 +24,10 @@ for (const entry of readdirSync(directory)) {
   if (fileName.startsWith("index.")) continue;
   if (fileName.endsWith(".d.ts")) continue;
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic registration logic
-  require(join(directory, entry));
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic registration logic
+    require(join(directory, entry));
+  } catch (error) {
+    console.error(`[listeners] Failed to load listener ${fileName}:`, error);
+  }
 }
