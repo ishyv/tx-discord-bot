@@ -9,7 +9,6 @@ import type { UsingClient } from "seyfert";
 
 import * as repo from "@/db/repositories";
 import type { AutoRoleRule } from "@/modules/autorole/types";
-import { revokeByRule } from "@/db/repositories";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
 const DEFAULT_INTERVAL_MS = 60_000; //  Tiempo de espera entre barridos
@@ -81,7 +80,7 @@ async function sweep(client: UsingClient): Promise<void> {
         ruleCache.set(key, rule);
       }
 
-      await revokeByRule({
+      await repo.revokeByRule({
         client,
         rule,
         userId: grant.userId,

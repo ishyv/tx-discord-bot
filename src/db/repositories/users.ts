@@ -1,10 +1,9 @@
 import { connectMongo } from "@/db/client";
 import { UserModel, type UserData, type Warn } from "@/db/models/user.schema";
 import type { CurrencyInventory } from "@/modules/economy/currency";
-import type { UserInventory } from "@/modules/inventory/items";
-import type { CoinValue } from "@/modules/economy/currencies/coin";
-import { applyTransaction, type Transaction } from "@/modules/economy/transactions";
-import { ErrResult, OkResult, type Result } from "@/utils/result";
+import {
+  type UserInventory,
+} from "@/modules/inventory";
 
 type UserPatch = Partial<{
   rep: number;
@@ -14,35 +13,16 @@ type UserPatch = Partial<{
   inventory: UserInventory;
 }>;
 
-const ZERO_COINS: CoinValue = { hand: 0, bank: 0, use_total_on_subtract: false };
-
-function normalizeCoins(value: unknown): CoinValue {
-  const coins = (value as CoinValue) ?? ZERO_COINS;
-  const hand = Number.isFinite((coins as any).hand) ? Math.trunc((coins as any).hand) : 0;
-  const bank = Number.isFinite((coins as any).bank) ? Math.trunc((coins as any).bank) : 0;
-  return {
-    hand: Math.max(0, hand),
-    bank: Math.max(0, bank),
-    use_total_on_subtract: Boolean((coins as any).use_total_on_subtract),
-  };
-}
-
-function normalizeCurrency(currency: CurrencyInventory | undefined): CurrencyInventory {
-  const normalized: CurrencyInventory = { ...(currency ?? {}) };
-  normalized.coins = normalizeCoins((normalized as any).coins);
-  return normalized;
-}
-
 const defaultUser = (): UserData => ({
   _id: "",
   rep: 0,
   warns: [],
   openTickets: [],
-  currency: normalizeCurrency({}),
+  currency: {},
   inventory: {},
 });
 
-const toUser = (doc: UserData | null): UserData | null => {
+export const toUser = (doc: UserData | null): UserData | null => {
   if (!doc) return null;
   return {
     _id: doc._id,
@@ -59,7 +39,7 @@ const toUser = (doc: UserData | null): UserData | null => {
       )
       : [],
 
-    currency: normalizeCurrency(doc.currency),
+    currency: doc.currency ?? {},
     inventory: doc.inventory ?? {},
   };
 };
@@ -88,7 +68,7 @@ function buildUserCreateDoc(id: string, init: UserPatch = {}): UserData {
     warns: Array.isArray(init.warns) ? init.warns : base.warns,
     openTickets: sanitizeTickets(init.openTickets ?? base.openTickets),
 
-    currency: normalizeCurrency(init.currency ?? base.currency),
+    currency: init.currency ?? base.currency,
     inventory: init.inventory ?? base.inventory,
   } as UserData;
 }
@@ -107,12 +87,17 @@ function buildUserUpdateDoc(patch: UserPatch): Partial<UserData> {
     update.openTickets = sanitizeTickets(patch.openTickets);
   }
 
-  if (patch.currency !== undefined) update.currency = normalizeCurrency(patch.currency);
+  if (patch.currency !== undefined) update.currency = patch.currency;
   if (patch.inventory !== undefined) update.inventory = patch.inventory;
 
   return update;
 }
 
+
+/**
+ * Devuelve el usuario o null si no existe.
+ * Lo mas probable es que quieras usar `ensureUser()` en su lugar. 
+ */
 export async function getUser(id: string): Promise<UserData | null> {
   await connectMongo();
   const doc = await UserModel.findById(id).lean<UserData>();
@@ -186,6 +171,7 @@ export async function upsertUser(
 
 /**
  * Actualiza un usuario existente (no hace upsert).
+ * Lo mas probable es que quieras usar `upsertUser()` en su lugar.
  */
 export async function updateUser(
   id: string,
@@ -373,30 +359,4 @@ export async function removeOpenTicketByChannel(
     { _id: { $in: ids } },
     { $pull: { openTickets: channelId } },
   );
-}
-
-/**
- * Aplica una transaccion de monedas/inventario al usuario usando el motor comun.
- */
-export async function transaction(
-  userId: string,
-  tx: Transaction,
-): Promise<Result<UserData>> {
-  const user = await ensureUser(userId);
-  const currentCurrency = normalizeCurrency(user.currency);
-
-  const result = applyTransaction(currentCurrency, tx);
-  if (result.isErr()) {
-    return ErrResult(result.error);
-  }
-
-  const nextCurrency = normalizeCurrency(result.unwrap());
-  await connectMongo();
-  const doc = await UserModel.findOneAndUpdate(
-    { _id: userId },
-    { $set: { currency: nextCurrency } },
-    { new: true, lean: true },
-  );
-  const mapped = toUser(doc);
-  return mapped ? OkResult(mapped) : ErrResult(new Error("USER_NOT_FOUND"));
 }

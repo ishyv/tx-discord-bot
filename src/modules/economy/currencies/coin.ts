@@ -47,6 +47,10 @@ export class Coins implements Currency<CoinValue> {
     if (b.use_total_on_subtract) {
       let total = (a.hand ?? 0) + (a.bank ?? 0);
       const subAmount = (b.hand ?? 0) + (b.bank ?? 0);
+      if (subAmount > total) {
+        // Signal invalid operation so the engine rejects the transaction.
+        return { hand: -1, bank: -1, use_total_on_subtract: false };
+      }
       total -= subAmount;
 
       const newHand = Math.max(0, total - (a.bank ?? 0));

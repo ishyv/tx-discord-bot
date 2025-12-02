@@ -1,7 +1,7 @@
 import { Command, Declare, Options, createStringOption, type CommandContext } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
-import { transaction, ensureUser } from "@/db/repositories/users";
+import { ensureUser } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { BindDisabled, Features } from "@/modules/features";
 import {
@@ -12,6 +12,7 @@ import {
   toBalanceLike,
   readCoins,
 } from "./shared";
+import { currencyTransaction } from "@/modules/economy";
 
 const options = {
   amount: createStringOption({
@@ -54,7 +55,7 @@ export default class WithdrawCommand extends Command {
       return;
     }
 
-    const result = await transaction(userId, {
+    const result = await currencyTransaction(userId, {
       costs: [
         {
           currencyId: "coins",
@@ -77,7 +78,7 @@ export default class WithdrawCommand extends Command {
       return;
     }
 
-    const updatedUser = normalizeBalances(toBalanceLike(result.unwrap()));
+    const updatedUser = normalizeBalances(toBalanceLike({ currency: result.unwrap() }));
     await ctx.write({
       embeds: [
         {

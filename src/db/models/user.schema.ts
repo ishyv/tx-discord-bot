@@ -1,6 +1,6 @@
 import { Schema, model, type HydratedDocument } from "mongoose";
 import { CurrencyInventorySchema, type CurrencyInventory } from "@/modules/economy/currency";
-import { UserInventorySchema, type UserInventory } from "@/modules/inventory/items";
+import { UserInventorySchema, type UserInventory } from "@/modules/inventory";
 
 export interface Warn {
   reason: string;
@@ -52,7 +52,7 @@ const UserSchema = new Schema<UserData>(
     },
 
     inventory: {
-      type: UserInventorySchema,  
+      type: UserInventorySchema,
       default: {},
     },
   },

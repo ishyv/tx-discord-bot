@@ -10,6 +10,12 @@ export interface DebugReplOptions {
 }
 
 export function startDebugRepl(options: DebugReplOptions = {}) {
+    // Security: Prevent REPL from starting in production
+    if (process.env.NODE_ENV === 'production') {
+        console.warn('[debug-repl] REPL is disabled in production for security');
+        return null;
+    }
+
     const {
         port = 5001,
         prompt = "debug> ",

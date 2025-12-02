@@ -8,8 +8,9 @@ import {
   createUserOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { applyTransaction, currencyRegistry } from "@/modules/economy/transactions";
-import { ensureUser, updateUser } from "@/db/repositories/users";
+import { currencyTransaction, currencyRegistry } from "@/modules/economy/transactions";
+import { GuildLogger } from "@/utils/guildLogger";
+
 
 const choices = currencyRegistry.list().map((currencyId) => {
   return { name: currencyId, value: currencyId };
@@ -58,11 +59,8 @@ export default class GiveCurrencyCommand extends Command {
       return;
     }
 
-    const userData = await ensureUser(target.id);
-    const current = userData.currency ?? {};
-
     const rewardValue = buildRewardValue(currency, amount);
-    const result = applyTransaction(current, {
+    const result = await currencyTransaction(target.id, {
       rewards: [
         {
           currencyId: currency,
@@ -79,12 +77,23 @@ export default class GiveCurrencyCommand extends Command {
       return;
     }
 
-    const nextCurrency = result.unwrap();
-    await updateUser(target.id, { currency: nextCurrency });
+    const newBalance = result.value[currency] ?? currencyObj.zero();
 
-    const newBalance = nextCurrency[currency] ?? currencyObj.zero();
     await ctx.write({
       content: `Se han anadido **${currencyObj.display(rewardValue as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
+    });
+
+    const logger = new GuildLogger();
+    await logger.init(ctx.client, ctx.guildId);
+    await logger.generalLog({
+      title: "Moneda entregada",
+      description: `El staff ${ctx.author.toString()} ha entregado moneda a ${target.toString()}.`,
+      fields: [
+        { name: "Moneda", value: currency, inline: true },
+        { name: "Cantidad", value: `${amount}`, inline: true },
+        { name: "Nuevo Saldo", value: currencyObj.display(newBalance as any), inline: true },
+      ],
+      color: "Green",
     });
   }
 }

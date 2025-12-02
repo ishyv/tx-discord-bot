@@ -20,8 +20,14 @@ import { type Message, userMemory } from "@/utils/userMemory";
 // Ej. si la clave de google gemini no es válida
 const DEFAULT_NO_API_RESPONSE = "Mejor comamos un poco de sushi! 🍣";
 
+// Validate API key at module load
+const API_KEY = process.env.GOOGLE_GENAI_API_KEY;
+if (!API_KEY) {
+  console.warn('[ai-service] GOOGLE_GENAI_API_KEY not set - AI features will return default responses');
+}
+
 const genAI = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY,
+  apiKey: API_KEY,
 });
 
 interface ProcessMessageOptions {

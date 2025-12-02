@@ -3,7 +3,7 @@ import {
   getItemDefinition,
   loadInventory,
   type InventoryItem,
-} from "@/modules/inventory/items";
+} from "@/modules/inventory";
 import { BindDisabled, Features } from "@/modules/features";
 import { startPagination } from "@/modules/prefabs/pagination";
 
@@ -22,7 +22,7 @@ export default class InventoryCommand extends Command {
         !!entry && typeof entry.id === "string" && typeof entry.quantity === "number" && entry.quantity > 0,
     );
 
-if (items.length === 0) {
+    if (items.length === 0) {
       await ctx.write({ content: "Tu inventario esta vacio." });
       return;
     }
