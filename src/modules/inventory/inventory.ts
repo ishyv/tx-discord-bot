@@ -102,3 +102,4 @@ export async function loadInventory(userID: string): Promise<UserInventory> {
     const user = await ensureUser(userID);
     return (user.inventory as UserInventory) || createEmptyInventory();
 }
+

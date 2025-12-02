@@ -77,7 +77,7 @@ export default class GiveCurrencyCommand extends Command {
       return;
     }
 
-    const newBalance = result.value[currency] ?? currencyObj.zero();
+    const newBalance = result.unwrap()[currency] ?? currencyObj.zero();
 
     await ctx.write({
       content: `Se han anadido **${currencyObj.display(rewardValue as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
