@@ -1,6 +1,6 @@
 import { CurrencyId, CurrencyInventory } from "./currency";
 import { CurrencyRegistry, currencyRegistry } from "./currencyRegistry";
-import { Err, ErrResult, Ok, OkResult, Result } from "@/utils/result";
+import { ErrResult, OkResult, Result } from "@/utils/result";
 
 import "./currencies/coin";
 import { ensureUser, toUser } from "@/db/repositories";
@@ -69,11 +69,11 @@ class CurrencyEngine {
     const rewards = tx.rewards ?? [];
 
     if (costs.length === 0 && rewards.length === 0) {
-      return new Err(new Error("Transaction must have costs or rewards."));
+      return ErrResult(new Error("Transaction must have costs or rewards."));
     }
 
     if (!this.canApply(inv, tx)) {
-      return new Err(
+      return ErrResult(
         new Error("Transaction cannot be applied: insufficient funds or invalid currency."),
       );
     }
@@ -83,7 +83,7 @@ class CurrencyEngine {
     this.applyAmounts(next, costs, "sub");
     this.applyAmounts(next, rewards, "add");
 
-    return new Ok(next);
+    return OkResult(next);
   }
 }
 
