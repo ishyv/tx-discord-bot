@@ -7,7 +7,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { requireRepContext } from "./shared";
-import { withGuild } from "@/db/repositories/with_guild";
+
 import { createBooleanOption } from "seyfert";
 import { setFeatureFlag, Features } from "@/modules/features";
 
@@ -32,10 +32,8 @@ export default class RepConfigKeywordsCommand extends SubCommand {
         const { palabras } = ctx.options;
         const keywords = palabras.split(",").map((w) => w.trim()).filter(Boolean);
 
-        await withGuild(context.guildId, (guild) => {
-            guild.reputation.keywords = keywords;
-            return guild.reputation;
-        });
+        const { configStore, ConfigurableModule } = await import("@/configuration");
+        await configStore.set(context.guildId, ConfigurableModule.Reputation, { keywords });
 
         await ctx.write({
             content: `Se han actualizado las palabras clave de reputacion: ${keywords.map(k => `\`${k}\``).join(", ")}`,

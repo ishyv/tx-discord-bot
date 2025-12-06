@@ -32,12 +32,13 @@
     "@google/genai": "^1.12.0",
     "dotenv": "^17.2.1",
     "highlight.js": "^11.11.1",
-    "mongoose": "^8.6.2",
     "module-alias": "^2.2.3",
+    "mongoose": "^8.6.2",
     "onnxruntime-node": "1.22.0-rev",
     "paddleocr": "^1.0.6",
     "seyfert": "^3.2.5",
-    "sharp": "^0.34.3"
+    "sharp": "^0.34.3",
+    "zod": "^4.1.13"
   },
   "lint-staged": {
     "*.{ts,js,mjs,cjs,json}": "biome check --write"

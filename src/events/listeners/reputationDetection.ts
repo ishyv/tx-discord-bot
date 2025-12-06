@@ -6,7 +6,7 @@
  * Alcance: orquesta el flujo específico del listener; no define el hook ni registra el evento base.
  */
 import { onMessageCreate } from "@/events/hooks/messageCreate";
-import { getGuild } from "@/db/repositories/with_guild";
+
 import { getGuildChannels } from "@/modules/guild-channels";
 import { sendReputationRequest } from "@/commands/moderation/rep/shared";
 import { isFeatureEnabled, Features } from "@/modules/features";
@@ -21,13 +21,15 @@ onMessageCreate(async (message, client) => {
     );
     if (!detectionEnabled) return;
 
-    const guild = await getGuild(message.guildId);
-    if (!guild || !guild.reputation || !guild.reputation.keywords || guild.reputation.keywords.length === 0) {
+    const { configStore, ConfigurableModule } = await import("@/configuration");
+    const { keywords } = await configStore.get(message.guildId, ConfigurableModule.Reputation);
+
+    if (!keywords || keywords.length === 0) {
         return;
     }
 
     const content = message.content.toLowerCase();
-    const hasKeyword = guild.reputation.keywords.some((keyword: string) => content.includes(keyword.toLowerCase()));
+    const hasKeyword = keywords.some((keyword: string) => content.includes(keyword.toLowerCase()));
 
     if (hasKeyword) {
         const guildChannels = await getGuildChannels(message.guildId);

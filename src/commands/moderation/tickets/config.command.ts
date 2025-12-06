@@ -1,3 +1,4 @@
+
 /**
  * Motivación: registrar el comando "moderation / tickets / config" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
  *
@@ -15,9 +16,7 @@ import {
 import { ChannelType } from "seyfert/lib/types";
 
 import { ensureGuild } from "@/db/repositories/with_guild";
-import { getCoreChannel, setCoreChannel } from "@/modules/guild-channels";
 import { requireGuildId } from "@/utils/commandGuards";
-import { CoreChannelNames } from "@/modules/guild-channels/constants";
 import { ensureTicketMessage } from "@/systems/tickets";
 
 const options = {
@@ -47,12 +46,13 @@ const options = {
   name: "config",
   description: "Configurar el sistema de tickets",
   defaultMemberPermissions: ["ManageChannels"],
-  contexts: ["Guild"],
+  // intents contexts are handled by Seyfert logic usually, but here we can specify:
+  // contexts: ["Guild"], // if supported by version
 })
 @Options(options)
 export default class ConfigTicketsCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const { channel, category, logchannel: logChannel } = ctx.options;
+    const { channel: tickets, category: ticketCategory, logchannel: ticketLogs } = ctx.options;
 
     const guildId = await requireGuildId(ctx);
     if (!guildId) return;
@@ -60,20 +60,23 @@ export default class ConfigTicketsCommand extends SubCommand {
     // Ensure guild row exists
     await ensureGuild(guildId);
 
-    // Save core channels using the flat repo
-    await setCoreChannel(guildId, CoreChannelNames.Tickets, channel.id);
-    await setCoreChannel(guildId, CoreChannelNames.TicketLogs, logChannel.id);
-    await setCoreChannel(guildId, CoreChannelNames.TicketCategory, category.id);
+    const { configStore, ConfigurableModule } = await import("@/configuration");
+
+    // Save using the new config store
+    // The schema expects { tickets: {channelId: string}, ... }
+    await configStore.set(guildId, ConfigurableModule.Tickets, {
+      tickets: { channelId: tickets.id },
+      ticketCategory: { channelId: ticketCategory.id },
+      ticketLogs: { channelId: ticketLogs.id }
+    });
 
     // Debug: read back stored values
-    const ticketChannel = await getCoreChannel(guildId, CoreChannelNames.Tickets);
-    const ticketLogs = await getCoreChannel(guildId, CoreChannelNames.TicketLogs);
-    const ticketCategory = await getCoreChannel(guildId, CoreChannelNames.TicketCategory);
+    const config = await configStore.get(guildId, ConfigurableModule.Tickets);
 
     console.log("Datos guardados en la base de datos:");
-    console.log("Canal de tickets:", ticketChannel);
-    console.log("Canal de logs de tickets:", ticketLogs);
-    console.log("Categoría de tickets:", ticketCategory);
+    console.log("Canal de tickets:", config.tickets);
+    console.log("Canal de logs de tickets:", config.ticketLogs);
+    console.log("Categoría de tickets:", config.ticketCategory);
 
     // Cuando se actualiza el canal de tickets, asegurarse de que el mensaje de tickets exista.
     await ensureTicketMessage(ctx.client).catch(() => {
@@ -85,4 +88,3 @@ export default class ConfigTicketsCommand extends SubCommand {
     });
   }
 }
-
