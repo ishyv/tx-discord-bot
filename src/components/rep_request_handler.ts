@@ -136,7 +136,15 @@ export default class RepRequestHandler extends ComponentCommand {
     if (action === "accept") amount = 1;
     if (action === "deny") amount = -1;
 
-    const total = await adjustUserReputation(targetId, amount);
+    const totalResult = await adjustUserReputation(targetId, amount);
+    if (totalResult.isErr()) {
+      await ctx.write({
+        content: "No se pudo actualizar la reputacion.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    const total = totalResult.unwrap();
     await recordReputationChange(ctx.client, guildId, targetId, amount);
     await syncUserReputationRoles(ctx.client, guildId, targetId, total);
 

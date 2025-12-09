@@ -70,12 +70,12 @@ Guia para entender y usar la persistencia del bot. Todo vive en `src/db` y se ap
 
 ### `repositories/users.ts`
 
-- `getUser`, `userExists`, `ensureUser`, `upsertUser`, `updateUser`, `removeUser`: gestion basica del documento; `ensureUser` crea con defaults.
+- `getUser`, `userExists`, `ensureUser`, `updateUser`, `removeUser`: gestion basica del documento; `ensureUser` crea con defaults.
 - Economia: `bumpBalance`, `depositCoins`, `withdrawCoins` (las dos ultimas devuelven `Result` con errores `INVALID_AMOUNT` o `INSUFFICIENT_FUNDS`).
 - Reputacion: `getUserReputation`, `setUserReputation`, `adjustUserReputation` (usa pipeline para clamp a 0).
 - Warns: `listWarns`, `setWarns`, `addWarn`, `removeWarn`, `clearWarns`.
 - Tickets: `listOpenTickets`, `setOpenTickets`, `addOpenTicket`, `removeOpenTicket`, `removeOpenTicketByChannel` (deduplica y limpia valores no string).
-- `currency` e `inventory` se manipulan via `ensureUser`/`updateUser`/`upsertUser` desde los modulos de economia/juego.
+- `currency` e `inventory` se manipulan via `ensureUser`/`updateUser` desde los modulos de economia/juego.
 
 ### `repositories/guilds.ts`
 
@@ -84,7 +84,7 @@ Guia para entender y usar la persistencia del bot. Todo vive en `src/db` y se ap
 - Canales: `readChannels`/`writeChannels` (mutador funcional), `setCoreChannel`, `getCoreChannel`, `setTicketCategory`, `setTicketMessage`.
 - Canales gestionados: `listManagedChannels`, `addManagedChannel`, `updateManagedChannel`, `removeManagedChannel` (genera claves a partir del label).
 - Tickets pendientes: `getPendingTickets`, `setPendingTickets` (sanitiza y deduplica).
-- Roles de guild: `readRoles`, `writeRoles`, `getRole`, `upsertRole`, `removeRole`, `ensureRoleExists`.
+- Roles de guild: `readRoles`, `writeRoles`, `getRole`, `updateRole`, `removeRole`, `ensureRoleExists`.
 - Overrides y limites: `getRoleOverrides`, `setRoleOverride`, `clearRoleOverride`, `resetRoleOverrides`, `getRoleLimits`, `setRoleLimit`, `clearRoleLimit` (normaliza las keys a snake_case).
 
 ### `repositories/with_guild.ts`
@@ -98,14 +98,14 @@ Guia para entender y usar la persistencia del bot. Todo vive en `src/db` y se ap
 - Grants: `autoRoleUpsertGrant`, `autoRoleDeleteGrant`, `autoRoleListReasonsForMemberRole`, `autoRoleListReasonsForRule`, `autoRoleCountReasonsForRole`, `autoRoleFindGrant`, `autoRoleListDueTimedGrants`, `autoRolePurgeGrantsForRule`, `autoRolePurgeGrantsForGuildRole`, helpers de alto nivel `grantByRule`, `revokeByRule`, `purgeRule`.
 - Tallies de reacciones: `autoRoleIncrementReactionTally`, `autoRoleDecrementReactionTally`, `autoRoleReadReactionTally`, `autoRoleDeleteReactionTally`, `autoRoleListTalliesForMessage`, `autoRoleDeleteTalliesForMessage`, helpers `incrementReactionTally`, `decrementReactionTally`, `readReactionTally`, `removeReactionTally`, `drainMessageState`.
 - Cache: integra con `@/modules/autorole/cache` para mantener reglas y contadores en memoria; los helpers `trackPresence/clearTrackedPresence` escriben solo en cache.
-- Reglas de reputacion: `upsertReputationRule`, `applyReputationPreset` crean/actualizan presets y limpian reglas sobrantes del mismo tipo.
+- Reglas de reputacion: `updateReputationRule`, `applyReputationPreset` crean/actualizan presets y limpian reglas sobrantes del mismo tipo.
 
 ### `repositories/offers.ts`
 
 - Devuelven `Result` para manejo explicito de errores.
 - Creacion: `createOffer` (falla con `ACTIVE_OFFER_EXISTS` si hay oferta activa del autor).
 - Lectura: `findById`, `findActiveByAuthor`.
-- Escritura: `updateOffer` (patch libre) y `transitionOffer` (cambia estado solo si el actual pertenece a `allowedFrom`).
+- Escritura: `updateOffer` (patch libre, con guardas opcionales de estado).
 - Listado: `listByStatus` por guild y estado.
 
 ### `repositories/tops.ts`

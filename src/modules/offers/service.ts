@@ -13,7 +13,6 @@ import {
 	createOffer,
 	findActiveByAuthor,
 	findById,
-	transitionOffer,
 	updateOffer,
 } from "@/db/repositories/offers";
 import { getGuildChannels } from "@/modules/guild-channels";
@@ -37,6 +36,15 @@ export { ACTIVE_STATUSES };
 /** Genera un ID corto y legible para la oferta. */
 export function generateOfferId(): string {
 	return randomBytes(5).toString("hex");
+}
+
+async function applyStatus(
+	offerId: string,
+	status: OfferStatus,
+	allowedFrom: OfferStatus[],
+	patch: Partial<Offer> = {},
+) {
+	return updateOffer(offerId, { ...patch, status }, { allowedFrom });
 }
 
 async function resolveChannels(guildId: string) {
@@ -177,12 +185,11 @@ export async function createOfferForReview(
 			authorAvatar: params.authorAvatar,
 			includeMeta: false,
 		});
-	const statusEmbed = buildStatusEmbed(
-		{
-			_id: id,
-			id,
-			guildId: params.guildId,
-			authorId: params.authorId,
+  const statusEmbed = buildStatusEmbed(
+    {
+      id,
+      guildId: params.guildId,
+      authorId: params.authorId,
 			status: "PENDING_REVIEW",
 			details: params.details as any,
 			embed: userEmbed.toJSON(),
@@ -195,7 +202,7 @@ export async function createOfferForReview(
 			lastModeratorId: null,
 			createdAt: new Date(),
 			updatedAt: new Date(),
-		},
+		} as unknown as Offer,
 		"PENDING_REVIEW",
 		null,
 	);
@@ -257,12 +264,9 @@ export async function withdrawOffer(
 	offer: Offer,
 	actorId: string,
 ): Promise<Result<Offer | null>> {
-	const updatedResult = await transitionOffer(
-		offer.id,
-		"WITHDRAWN",
-		ACTIVE_STATUSES,
-		{ lastModeratorId: actorId },
-	);
+	const updatedResult = await applyStatus(offer.id, "WITHDRAWN", ACTIVE_STATUSES, {
+		lastModeratorId: actorId,
+	});
 
 	if (updatedResult.isErr()) return updatedResult;
 	const updated = updatedResult.unwrap();
@@ -291,12 +295,9 @@ export async function approveOffer(
 
 	if (!offer) return OkResult(null);
 
-	const updatedResult = await transitionOffer(
-		offerId,
-		"APPROVED",
-		["PENDING_REVIEW"],
-		{ lastModeratorId: moderatorId },
-	);
+	const updatedResult = await applyStatus(offerId, "APPROVED", ["PENDING_REVIEW"], {
+		lastModeratorId: moderatorId,
+	});
 	if (updatedResult.isErr()) return updatedResult;
 	const updated = updatedResult.unwrap();
 
@@ -372,7 +373,7 @@ export async function rejectOffer(
 
 	if (!offer) return OkResult(null);
 
-	const updatedResult = await transitionOffer(
+	const updatedResult = await applyStatus(
 		offerId,
 		"REJECTED",
 		["PENDING_REVIEW", "CHANGES_REQUESTED"],
@@ -421,7 +422,7 @@ export async function requestOfferChanges(
 
 	if (!offer) return OkResult(null);
 
-	const updatedResult = await transitionOffer(
+	const updatedResult = await applyStatus(
 		offerId,
 		"CHANGES_REQUESTED",
 		["PENDING_REVIEW"],

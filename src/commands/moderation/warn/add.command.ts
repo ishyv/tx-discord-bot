@@ -48,7 +48,12 @@ export default class AddWarnCommand extends SubCommand {
 		}
 
 		const { user, reason } = ctx.options;
-		const existingWarns = await listWarns(user.id);
+		const warnsResult = await listWarns(user.id);
+		if (warnsResult.isErr()) {
+			await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+			return;
+		}
+		const existingWarns = warnsResult.unwrap();
 		const existingIds = new Set(existingWarns.map((warn) => warn.warn_id));
 
 		let warnId = generateWarnId();
@@ -65,7 +70,11 @@ export default class AddWarnCommand extends SubCommand {
 			timestamp: new Date().toISOString(),
 		};
 
-		await addWarn(user.id, warn);
+		const addResult = await addWarn(user.id, warn);
+		if (addResult.isErr()) {
+			await ctx.write({ content: "No se pudo registrar el warn." });
+			return;
+		}
 
 		const successEmbed = new Embed({
 			title: "Warn aplicado",

@@ -25,6 +25,11 @@ onVoiceStateUpdate(async (payload, client) => {
   const userId = state?.userId ?? oldState?.userId ?? null;
   const newChannelId = state?.channelId ?? null;
   const oldChannelId = oldState?.channelId ?? null;
+  // Seyfert typings may omit server mute/deaf flags; fall back to duck-typing.
+  const serverMute = Boolean((state as any)?.serverMute);
+  const serverDeaf = Boolean((state as any)?.serverDeaf);
+  const prevServerMute = Boolean((oldState as any)?.serverMute);
+  const prevServerDeaf = Boolean((oldState as any)?.serverDeaf);
 
   if (oldChannelId && oldChannelId !== newChannelId) {
     await logModerationAction(
@@ -58,6 +63,30 @@ onVoiceStateUpdate(async (payload, client) => {
       },
       "voiceLogs",
     );
+  }
+
+  if (serverMute !== prevServerMute) {
+    await logModerationAction(client, guildId, {
+      title: serverMute ? "Usuario muteado en voz" : "Mute de voz removido",
+      description: [
+        `Usuario: ${formatUser(userId)}`,
+        newChannelId ? `Canal: <#${newChannelId}>` : oldChannelId ? `Canal: <#${oldChannelId}>` : "Canal desconocido",
+        `Hora: <t:${now()}:f>`,
+      ].join("\n"),
+      color: serverMute ? EmbedColors.Red : EmbedColors.Green,
+    });
+  }
+
+  if (serverDeaf !== prevServerDeaf) {
+    await logModerationAction(client, guildId, {
+      title: serverDeaf ? "Usuario ensordecido en voz" : "Ensordecimiento removido",
+      description: [
+        `Usuario: ${formatUser(userId)}`,
+        newChannelId ? `Canal: <#${newChannelId}>` : oldChannelId ? `Canal: <#${oldChannelId}>` : "Canal desconocido",
+        `Hora: <t:${now()}:f>`,
+      ].join("\n"),
+      color: serverDeaf ? EmbedColors.Red : EmbedColors.Green,
+    });
   }
 });
 

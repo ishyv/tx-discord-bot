@@ -10,6 +10,7 @@ import { connectMongo } from "@/db/client";
 import { TOP_DEFAULTS, TopReportModel, TopWindowModel } from "@/db/models/tops.schema";
 import { deepClone } from "@/db/helpers";
 import type { TopReportRecord, TopWindowRecord } from "@/db/models/tops.schema";
+import type { ChannelId, GuildId } from "@/db/types";
 
 const EMPTY_COUNTS: Record<string, number> = {};
 
@@ -55,7 +56,7 @@ const toWindow = (doc: unknown): TopWindowRecord | null => {
     reputationDeltas: normalizeNumberMap(base.reputationDeltas),
     createdAt: asDate(base.createdAt, null) ?? undefined,
     updatedAt: asDate(base.updatedAt, null) ?? undefined,
-  };
+  } as unknown as TopWindowRecord;
 };
 
 const toReport = (doc: unknown): TopReportRecord | null => {
@@ -73,13 +74,13 @@ const toReport = (doc: unknown): TopReportRecord | null => {
     metadata: (base.metadata as Record<string, unknown> | null) ?? null,
     createdAt: asDate(base.createdAt, null) ?? undefined,
     updatedAt: asDate(base.updatedAt, null) ?? undefined,
-  };
+  } as unknown as TopReportRecord;
 };
 
 /**
  * Asegura que exista una ventana de TOPs para el guild indicado.
  */
-export async function ensureTopWindow(guildId: string): Promise<TopWindowRecord> {
+export async function ensureTopWindow(guildId: GuildId): Promise<TopWindowRecord> {
   await connectMongo();
   const now = new Date();
   const doc = await TopWindowModel.findOneAndUpdate(
@@ -110,7 +111,7 @@ export async function ensureTopWindow(guildId: string): Promise<TopWindowRecord>
 /**
  * Obtiene la ventana de TOPs actual para el guild.
  */
-export async function getTopWindow(guildId: string): Promise<TopWindowRecord> {
+export async function getTopWindow(guildId: GuildId): Promise<TopWindowRecord> {
   const window = await ensureTopWindow(guildId);
   return deepClone(window);
 }
@@ -119,7 +120,7 @@ export async function getTopWindow(guildId: string): Promise<TopWindowRecord> {
  * Actualiza configuración (canal, intervalo, tamaño de TOP) sin tocar contadores.
  */
 export async function updateTopConfig(
-  guildId: string,
+  guildId: GuildId,
   patch: Partial<Pick<TopWindowRecord, "channelId" | "intervalMs" | "topSize">>,
 ): Promise<TopWindowRecord> {
   const safeInterval =
@@ -178,7 +179,7 @@ export async function updateTopConfig(
  * Reinicia los contadores y abre una nueva ventana iniciando en `startedAt`.
  */
 export async function resetTopWindow(
-  guildId: string,
+  guildId: GuildId,
   startedAt: Date = new Date(),
 ): Promise<TopWindowRecord> {
   await connectMongo();
@@ -213,7 +214,7 @@ export async function resetTopWindow(
  * Incrementa contadores de emojis usados en la ventana activa.
  */
 export async function bumpEmojiCounts(
-  guildId: string,
+  guildId: GuildId,
   increments: Record<string, number>,
 ): Promise<void> {
   const inc: Record<string, number> = {};
@@ -236,8 +237,8 @@ export async function bumpEmojiCounts(
  * Incrementa el contador de mensajes por canal.
  */
 export async function bumpChannelCount(
-  guildId: string,
-  channelId: string,
+  guildId: GuildId,
+  channelId: ChannelId,
   delta = 1,
 ): Promise<void> {
   if (!Number.isFinite(delta) || !channelId) return;
@@ -258,7 +259,7 @@ export async function bumpChannelCount(
  * Ajusta la reputación neta del usuario dentro de la ventana activa.
  */
 export async function bumpReputationDelta(
-  guildId: string,
+  guildId: GuildId,
   userId: string,
   delta: number,
 ): Promise<void> {

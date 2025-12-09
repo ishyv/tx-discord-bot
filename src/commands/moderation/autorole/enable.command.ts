@@ -13,8 +13,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import * as repo from "@/db/repositories";
-import { enableRule } from "@/db/repositories";
+import { AutoRoleRulesRepo, enableRule } from "@/db/repositories";
 import { formatRuleSummary, respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 
@@ -37,7 +36,7 @@ export default class AutoroleEnableCommand extends SubCommand {
     if (!context) return;
 
     const slug = ctx.options.name.trim().toLowerCase();
-    const rule = await repo.autoRoleFetchRule(context.guildId, slug);
+    const rule = await AutoRoleRulesRepo.fetchOne(context.guildId, slug);
     if (!rule) {
       await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
       return;

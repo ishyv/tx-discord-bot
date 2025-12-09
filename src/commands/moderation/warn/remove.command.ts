@@ -57,7 +57,12 @@ export default class RemoveWarnCommand extends SubCommand {
       return;
     }
 
-    const warns = await listWarns(user.id);
+    const warnsResult = await listWarns(user.id);
+    if (warnsResult.isErr()) {
+      await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+      return;
+    }
+    const warns = warnsResult.unwrap();
 
     if (warns.length === 0) {
       await ctx.write({ content: "El usuario no tiene warns para remover." });
@@ -72,14 +77,10 @@ export default class RemoveWarnCommand extends SubCommand {
       return;
     }
 
-    try {
-      await removeWarn(user.id, warnId);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error desconocido";
-      await ctx.write({
-        content: `Error al remover el warn: ${message}`,
-      });
+    const removeResult = await removeWarn(user.id, warnId);
+    if (removeResult.isErr()) {
+      const message = removeResult.error?.message ?? "Error desconocido";
+      await ctx.write({ content: `Error al remover el warn: ${message}` });
       return;
     }
 

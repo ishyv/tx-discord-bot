@@ -6,10 +6,7 @@
  * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
  */
 import type { UsingClient } from "seyfert";
-import {
-  autoRoleFetchAllRules,
-  autoRoleFetchRulesByGuild,
-} from "@/db/repositories";
+import { AutoRoleRulesRepo } from "@/db/repositories";
 import { syncUserAntiquityRoles } from "./service";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
@@ -47,7 +44,7 @@ export async function runAntiquityChecks(
       const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
       if (!featureEnabled) return;
 
-      const rules = await autoRoleFetchRulesByGuild(guildId);
+      const rules = await AutoRoleRulesRepo.fetchByGuild(guildId);
       const active = rules.filter(
         (rule) =>
           rule.enabled && rule.trigger.type === "ANTIQUITY_THRESHOLD",
@@ -55,7 +52,7 @@ export async function runAntiquityChecks(
       if (!active.length) return;
       guildsToCheck.set(guildId, active.map((r) => r.name));
     } else {
-      const rules = await autoRoleFetchAllRules();
+      const rules = await AutoRoleRulesRepo.fetchAll();
       for (const rule of rules) {
         if (rule.trigger.type !== "ANTIQUITY_THRESHOLD" || !rule.enabled) {
           continue;

@@ -9,6 +9,32 @@ import type { ResolveEventParams } from "seyfert";
 
 import { createEventHook } from "@/events/hooks/createEventHook";
 
+export type GuildRoleCreateArgs = ResolveEventParams<"guildRoleCreate">;
+export type GuildRoleCreateListener = (
+  ...args: GuildRoleCreateArgs
+) => Promise<void> | void;
+
+const roleCreateHook = createEventHook<GuildRoleCreateArgs>();
+
+export const onGuildRoleCreate = roleCreateHook.on;
+export const onceGuildRoleCreate = roleCreateHook.once;
+export const offGuildRoleCreate = roleCreateHook.off;
+export const emitGuildRoleCreate = roleCreateHook.emit;
+export const clearGuildRoleCreateListeners = roleCreateHook.clear;
+
+export type GuildRoleUpdateArgs = ResolveEventParams<"guildRoleUpdate">;
+export type GuildRoleUpdateListener = (
+  ...args: GuildRoleUpdateArgs
+) => Promise<void> | void;
+
+const roleUpdateHook = createEventHook<GuildRoleUpdateArgs>();
+
+export const onGuildRoleUpdate = roleUpdateHook.on;
+export const onceGuildRoleUpdate = roleUpdateHook.once;
+export const offGuildRoleUpdate = roleUpdateHook.off;
+export const emitGuildRoleUpdate = roleUpdateHook.emit;
+export const clearGuildRoleUpdateListeners = roleUpdateHook.clear;
+
 export type GuildRoleDeleteArgs = ResolveEventParams<"guildRoleDelete">;
 export type GuildRoleDeleteListener = (
   ...args: GuildRoleDeleteArgs

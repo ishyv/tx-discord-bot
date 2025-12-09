@@ -19,10 +19,12 @@ export type ItemTransaction = {
 export type ItemTransactionResult = Result<UserInventory, Error>;
 
 export async function itemTransaction(
-    userID: string,
-    tx: ItemTransaction,
+  userID: string,
+  tx: ItemTransaction,
 ): Promise<ItemTransactionResult> {
-    const user = await ensureUser(userID);
+    const userResult = await ensureUser(userID);
+    if (userResult.isErr()) return ErrResult(userResult.error);
+    const user = userResult.unwrap();
     let inv = user.inventory;
 
     // Optimistic retry loop to avoid lost updates under concurrent writes.

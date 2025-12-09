@@ -5,13 +5,13 @@
  *
  * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
  */
+import type { GuildCommandContext } from "seyfert";
 import {
   Command,
   createBooleanOption,
   createStringOption,
   Declare,
   Embed,
-  GuildCommandContext,
   Options,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
@@ -23,7 +23,7 @@ import {
   setAllFeatureFlags,
 } from "@/modules/features";
 import {
-  autoRoleFetchRulesByGuild,
+  AutoRoleRulesRepo,
   disableRule,
   refreshGuildRules,
 } from "@/db/repositories";
@@ -145,7 +145,7 @@ export default class FeatureDashboardCommand extends Command {
     if (feature !== "autoroles" || enabled) return;
 
     try {
-      const rules = await autoRoleFetchRulesByGuild(guildId);
+      const rules = await AutoRoleRulesRepo.fetchByGuild(guildId);
       const enabledRules = rules.filter((rule) => rule.enabled);
       if (enabledRules.length === 0) return;
 

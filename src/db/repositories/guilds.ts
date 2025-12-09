@@ -11,11 +11,14 @@ import {
   GuildModel,
   type CoreChannelRecord,
   type GuildChannelsRecord,
-  type GuildDoc,
+  type GuildData as BaseGuildData,
   type GuildFeaturesRecord,
   type GuildRolesRecord,
   type ManagedChannelRecord,
 } from "@/db/models/guild.schema";
+import type { GuildId } from "@/db/types";
+
+type GuildData = BaseGuildData & Record<string, unknown>;
 
 type ChannelsMutator = (current: GuildChannelsRecord) => GuildChannelsRecord;
 type RolesMutator = (current: GuildRolesRecord) => GuildRolesRecord;
@@ -37,18 +40,17 @@ function mergeFeatures(
   return { ...DEFAULT_GUILD_FEATURES, ...(features ?? {}) };
 }
 
-function normalizeGuild(doc: GuildDoc | null): GuildDoc | null {
+function normalizeGuild(doc: GuildData | null): GuildData | null {
   if (!doc) return null;
   return {
     ...doc,
-    id: doc._id,
     roles: (doc.roles as GuildRolesRecord) ?? {},
     channels: (doc.channels as GuildChannelsRecord) ?? deepClone(EMPTY_CHANNELS),
     features: mergeFeatures(doc.features as GuildFeaturesRecord),
     pendingTickets: Array.isArray(doc.pendingTickets)
       ? doc.pendingTickets.filter((v): v is string => typeof v === "string")
       : [],
-  } as GuildDoc;
+  } as unknown as GuildData;
 }
 
 function normalizeChannels(channels: Partial<GuildChannelsRecord>): GuildChannelsRecord {
@@ -68,32 +70,33 @@ function normalizeChannels(channels: Partial<GuildChannelsRecord>): GuildChannel
   } as GuildChannelsRecord;
 }
 
-const defaultGuild = (id: string): GuildDoc => ({
-  _id: id,
-  roles: {},
-  channels: deepClone(EMPTY_CHANNELS),
-  pendingTickets: [],
-  features: { ...DEFAULT_GUILD_FEATURES },
-  reputation: { keywords: [] },
-}) as any;
+const defaultGuild = (id: string): GuildData =>
+  ({
+    _id: id,
+    roles: {},
+    channels: deepClone(EMPTY_CHANNELS),
+    pendingTickets: [],
+    features: { ...DEFAULT_GUILD_FEATURES },
+    reputation: { keywords: [] },
+  } as unknown as GuildData);
 
-class GuildStore extends MongoStore<GuildDoc> {
+class GuildStore extends MongoStore<GuildData> {
   constructor() {
     super(GuildModel, defaultGuild);
   }
 
   // Override get to normalize
-  async get(id: string): Promise<GuildDoc | null> {
+  async get(id: string): Promise<GuildData | null> {
     const doc = await super.get(id);
     return normalizeGuild(doc);
   }
 
-  async ensure(id: string): Promise<GuildDoc> {
+  async ensure(id: string): Promise<GuildData> {
     const doc = await super.ensure(id);
-    return normalizeGuild(doc) as GuildDoc;
+    return normalizeGuild(doc) as GuildData;
   }
 
-  async update(id: string, partial: Partial<GuildDoc>): Promise<GuildDoc | null> {
+  async update(id: string, partial: Partial<GuildData>): Promise<GuildData | null> {
     const doc = await super.update(id, partial);
     return normalizeGuild(doc);
   }
@@ -105,24 +108,24 @@ export const guildStore = new GuildStore();
 /* Core entity helpers                                                       */
 /* ------------------------------------------------------------------------- */
 
-export async function getGuild(id: string) { return guildStore.get(id); }
-export async function ensureGuild(id: string) { return guildStore.ensure(id); }
-export async function updateGuild(id: string, update: Partial<GuildDoc>) {
-  return guildStore.update(id, { ...update, updatedAt: new Date() });
+export async function getGuild(id: GuildId) { return guildStore.get(id); }
+export async function ensureGuild(id: GuildId) { return guildStore.ensure(id); }
+export async function updateGuild(id: GuildId, update: Partial<GuildData>) {
+  return guildStore.update(id, { ...(update as Record<string, unknown>), updatedAt: new Date() });
 }
-export async function deleteGuild(id: string) { return guildStore.remove(id); }
+export async function deleteGuild(id: GuildId) { return guildStore.remove(id); }
 
 /* ------------------------------------------------------------------------- */
 /* Feature flags                                                             */
 /* ------------------------------------------------------------------------- */
 
-export async function readFeatures(id: string): Promise<GuildFeaturesRecord> {
+export async function readFeatures(id: GuildId): Promise<GuildFeaturesRecord> {
   const g = await guildStore.ensure(id);
   return mergeFeatures(g.features);
 }
 
 export async function setFeature(
-  id: string,
+  id: GuildId,
   feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
@@ -136,7 +139,7 @@ export async function setFeature(
 }
 
 export async function setAllFeatures(
-  id: string,
+  id: GuildId,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
   const updates: Record<string, boolean> = {};
@@ -151,25 +154,28 @@ export async function setAllFeatures(
 /* Channels                                                                  */
 /* ------------------------------------------------------------------------- */
 
-export async function readChannels(id: string): Promise<GuildChannelsRecord> {
+export async function readChannels(id: GuildId): Promise<GuildChannelsRecord> {
   const g = await guildStore.ensure(id);
   const channels = deepClone(g.channels ?? {}) as Partial<GuildChannelsRecord>;
   return normalizeChannels(channels);
 }
 
 export async function writeChannels(
-  guildID: string,
+  guildID: GuildId,
   mutate: ChannelsMutator,
 ): Promise<GuildChannelsRecord> {
   const current = await readChannels(guildID);
   const next = deepClone(mutate(current));
   // We update the whole "channels" object.
-  const doc = await guildStore.update(guildID, { channels: next, updatedAt: new Date() });
+  const doc = await guildStore.update(
+    guildID,
+    { channels: next, updatedAt: new Date() } as any,
+  );
   return normalizeChannels(doc?.channels ?? {});
 }
 
 export async function setCoreChannel(
-  id: string,
+  id: GuildId,
   name: string,
   channelId: string,
 ): Promise<GuildChannelsRecord> {
@@ -183,7 +189,7 @@ export async function setCoreChannel(
 }
 
 export async function getCoreChannel(
-  id: string,
+  id: GuildId,
   name: string,
 ): Promise<CoreChannelRecord | null> {
   const c = await readChannels(id);
@@ -193,7 +199,7 @@ export async function getCoreChannel(
 }
 
 export async function setTicketCategory(
-  id: string,
+  id: GuildId,
   categoryId: string | null,
 ): Promise<GuildChannelsRecord> {
   // Assuming ticketCategoryId exists on type or is allowed
@@ -204,7 +210,7 @@ export async function setTicketCategory(
 }
 
 export async function setTicketMessage(
-  id: string,
+  id: GuildId,
   messageId: string | null,
 ): Promise<GuildChannelsRecord> {
   return writeChannels(id, (c) => ({ ...c, ticketMessageId: messageId }));
@@ -212,13 +218,13 @@ export async function setTicketMessage(
 
 /* Managed channels -------------------------------------------------------- */
 
-export async function listManagedChannels(id: string): Promise<ManagedChannelRecord[]> {
+export async function listManagedChannels(id: GuildId): Promise<ManagedChannelRecord[]> {
   const c = await readChannels(id);
   return Object.values(c.managed ?? {}) as ManagedChannelRecord[];
 }
 
 export async function addManagedChannel(
-  id: string,
+  id: GuildId,
   entry: { key?: string; label: string; channelId: string },
 ): Promise<GuildChannelsRecord> {
   return writeChannels(id, (c) => {
@@ -235,7 +241,7 @@ export async function addManagedChannel(
 }
 
 export async function updateManagedChannel(
-  id: string,
+  id: GuildId,
   identifier: string,
   patch: Partial<{ label: string; channelId: string }>,
 ): Promise<GuildChannelsRecord> {
@@ -249,7 +255,7 @@ export async function updateManagedChannel(
 }
 
 export async function removeManagedChannel(
-  guildID: string,
+  guildID: GuildId,
   identifier: string,
 ): Promise<GuildChannelsRecord> {
   return writeChannels(guildID, (c) => {
@@ -264,13 +270,13 @@ export async function removeManagedChannel(
 /* Pending tickets                                                           */
 /* ------------------------------------------------------------------------- */
 
-export async function getPendingTickets(guildId: string): Promise<string[]> {
+export async function getPendingTickets(guildId: GuildId): Promise<string[]> {
   const g = await guildStore.ensure(guildId);
   return Array.isArray(g.pendingTickets) ? deepClone(g.pendingTickets) : [];
 }
 
 export async function setPendingTickets(
-  guildId: string,
+  guildId: GuildId,
   update: (tickets: string[]) => string[],
 ): Promise<string[]> {
   // This requires read-modify-write as well
@@ -280,42 +286,46 @@ export async function setPendingTickets(
   const sanitized = Array.from(new Set(next.filter(s => typeof s === 'string')));
 
   // We could optimize with $addToSet or $pull if we knew the operation, but generic update function implies full replacement
-  const doc = await guildStore.update(guildId, {
-    pendingTickets: sanitized,
-    updatedAt: new Date()
-  });
-  return deepClone(doc?.pendingTickets ?? []);
+  const doc = await guildStore.update(
+    guildId,
+    {
+      pendingTickets: sanitized,
+      updatedAt: new Date()
+    } as any,
+  );
+  const pending = doc && Array.isArray(doc.pendingTickets) ? doc.pendingTickets : [];
+  return deepClone(pending as string[]);
 }
 
 /* ------------------------------------------------------------------------- */
 /* Roles                                                                     */
 /* ------------------------------------------------------------------------- */
 
-export async function readRoles(id: string): Promise<GuildRolesRecord> {
+export async function readRoles(id: GuildId): Promise<GuildRolesRecord> {
   const g = await guildStore.ensure(id);
   return deepClone((g.roles as GuildRolesRecord) ?? {});
 }
 
 export async function writeRoles(
-  id: string,
+  id: GuildId,
   mutate: RolesMutator,
 ): Promise<GuildRolesRecord> {
   const current = await readRoles(id);
   const next = deepClone(mutate(current));
-  const doc = await guildStore.update(id, { roles: next, updatedAt: new Date() });
+  const doc = await guildStore.update(id, { roles: next, updatedAt: new Date() } as any);
   return deepClone((doc?.roles as GuildRolesRecord) ?? {});
 }
 
 export async function getRole(
-  id: string,
+  id: GuildId,
   key: string,
 ): Promise<GuildRolesRecord[string] | null> {
   const r = await readRoles(id);
   return r?.[key] ?? null;
 }
 
-export async function upsertRole(
-  id: string,
+export async function updateRole(
+  id: GuildId,
   key: string,
   patch: any,
 ): Promise<GuildRolesRecord> {
@@ -330,7 +340,7 @@ export async function upsertRole(
 }
 
 export async function removeRole(
-  id: string,
+  id: GuildId,
   key: string,
 ): Promise<GuildRolesRecord> {
   return writeRoles(id, (r) => {
@@ -341,10 +351,10 @@ export async function removeRole(
 }
 
 export async function ensureRoleExists(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
 ): Promise<void> {
-  await upsertRole(guildId, roleKey, {});
+  await updateRole(guildId, roleKey, {});
 }
 
 /* Role overrides & limits -------------------------------------------------- */
@@ -358,7 +368,7 @@ export async function getRoleOverrides(
 }
 
 export async function setRoleOverride(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
   actionKey: string,
   override: any,
@@ -374,7 +384,7 @@ export async function setRoleOverride(
 }
 
 export async function clearRoleOverride(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
   actionKey: string,
 ): Promise<boolean> {
@@ -394,7 +404,7 @@ export async function clearRoleOverride(
 }
 
 export async function resetRoleOverrides(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
 ): Promise<void> {
   await writeRoles(guildId, (roles: any = {}) => {
@@ -405,7 +415,7 @@ export async function resetRoleOverrides(
 }
 
 export async function getRoleLimits(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
 ): Promise<Record<string, unknown>> {
   const roles = await readRoles(guildId);
@@ -413,7 +423,7 @@ export async function getRoleLimits(
 }
 
 export async function setRoleLimit(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
   actionKey: string,
   limit: { limit: number; window?: string | null; windowSeconds?: number | null },
@@ -433,7 +443,7 @@ export async function setRoleLimit(
 }
 
 export async function clearRoleLimit(
-  guildId: string,
+  guildId: GuildId,
   roleKey: string,
   actionKey: string,
 ): Promise<boolean> {

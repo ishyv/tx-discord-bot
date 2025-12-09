@@ -28,3 +28,16 @@ export const onceInviteCreate = inviteCreateHook.once;
 export const offInviteCreate = inviteCreateHook.off;
 export const emitInviteCreate = inviteCreateHook.emit;
 export const clearInviteCreateListeners = inviteCreateHook.clear;
+
+export type InviteDeleteArgs = ResolveEventParams<"inviteDelete">;
+export type InviteDeleteListener = (
+  ...args: InviteDeleteArgs
+) => Promise<void> | void;
+
+const inviteDeleteHook = createEventHook<InviteDeleteArgs>();
+
+export const onInviteDelete = inviteDeleteHook.on;
+export const onceInviteDelete = inviteDeleteHook.once;
+export const offInviteDelete = inviteDeleteHook.off;
+export const emitInviteDelete = inviteDeleteHook.emit;
+export const clearInviteDeleteListeners = inviteDeleteHook.clear;

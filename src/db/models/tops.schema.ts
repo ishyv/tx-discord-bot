@@ -8,49 +8,43 @@
  * Alcance: describe la forma de los documentos y expone los modelos Mongoose;
  * no implementa la lógica de negocio del sistema de TOPs.
  */
-import { Schema, model, type InferSchemaType, type Types } from "mongoose";
-
-export interface TopWindowRecord {
-  guildId: string;
-  channelId: string | null;
-  intervalMs: number;
-  topSize: number;
-  windowStartedAt: Date;
-  lastReportAt: Date | null;
-  emojiCounts: Record<string, number>;
-  channelCounts: Record<string, number>;
-  reputationDeltas: Record<string, number>;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export interface TopReportRecord {
-  id: string;
-  guildId: string;
-  periodStart: Date;
-  periodEnd: Date;
-  intervalMs: number;
-  emojiCounts: Record<string, number>;
-  channelCounts: Record<string, number>;
-  reputationDeltas: Record<string, number>;
-  metadata?: Record<string, unknown> | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import {
+  Schema,
+  model,
+  type HydratedDocument,
+} from "mongoose";
+import type { ChannelId, GuildId, TopReportId } from "@/db/types";
 
 const DEFAULT_TOP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 const DEFAULT_TOP_SIZE = 10;
 
-const mapOfNumbers = { type: Map, of: Number, default: {} };
+// Mongoose Map<number>, luego lo tipamos como Record<string, number> en TS
+const mapOfNumbers = { type: Map, of: Number, default: {} } as const;
+
+/* ==============================
+ * TopWindow
+ * ============================ */
 
 const TopWindowSchema = new Schema(
   {
-    _id: { type: String, required: true }, // guildId
+    _id: { type: String, required: true }, // GuildId
     guildId: { type: String, required: true },
-    channelId: { type: String, default: null },
-    intervalMs: { type: Number, required: true, default: DEFAULT_TOP_INTERVAL_MS },
-    topSize: { type: Number, required: true, default: DEFAULT_TOP_SIZE },
-    windowStartedAt: { type: Date, required: true, default: () => new Date() },
+    channelId: { type: String, default: null }, // ChannelId
+    intervalMs: {
+      type: Number,
+      required: true,
+      default: DEFAULT_TOP_INTERVAL_MS,
+    },
+    topSize: {
+      type: Number,
+      required: true,
+      default: DEFAULT_TOP_SIZE,
+    },
+    windowStartedAt: {
+      type: Date,
+      required: true,
+      default: () => new Date(),
+    },
     lastReportAt: { type: Date, default: null },
     emojiCounts: mapOfNumbers,
     channelCounts: mapOfNumbers,
@@ -62,24 +56,44 @@ const TopWindowSchema = new Schema(
     timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" },
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
+    id: false,
   },
 );
 
-TopWindowSchema.virtual("id").get(function virtualId(this: { _id: string }) {
-  return this._id;
-});
 TopWindowSchema.index({ guildId: 1 });
 
-export type TopWindowDoc = InferSchemaType<typeof TopWindowSchema> & {
-  id: string;
-};
+export interface TopWindowData {
+  _id: GuildId;
+  guildId: GuildId;
+  channelId: ChannelId | null;
+  intervalMs: number;
+  topSize: number;
+  windowStartedAt: Date;
+  lastReportAt: Date | null;
+  emojiCounts: Record<string, number>;
+  channelCounts: Record<string, number>;
+  reputationDeltas: Record<string, number>;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export type TopWindowData = TopWindowRecord;
+export type TopWindowDoc = HydratedDocument<TopWindowData>;
 
-export const TopWindowModel = model<TopWindowDoc>("TopWindow", TopWindowSchema);
+// Si quieres mantener el nombre “Record” para semántica de dominio:
+export type TopWindowRecord = TopWindowData;
+
+export const TopWindowModel = model<TopWindowData>(
+  "TopWindow",
+  TopWindowSchema,
+);
+
+/* ==============================
+ * TopReport
+ * ============================ */
 
 const TopReportSchema = new Schema(
   {
+    _id: { type: String, required: true }, // TopReportId
     guildId: { type: String, required: true },
     periodStart: { type: Date, required: true },
     periodEnd: { type: Date, required: true },
@@ -95,22 +109,36 @@ const TopReportSchema = new Schema(
     timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" },
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
+    id: false,
   },
 );
 
-TopReportSchema.virtual("id").get(function virtualId(this: { _id: Types.ObjectId }) {
-  return this._id.toString();
-});
 TopReportSchema.index({ guildId: 1, createdAt: -1 });
 TopReportSchema.index({ periodEnd: 1 });
 
-export type TopReportDoc = InferSchemaType<typeof TopReportSchema> & {
-  id: string;
-};
+export interface TopReportData {
+  _id: TopReportId;
+  guildId: GuildId;
+  periodStart: Date;
+  periodEnd: Date;
+  intervalMs: number;
+  emojiCounts: Record<string, number>;
+  channelCounts: Record<string, number>;
+  reputationDeltas: Record<string, number>;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export type TopReportData = TopReportRecord;
+export type TopReportDoc = HydratedDocument<TopReportData>;
 
-export const TopReportModel = model<TopReportDoc>("TopReport", TopReportSchema);
+// Alias semántico si lo usas como “record” de dominio
+export type TopReportRecord = TopReportData;
+
+export const TopReportModel = model<TopReportData>(
+  "TopReport",
+  TopReportSchema,
+);
 
 export const TOP_DEFAULTS = {
   intervalMs: DEFAULT_TOP_INTERVAL_MS,

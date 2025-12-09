@@ -5,11 +5,11 @@
  *
  * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
  */
+import type { GuildCommandContext } from "seyfert";
 import {
   createRoleOption,
   Declare,
   Embed,
-  GuildCommandContext,
   Options,
   SubCommand,
 } from "seyfert";

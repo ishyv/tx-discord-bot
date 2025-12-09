@@ -38,7 +38,12 @@ export default class ListWarnCommand extends SubCommand {
     const { user } = ctx.options;
 
     const guild = await ctx.guild();
-    const warns = await listWarns(user.id);
+    const warnsResult = await listWarns(user.id);
+    if (warnsResult.isErr()) {
+      await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+      return;
+    }
+    const warns = warnsResult.unwrap();
 
     if (warns.length === 0) {
       await ctx.write({ content: "El usuario no tiene warns para ver." });

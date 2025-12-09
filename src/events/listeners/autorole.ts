@@ -30,8 +30,8 @@ import {
 } from "@/modules/autorole/parsers";
 import type { AutoRoleRule } from "@/modules/autorole/types";
 import {
-  autoRoleFetchRulesByGuild,
-  autoRoleListReasonsForRule,
+  AutoRoleGrantsRepo,
+  AutoRoleRulesRepo,
   clearTrackedPresence,
   decrementReactionTally,
   disableRule,
@@ -247,7 +247,7 @@ onMessageReactionRemoveAll(async (payload: ReactionRemoveAllPayload, client: Usi
 });
 
 onMessageDelete(async (payload, client: UsingClient) => {
-  const raw: any = payload;
+  const raw = payload as { guildId?: string; guild_id?: string };
   const guildId = raw.guildId ?? raw.guild_id;
   await handleMessageStateReset(
     client,
@@ -258,7 +258,11 @@ onMessageDelete(async (payload, client: UsingClient) => {
 });
 
 onMessageDeleteBulk(async (payload, client: UsingClient) => {
-  const raw: any = payload;
+  const raw = payload as {
+    guildId?: string;
+    guild_id?: string;
+    ids?: string[];
+  };
   const guildId = raw.guildId ?? raw.guild_id;
   if (!guildId) return;
 
@@ -276,7 +280,13 @@ onMessageDeleteBulk(async (payload, client: UsingClient) => {
   }
 });
 onGuildRoleDelete(async (payload, client: UsingClient) => {
-  const raw: any = payload;
+  const raw = payload as {
+    guildId?: string;
+    guild_id?: string;
+    roleId?: string;
+    role_id?: string;
+    role?: { id?: string };
+  };
   const guildId = raw.guildId ?? raw.guild_id;
   const roleId = raw.roleId ?? raw.role_id ?? raw.role?.id;
   if (!guildId || !roleId) return;
@@ -285,7 +295,7 @@ onGuildRoleDelete(async (payload, client: UsingClient) => {
   if (!featureEnabled) return;
 
   try {
-    const rules: AutoRoleRule[] = await autoRoleFetchRulesByGuild(guildId);
+    const rules: AutoRoleRule[] = await AutoRoleRulesRepo.fetchByGuild(guildId);
     const affected: AutoRoleRule[] = rules.filter((rule) => rule.enabled && rule.roleId === roleId);
     for (const rule of affected) {
       await disableRule(guildId, rule.name);
@@ -331,7 +341,7 @@ async function handleMessageStateReset(
       if (fallback) {
         rules = fallback;
       } else {
-        rules = await autoRoleFetchRulesByGuild(guildId);
+        rules = await AutoRoleRulesRepo.fetchByGuild(guildId);
         fallback = rules;
       }
       return rules.filter(matcher);
@@ -384,7 +394,7 @@ async function handleMessageStateReset(
     }
 
     const allRules: AutoRoleRule[] =
-      fallback ?? (await autoRoleFetchRulesByGuild(guildId));
+      fallback ?? (await AutoRoleRulesRepo.fetchByGuild(guildId));
     const messageRules: AutoRoleRule[] = allRules.filter(
       (rule) =>
         rule.enabled &&
@@ -403,7 +413,7 @@ async function handleMessageStateReset(
 
     for (const rule of messageRules) {
       if (!isLiveRule(rule.durationMs)) continue;
-      const grants = await autoRoleListReasonsForRule(guildId, rule.name);
+      const grants = await AutoRoleGrantsRepo.listForRule(guildId, rule.name);
       for (const grant of grants) {
         if (grant.type !== "LIVE") continue;
         await revokeByRule({

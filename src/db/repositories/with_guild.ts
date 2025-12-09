@@ -7,8 +7,7 @@
  * NO USAR para contadores de alta frecuencia (XP, stats) donde se requiere atomicidad ($inc).
  */
 import { connectMongo } from "@/db/client";
-import { GuildModel, type GuildDoc } from "@/db/models/guild.schema";
-import type { HydratedDocument } from "mongoose";
+import { GuildModel, type GuildDoc, type GuildData } from "@/db/models/guild.schema";
 
 /**
  * Modifies a guild document safely.
@@ -18,7 +17,7 @@ import type { HydratedDocument } from "mongoose";
  */
 export async function withGuild<T>(
     id: string,
-    callback: (guild: HydratedDocument<GuildDoc>) => Promise<T> | T
+    callback: (guild: GuildDoc) => Promise<T> | T
 ): Promise<T> {
     await connectMongo();
 
@@ -48,14 +47,14 @@ export async function withGuild<T>(
 /**
  * Retrieve a guild document by ID (read-only).
  */
-export async function getGuild(id: string): Promise<GuildDoc | null> {
+export async function getGuild(id: string): Promise<GuildData | null> {
     await connectMongo();
-    return GuildModel.findById(id).lean();
+    return GuildModel.findById(id).lean() as unknown as GuildData | null;
 }
 
 /**
  * Ensure a guild document exists, creating it if necessary.
  */
-export async function ensureGuild(id: string): Promise<GuildDoc> {
-    return withGuild(id, (guild) => guild.toObject());
+export async function ensureGuild(id: string): Promise<GuildData> {
+    return withGuild(id, (guild) => guild.toObject() as GuildData);
 }

@@ -1,5 +1,5 @@
 
-import { Model, FilterQuery } from "mongoose";
+import { Model, FilterQuery, type UpdateQuery } from "mongoose";
 import { connectMongo } from "./client";
 
 /**
@@ -8,7 +8,7 @@ import { connectMongo } from "./client";
  * T: The interface of the raw data (plain object).
  * D: The interface of the Mongoose Document (usually T & Document).
  */
-export class MongoStore<T> {
+export class MongoStore<T extends Record<string, any>> {
     constructor(
         protected model: Model<T>,
         protected defaultGenerator: (id: string) => T
@@ -56,15 +56,19 @@ export class MongoStore<T> {
 
     /**
      * Update a document by ID.
-     * Uses $set to merge fields.
+     * Uses $set to merge fields; upserts with defaults if missing.
      */
     async update(id: string, partial: Partial<T>): Promise<T | null> {
         await this.connect();
-        // @ts-ignore
+        const defaults = this.defaultGenerator(id);
+        const update: UpdateQuery<T> = {
+            $set: partial as any,
+            $setOnInsert: defaults as any,
+        };
         const doc = await this.model.findByIdAndUpdate(
             id,
-            { $set: partial },
-            { new: true, lean: true }
+            update,
+            { new: true, lean: true, upsert: true }
         );
         return (doc as T) || null;
     }
@@ -82,13 +86,13 @@ export class MongoStore<T> {
         // If we use findOneAndUpdate with upsert: true, we need $setOnInsert for the rest of defaults.
 
         const defaults = this.defaultGenerator(id);
-        // @ts-ignore
+        const update: UpdateQuery<T> = {
+            $set: partial as any,
+            $setOnInsert: defaults as any,
+        };
         const doc = await this.model.findByIdAndUpdate(
             id,
-            {
-                $set: partial,
-                $setOnInsert: defaults
-            } as any,
+            update,
             { new: true, upsert: true, lean: true }
         );
         return doc as T;

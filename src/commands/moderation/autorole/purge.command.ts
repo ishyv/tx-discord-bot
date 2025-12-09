@@ -13,8 +13,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import * as repo from "@/db/repositories";
-import { purgeRule } from "@/db/repositories";
+import { AutoRoleRulesRepo, purgeRule } from "@/db/repositories";
 import { respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 
 const options = {
@@ -36,7 +35,7 @@ export default class AutorolePurgeCommand extends SubCommand {
     if (!context) return;
 
     const slug = ctx.options.name.trim().toLowerCase();
-    const rule = await repo.autoRoleFetchRule(context.guildId, slug);
+    const rule = await AutoRoleRulesRepo.fetchOne(context.guildId, slug);
     if (!rule) {
       await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
       return;

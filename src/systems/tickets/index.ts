@@ -221,7 +221,15 @@ export function buildTicketModal(category: TicketCategory): Modal {
           return;
         }
 
-        const openTickets = await listOpenTickets(userId);
+        const openTicketsResult = await listOpenTickets(userId);
+        if (openTicketsResult.isErr()) {
+          await ctx.write({
+            content: "No se pudo verificar tus tickets abiertos.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const openTickets = openTicketsResult.unwrap();
         if (openTickets.length >= MAX_TICKETS_PER_USER) {
           await ctx.write({
             content:
@@ -269,10 +277,21 @@ export function buildTicketModal(category: TicketCategory): Modal {
 
         // Marcar el ticket como abierto en la base de datos
         await withGuild(guildId, (guild) => {
-          guild.pendingTickets.push(ticketChannel.id);
-          return guild.pendingTickets;
+          const pending = Array.isArray((guild as any).pendingTickets)
+            ? (guild as any).pendingTickets as string[]
+            : [];
+          pending.push(ticketChannel.id);
+          (guild as any).pendingTickets = pending;
+          return pending;
         });
-        await addOpenTicket(userId, ticketChannel.id);
+        const addTicketResult = await addOpenTicket(userId, ticketChannel.id);
+        if (addTicketResult.isErr()) {
+          ctx.client.logger?.warn?.("[tickets] no se pudo registrar openTicket", {
+            error: addTicketResult.error,
+            userId,
+            channelId: ticketChannel.id,
+          });
+        }
 
         const welcomeEmbed = new Embed()
           .setColor(Colors.info)

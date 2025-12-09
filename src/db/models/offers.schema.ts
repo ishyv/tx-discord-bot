@@ -5,7 +5,19 @@
  *
  * Alcance: representa la forma de los datos; no implementa reglas de negocio ni flujos de aplicación.
  */
-import { Schema, model, type InferSchemaType } from "mongoose";
+import {
+  Schema,
+  model,
+  type InferSchemaType,
+  type HydratedDocument,
+} from "mongoose";
+import type {
+  ChannelId,
+  GuildId,
+  MessageId,
+  OfferId,
+  UserId,
+} from "@/db/types";
 
 /** Estados que recorre una oferta durante su ciclo de vida. */
 export const offerStatus = {
@@ -20,19 +32,11 @@ export const offerStatus = {
 
 export type OfferStatus = (typeof offerStatus.enumValues)[number];
 
-/** Datos que el autor provee para construir el embed de la oferta. */
-export interface OfferDetails {
-  title: string;
-  description: string;
-  requirements?: string | null;
-  workMode?: string | null;
-  duration?: string | null;
-  salary?: string | null;
-  contact?: string | null;
-  labels?: string[] | null;
-  location?: string | null;
-}
+/* ==============================
+ * OfferDetails
+ * ============================ */
 
+/** Datos que el autor provee para construir el embed de la oferta. */
 const OfferDetailsSchema = new Schema(
   {
     title: { type: String, required: true },
@@ -48,32 +52,55 @@ const OfferDetailsSchema = new Schema(
   { _id: false },
 );
 
+export type OfferDetails = {
+  title: string;
+  description: string;
+  requirements: string | null;
+  workMode: string | null;
+  duration: string | null;
+  salary: string | null;
+  contact: string | null;
+  labels: string[];
+  location: string | null;
+};
+
+/* ==============================
+ * Offer
+ * ============================ */
+
 const OfferSchema = new Schema(
   {
-    _id: { type: String, required: true },
-    guildId: { type: String, required: true },
-    authorId: { type: String, required: true },
-    status: { type: String, required: true, enum: offerStatus.enumValues },
+    _id: { type: String, required: true }, // OfferId
+    guildId: { type: String, required: true }, // GuildId
+    authorId: { type: String, required: true }, // UserId
+
+    status: {
+      type: String,
+      required: true,
+      enum: offerStatus.enumValues,
+    },
+
     details: { type: OfferDetailsSchema, required: true },
+
     embed: { type: Schema.Types.Mixed, required: true },
-    reviewMessageId: { type: String, default: null },
-    reviewChannelId: { type: String, default: null },
-    publishedMessageId: { type: String, default: null },
-    publishedChannelId: { type: String, default: null },
+
+    reviewMessageId: { type: String, default: null }, // MessageId
+    reviewChannelId: { type: String, default: null }, // ChannelId
+
+    publishedMessageId: { type: String, default: null }, // MessageId
+    publishedChannelId: { type: String, default: null }, // ChannelId
+
     rejectionReason: { type: String, default: null },
     changesNote: { type: String, default: null },
-    lastModeratorId: { type: String, default: null },
+    lastModeratorId: { type: String, default: null }, // UserId
   },
   {
     collection: "offers",
     versionKey: false,
     timestamps: true,
+    id: false,
   },
 );
-
-OfferSchema.virtual("id").get(function virtualId(this: { _id: string }) {
-  return this._id;
-});
 
 OfferSchema.index({ status: 1, guildId: 1 });
 OfferSchema.index(
@@ -86,25 +113,43 @@ OfferSchema.index(
   },
 );
 
-export type OfferDoc = InferSchemaType<typeof OfferSchema> & { id: string };
+// Tipo base inferido desde el schema
+type OfferSchemaType = InferSchemaType<typeof OfferSchema>;
 
-export type OfferData = {
-  _id: string;
-  id: string;
-  guildId: string;
-  authorId: string;
+// Capa de dominio: aplicamos tipos branded y nullables específicos
+export type OfferData = Omit<
+  OfferSchemaType,
+  | "_id"
+  | "guildId"
+  | "authorId"
+  | "details"
+  | "reviewMessageId"
+  | "reviewChannelId"
+  | "publishedMessageId"
+  | "publishedChannelId"
+  | "lastModeratorId"
+  | "rejectionReason"
+  | "changesNote"
+> & {
+  _id: OfferId;
+  id: OfferId;
+  guildId: GuildId;
+  authorId: UserId;
+
+  reviewMessageId: MessageId | null;
+  reviewChannelId: ChannelId | null;
+  publishedMessageId: MessageId | null;
+  publishedChannelId: ChannelId | null;
+  lastModeratorId: UserId | null;
+  rejectionReason: string | null;
+  changesNote: string | null;
+
+  // por si el infer no lo captura muy explícito
   status: OfferStatus;
   details: OfferDetails;
   embed: any;
-  reviewMessageId: string | null;
-  reviewChannelId: string | null;
-  publishedMessageId: string | null;
-  publishedChannelId: string | null;
-  rejectionReason: string | null;
-  changesNote: string | null;
-  lastModeratorId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
-export const OfferModel = model<OfferDoc>("Offer", OfferSchema);
+export type OfferDoc = HydratedDocument<OfferData>;
+
+export const OfferModel = model<OfferData>("Offer", OfferSchema);

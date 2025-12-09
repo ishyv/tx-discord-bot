@@ -13,7 +13,7 @@
 
 import type { AutocompleteInteraction, GuildCommandContext } from "seyfert";
 
-import * as repo from "@/db/repositories";
+import { AutoRoleRulesRepo } from "@/db/repositories";
 import type {
   AutoRoleRule,
   AutoRoleTrigger,
@@ -142,7 +142,7 @@ export async function respondRuleAutocomplete(
   }
 
   const input = interaction.getInput()?.toLowerCase() ?? "";
-  const names = await repo.autoRoleListRuleNames(guildId);
+  const names = await AutoRoleRulesRepo.listNames(guildId);
   const filtered = input
     ? names.filter((name) => name.toLowerCase().includes(input))
     : names;

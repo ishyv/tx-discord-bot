@@ -67,6 +67,7 @@ export function parseOfferDetails(payload: OfferDesignerPayload): {
     description,
     requirements: get("requirements"),
     workMode: get("workMode"),
+    duration: get("duration"),
     salary: get("salary"),
     contact: get("contact"),
     labels: splitLabels(get("labels")),
@@ -80,6 +81,7 @@ export function buildDesignerFields(details?: OfferDetails) {
   const valueMap: Record<string, string> = {
     requirements: details?.requirements ?? "",
     workMode: details?.workMode ?? "",
+    duration: details?.duration ?? "",
     salary: details?.salary ?? "",
     contact: details?.contact ?? "",
     labels: labelsToString(details?.labels),

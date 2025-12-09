@@ -19,8 +19,12 @@ import { withGuild } from "@/db/repositories/with_guild";
  */
 export async function closeTicket(guildId: string, channelId: string): Promise<void> {
   await withGuild(guildId, (guild) => {
-    guild.pendingTickets = guild.pendingTickets.filter((id) => id && id !== channelId);
-    return guild.pendingTickets;
+    const pending = Array.isArray((guild as any).pendingTickets)
+      ? [...(guild as any).pendingTickets]
+      : [];
+    const next = pending.filter((id: string | null | undefined) => id && id !== channelId);
+    (guild as any).pendingTickets = next;
+    return next;
   }).catch((error) => {
     console.error("[tickets] failed to update pending tickets during close", {
       error,

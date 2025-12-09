@@ -1,26 +1,14 @@
-import { Schema, model, type HydratedDocument } from "mongoose";
-import { CurrencyInventorySchema, type CurrencyInventory } from "@/modules/economy/currency";
-import { UserInventorySchema, type UserInventory } from "@/modules/inventory";
+import {
+  Schema,
+  model,
+  type HydratedDocument,
+  type InferSchemaType,
+} from "mongoose";
+import { CurrencyInventorySchema } from "@/modules/economy/currency";
+import { UserInventorySchema } from "@/modules/inventory";
+import type { UserId, WarnId } from "@/db/types";
 
-export interface Warn {
-  reason: string;
-  warn_id: string;
-  moderator: string;
-  timestamp: string;
-}
-
-export interface UserData {
-  _id: string; // Discord userId
-  rep: number;
-
-  warns: Warn[];
-  openTickets: string[];
-
-  currency: CurrencyInventory;
-  inventory: UserInventory;
-}
-
-const WarnSchema = new Schema<Warn>(
+const WarnSchema = new Schema(
   {
     reason: { type: String, required: true },
     warn_id: { type: String, required: true },
@@ -30,9 +18,9 @@ const WarnSchema = new Schema<Warn>(
   { _id: false },
 );
 
-const UserSchema = new Schema<UserData>(
+const UserSchema = new Schema(
   {
-    _id: { type: String, required: true },
+    _id: { type: String, required: true }, // Discord userId
 
     rep: { type: Number, required: true, default: 0 },
 
@@ -62,8 +50,21 @@ const UserSchema = new Schema<UserData>(
   },
 );
 
-// Hydrated document (if you ever need document methods)
+// Infer from schema instead of duplicating
+type WarnSchemaType = InferSchemaType<typeof WarnSchema>;
+type UserSchemaType = InferSchemaType<typeof UserSchema>;
+
+// Add your branded types on top if you care about them:
+export type Warn = Omit<WarnSchemaType, "warn_id" | "moderator"> & {
+  warn_id: WarnId;
+  moderator: UserId;
+};
+
+export type UserData = Omit<UserSchemaType, "_id" | "warns"> & {
+  _id: UserId;
+  warns: Warn[];
+};
+
 export type UserDoc = HydratedDocument<UserData>;
 
-// Model uses the *plain* type, not the doc type
 export const UserModel = model<UserData>("User", UserSchema);

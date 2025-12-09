@@ -7,7 +7,11 @@
  */
 import type { UsingClient } from "seyfert";
 
-import * as repo from "@/db/repositories";
+import {
+  AutoRoleGrantsRepo,
+  AutoRoleRulesRepo,
+  revokeByRule,
+} from "@/db/repositories";
 import type { AutoRoleRule } from "@/modules/autorole/types";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
@@ -22,7 +26,7 @@ export function startTimedGrantScheduler(
 ): void {
   if (timer) return;
   timer = setInterval(() => sweep(client), intervalMs);
-  (timer as any)?.unref?.();
+  timer.unref?.();
 }
 
 export function stopTimedGrantScheduler(): void {
@@ -37,7 +41,7 @@ async function sweep(client: UsingClient): Promise<void> {
 
   try {
     const now = new Date();
-    const due = await repo.autoRoleListDueTimedGrants(now);
+    const due = await AutoRoleGrantsRepo.listDueTimed(now);
     if (!due.length) return;
 
     const ruleCache = new Map<string, AutoRoleRule>();
@@ -52,7 +56,7 @@ async function sweep(client: UsingClient): Promise<void> {
       let rule = ruleCache.get(key);
 
       if (!rule) {
-        const fetched = await repo.autoRoleFetchRule(
+        const fetched = await AutoRoleRulesRepo.fetchOne(
           grant.guildId,
           grant.ruleName,
         );
@@ -80,7 +84,7 @@ async function sweep(client: UsingClient): Promise<void> {
         ruleCache.set(key, rule);
       }
 
-      await repo.revokeByRule({
+      await revokeByRule({
         client,
         rule,
         userId: grant.userId,

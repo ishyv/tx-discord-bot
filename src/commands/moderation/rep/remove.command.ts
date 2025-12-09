@@ -55,7 +55,12 @@ export default class RepRemoveCommand extends SubCommand {
     }
 
     const target = ctx.options.user;
-    const total = await adjustUserReputation(target.id, -amount);
+    const totalResult = await adjustUserReputation(target.id, -amount);
+    if (totalResult.isErr()) {
+      await ctx.write({ content: "No se pudo actualizar la reputación." });
+      return;
+    }
+    const total = totalResult.unwrap();
     await recordReputationChange(ctx.client, context.guildId, target.id, -amount);
     await syncUserReputationRoles(
       ctx.client,

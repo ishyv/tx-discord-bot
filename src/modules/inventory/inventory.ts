@@ -1,5 +1,5 @@
 import { Schema } from "mongoose";
-import { ensureUser, updateUser } from "@/db/repositories";
+import { ensureUser, saveUser } from "@/db/repositories";
 import {
     ItemId,
     InventoryItem,
@@ -91,15 +91,17 @@ export function hasItem(
  * Saves the user inventory to the database.
  */
 export async function saveInventory(userID: string, inv: UserInventory): Promise<void> {
-    const user = await ensureUser(userID);
-    user.inventory = inv;
-    await updateUser(userID, { inventory: inv });
+    const userResult = await ensureUser(userID);
+    if (userResult.isErr()) throw userResult.error;
+    await saveUser(userID, { inventory: inv });
 }
 
 /** Loads the user inventory from the database.
  */
 export async function loadInventory(userID: string): Promise<UserInventory> {
-    const user = await ensureUser(userID);
+    const userResult = await ensureUser(userID);
+    if (userResult.isErr()) throw userResult.error;
+    const user = userResult.unwrap();
     return (user.inventory as UserInventory) || createEmptyInventory();
 }
 

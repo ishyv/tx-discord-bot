@@ -36,7 +36,12 @@ export default class ClearWarnCommand extends SubCommand {
 
     const { user } = ctx.options;
 
-    const warns = await listWarns(user.id);
+    const warnsResult = await listWarns(user.id);
+    if (warnsResult.isErr()) {
+      await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+      return;
+    }
+    const warns = warnsResult.unwrap();
     if (warns.length === 0) {
       await ctx.write({
         content: "No hay warns registrados para este usuario.",
@@ -44,7 +49,11 @@ export default class ClearWarnCommand extends SubCommand {
       return;
     }
 
-    await clearWarns(user.id);
+    const cleared = await clearWarns(user.id);
+    if (cleared.isErr()) {
+      await ctx.write({ content: "No se pudo limpiar los warns del usuario." });
+      return;
+    }
 
     const embed = new Embed({
       title: "Warns eliminados",

@@ -18,7 +18,7 @@ import {
 import { ButtonStyle } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/db/repositories";
+import { AutoRoleRulesRepo } from "@/db/repositories";
 import {
   clearDeleteSession,
   getDeleteSession,
@@ -53,7 +53,7 @@ export default class AutoroleDeleteCommand extends SubCommand {
     if (!context) return;
 
     const slug = ctx.options.name.trim().toLowerCase();
-    const rule = await repo.autoRoleFetchRule(context.guildId, slug);
+    const rule = await AutoRoleRulesRepo.fetchOne(context.guildId, slug);
     if (!rule) {
       await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
       return;

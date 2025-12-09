@@ -98,8 +98,9 @@ export async function currencyTransaction(
   tx: Transaction,
   engine: CurrencyEngine = currencyEngine,
 ): Promise<TransactionResult> {
-  let user = await ensureUser(userId);
-  let inv: CurrencyInventory = user.currency ?? {};
+  const userResult = await ensureUser(userId);
+  if (userResult.isErr()) return ErrResult(userResult.error);
+  let inv: CurrencyInventory = userResult.unwrap().currency ?? {};
 
   // Optimistic retry loop to avoid lost updates under concurrent writes.
   for (let attempt = 0; attempt < 3; attempt += 1) {

@@ -55,8 +55,8 @@ export default class RoleSetCommand extends SubCommand {
 
     await repo.ensureGuild(context.guildId);
 
-    // Upsert minimal role record
-    await repo.upsertRole(context.guildId, key, {
+    // Actualiza (o crea) el registro del rol administrado
+    await repo.updateRole(context.guildId, key, {
       label: key,
       discordRoleId: roleId,
       updatedBy: ctx.author.id,

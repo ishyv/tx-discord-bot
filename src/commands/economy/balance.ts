@@ -11,7 +11,17 @@ import { buildBalanceFields, toBalanceLike } from "./shared";
 @BindDisabled(Features.Economy)
 export default class BalanceCommand extends Command {
   async run(ctx: CommandContext) {
-    const user = await ensureUser(ctx.author.id);
+    const userResult = await ensureUser(ctx.author.id);
+    if (userResult.isErr()) {
+      await ctx.write({
+        embeds: [{
+          color: EmbedColors.Red,
+          description: "No pude cargar tus datos de economía.",
+        }],
+      });
+      return;
+    }
+    const user = userResult.unwrap();
 
     const fields = buildBalanceFields(toBalanceLike(user));
 

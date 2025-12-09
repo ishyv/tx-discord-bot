@@ -37,7 +37,12 @@ export default class WithdrawCommand extends Command {
     const { amount: rawAmount } = ctx.options;
     const userId = ctx.author.id;
 
-    const user = await ensureUser(userId);
+    const userResult = await ensureUser(userId);
+    if (userResult.isErr()) {
+      await replyMissingUser(ctx);
+      return;
+    }
+    const user = userResult.unwrap();
     if (!user) {
       await replyMissingUser(ctx);
       return;
