@@ -1,20 +1,20 @@
 /**
- * Author: Repositories team
- * Purpose: Provides grouped Mongo persistence APIs for autorole rules, grants, and tallies.
- * Why exists: Keeps raw database access isolated from cache/business layers, with consistent connection handling and projections.
+ * Autorole repository using native Mongo driver and Zod validation.
+ * Purpose: CRUD for rules, grants, tallies with validated shapes and stable domain return types.
  */
-import { connectMongo } from "@/db/client";
+import { getDb } from "@/db/mongo";
 import {
-  AutoRoleGrantModel,
-  AutoRoleReactionTallyModel,
-  AutoRoleRuleModel,
-  type AutoRoleGrantDoc,
-  type AutoRoleReactionTallyDoc,
-  type AutoRoleRuleDoc,
-} from "@/db/models/autorole.schema";
+  AutoRoleRuleSchema,
+  AutoRoleGrantSchema,
+  AutoRoleTallySchema,
+  type AutoRoleRule,
+  type AutoRoleGrant,
+  type AutoRoleTally,
+  AutoRoleTriggerSchema,
+} from "@/db/schemas/autorole";
 import type {
   AutoRoleGrantReason,
-  AutoRoleRule,
+  AutoRoleRule as AutoRoleRuleDomain,
   CreateAutoRoleRuleInput,
   DeleteRuleInput,
   GrantByRuleInput,
@@ -23,12 +23,10 @@ import type {
   RevokeByRuleInput,
   UpdateRuleEnabledInput,
 } from "@/modules/autorole/types";
-import {
-  encodeTrigger,
-  toAutoRoleGrant,
-  toAutoRoleRule,
-  toAutoRoleTally,
-} from "./autorole.mappers";
+
+const rulesCol = async () => (await getDb()).collection<AutoRoleRule>("autorole_rules");
+const grantsCol = async () => (await getDb()).collection<AutoRoleGrant>("autorole_role_grants");
+const talliesCol = async () => (await getDb()).collection<AutoRoleTally>("autorole_reaction_tallies");
 
 const ruleKey = (guildId: string, name: string) => `${guildId}:${name}`;
 const grantKey = (
@@ -41,344 +39,368 @@ const grantKey = (
 const tallyKey = (guildId: string, messageId: string, emojiKey: string) =>
   `${guildId}:${messageId}:${emojiKey}`;
 
-async function withMongo<T>(fn: () => Promise<T>): Promise<T> {
-  await connectMongo();
-  return fn();
-}
+const toRuleDomain = (doc: AutoRoleRule): AutoRoleRuleDomain => ({
+  guildId: doc.guildId,
+  name: doc.name,
+  trigger: doc.trigger,
+  roleId: doc.roleId,
+  durationMs: doc.durationMs ?? null,
+  enabled: doc.enabled ?? true,
+  createdBy: doc.createdBy ?? null,
+  createdAt: doc.createdAt ?? new Date(0),
+  updatedAt: doc.updatedAt ?? new Date(0),
+});
 
-function normalizeTally(
-  doc: AutoRoleReactionTallyDoc,
-): ReactionTallySnapshot {
-  return toAutoRoleTally({
-    ...doc,
-    count: Math.max(doc.count ?? 0, 0),
-  } as AutoRoleReactionTallyDoc);
-}
+const toGrantDomain = (doc: AutoRoleGrant): AutoRoleGrantReason => ({
+  guildId: doc.guildId,
+  userId: doc.userId,
+  roleId: doc.roleId,
+  ruleName: doc.ruleName,
+  type: doc.type,
+  expiresAt: doc.expiresAt ?? null,
+  createdAt: doc.createdAt ?? new Date(0),
+  updatedAt: doc.updatedAt ?? new Date(0),
+});
+
+const toTallySnapshot = (doc: AutoRoleTally): ReactionTallySnapshot => ({
+  key: {
+    guildId: doc.guildId,
+    messageId: doc.messageId,
+    emojiKey: doc.emojiKey,
+  },
+  authorId: doc.authorId ?? "",
+  count: Math.max(doc.count ?? 0, 0),
+  updatedAt: doc.updatedAt ?? new Date(0),
+});
 
 export const AutoRoleRulesRepo = {
-  fetchByGuild(guildId: string): Promise<AutoRoleRule[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleRuleModel.find({ guildId }).lean();
-      return rows.map(toAutoRoleRule);
-    });
+  async fetchByGuild(guildId: string): Promise<AutoRoleRuleDomain[]> {
+    const col = await rulesCol();
+    const rows = await col.find<AutoRoleRule>({ guildId }).toArray();
+    return rows.map((row) => toRuleDomain(AutoRoleRuleSchema.parse(row)));
   },
 
-  fetchAll(): Promise<AutoRoleRule[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleRuleModel.find().lean();
-      return rows.map(toAutoRoleRule);
-    });
+  async fetchAll(): Promise<AutoRoleRuleDomain[]> {
+    const col = await rulesCol();
+    const rows = await col.find<AutoRoleRule>({}).toArray();
+    return rows.map((row) => toRuleDomain(AutoRoleRuleSchema.parse(row)));
   },
 
-  fetchOne(guildId: string, name: string): Promise<AutoRoleRule | null> {
-    return withMongo(async () => {
-      const row = await AutoRoleRuleModel.findOne({ guildId, name }).lean();
-      return row ? toAutoRoleRule(row) : null;
-    });
+  async fetchOne(guildId: string, name: string): Promise<AutoRoleRuleDomain | null> {
+    const col = await rulesCol();
+    const row = await col.findOne<AutoRoleRule>({ guildId, name });
+    return row ? toRuleDomain(AutoRoleRuleSchema.parse(row)) : null;
   },
 
-  listNames(guildId: string): Promise<string[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleRuleModel.find({ guildId })
-        .select({ name: 1, _id: 0 })
-        .lean();
-      return (rows as Array<{ name: string }>).map((row) => row.name);
-    });
+  async listNames(guildId: string): Promise<string[]> {
+    const col = await rulesCol();
+    const rows = await col.find({ guildId }).project({ name: 1, _id: 0 }).toArray();
+    return rows.map((row: any) => row.name);
   },
 
-  insert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRule> {
-    return withMongo(async () => {
-      const { durationMs: encodedDuration, ...encodedTrigger } = encodeTrigger(
-        input.trigger,
-      );
-      const payload: AutoRoleRuleDoc = {
-        _id: ruleKey(input.guildId, input.name),
-        id: ruleKey(input.guildId, input.name),
-        guildId: input.guildId,
-        name: input.name,
-        roleId: input.roleId,
-        durationMs: encodedDuration ?? input.durationMs ?? null,
-        enabled: input.enabled ?? true,
-        createdBy: input.createdBy ?? null,
-        ...encodedTrigger,
-      } as AutoRoleRuleDoc;
-
-      const doc = await new AutoRoleRuleModel(payload).save();
-      return toAutoRoleRule(doc.toObject() as AutoRoleRuleDoc);
+  async insert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRuleDomain> {
+    const doc = AutoRoleRuleSchema.parse({
+      _id: ruleKey(input.guildId, input.name),
+      id: ruleKey(input.guildId, input.name),
+      guildId: input.guildId,
+      name: input.name,
+      roleId: input.roleId,
+      trigger: AutoRoleTriggerSchema.parse(input.trigger),
+      durationMs: input.durationMs ?? null,
+      enabled: input.enabled ?? true,
+      createdBy: input.createdBy ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
+    const col = await rulesCol();
+    await col.insertOne(doc);
+    return toRuleDomain(doc);
   },
 
-  upsert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRule> {
-    return withMongo(async () => {
-      const { durationMs: encodedDuration, ...encodedTrigger } = encodeTrigger(
-        input.trigger,
-      );
-      const row = await AutoRoleRuleModel.findOneAndUpdate(
-        { guildId: input.guildId, name: input.name },
-        {
-          $set: {
-            roleId: input.roleId,
-            enabled: input.enabled ?? true,
-            durationMs: encodedDuration ?? input.durationMs ?? null,
-            updatedAt: new Date(),
-            createdBy: input.createdBy ?? null,
-            ...encodedTrigger,
-          },
-          $setOnInsert: {
-            _id: ruleKey(input.guildId, input.name),
-            id: ruleKey(input.guildId, input.name),
-            createdAt: new Date(),
-          },
+  async upsert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRuleDomain> {
+    const col = await rulesCol();
+    const now = new Date();
+    const result = await col.findOneAndUpdate(
+      { guildId: input.guildId, name: input.name },
+      {
+        $set: {
+          roleId: input.roleId,
+          trigger: AutoRoleTriggerSchema.parse(input.trigger),
+          durationMs: input.durationMs ?? null,
+          enabled: input.enabled ?? true,
+          createdBy: input.createdBy ?? null,
+          updatedAt: now,
         },
-        { new: true, upsert: true, lean: true },
-      );
-      return toAutoRoleRule(row as AutoRoleRuleDoc);
-    });
+        $setOnInsert: {
+          _id: ruleKey(input.guildId, input.name),
+          id: ruleKey(input.guildId, input.name),
+          guildId: input.guildId,
+          name: input.name,
+          createdAt: now,
+        },
+      },
+      { returnDocument: "after", upsert: true },
+    );
+    const value =
+      result ??
+      (await col.findOne<AutoRoleRule>({ guildId: input.guildId, name: input.name }));
+    if (!value) throw new Error("FAILED_TO_UPSERT_RULE");
+    return toRuleDomain(AutoRoleRuleSchema.parse(value));
   },
 
-  updateEnabled({
+  async updateEnabled({
     guildId,
     name,
     enabled,
-  }: UpdateRuleEnabledInput): Promise<AutoRoleRule | null> {
-    return withMongo(async () => {
-      const row = await AutoRoleRuleModel.findOneAndUpdate(
-        { guildId, name },
-        { $set: { enabled, updatedAt: new Date() } },
-        { new: true, lean: true },
-      );
-      return row ? toAutoRoleRule(row) : null;
-    });
+  }: UpdateRuleEnabledInput): Promise<AutoRoleRuleDomain | null> {
+    const col = await rulesCol();
+    const row = await col.findOneAndUpdate(
+      { guildId, name },
+      { $set: { enabled, updatedAt: new Date() } },
+      { returnDocument: "after" },
+    );
+    const value = row ?? (await col.findOne<AutoRoleRule>({ guildId, name }));
+    return value ? toRuleDomain(AutoRoleRuleSchema.parse(value)) : null;
   },
 
-  delete(input: DeleteRuleInput): Promise<boolean> {
-    return withMongo(async () => {
-      await AutoRoleGrantModel.deleteMany({
-        guildId: input.guildId,
-        ruleName: input.name,
-      });
-      const res = await AutoRoleRuleModel.deleteOne({
-        guildId: input.guildId,
-        name: input.name,
-      });
-      return (res.deletedCount ?? 0) > 0;
+  async delete(input: DeleteRuleInput): Promise<boolean> {
+    const colGrants = await grantsCol();
+    const colRules = await rulesCol();
+    await colGrants.deleteMany({
+      guildId: input.guildId,
+      ruleName: input.name,
     });
+    const res = await colRules.deleteOne({
+      guildId: input.guildId,
+      name: input.name,
+    });
+    return (res.deletedCount ?? 0) > 0;
   },
 };
 
 export const AutoRoleGrantsRepo = {
-  upsert(input: GrantByRuleInput): Promise<AutoRoleGrantReason> {
-    return withMongo(async () => {
-      const doc = await AutoRoleGrantModel.findOneAndUpdate(
-        {
-          _id: grantKey(
-            input.guildId,
-            input.userId,
-            input.roleId,
-            input.ruleName,
-            input.type,
-          ),
+  async upsert(input: GrantByRuleInput): Promise<AutoRoleGrantReason> {
+    const col = await grantsCol();
+    const now = new Date();
+    const res = await col.findOneAndUpdate(
+      {
+        _id: grantKey(
+          input.guildId,
+          input.userId,
+          input.roleId,
+          input.ruleName,
+          input.type,
+        ),
+      },
+      {
+        $set: {
+          guildId: input.guildId,
+          userId: input.userId,
+          roleId: input.roleId,
+          ruleName: input.ruleName,
+          type: input.type,
+          expiresAt: input.expiresAt ?? null,
+          updatedAt: now,
         },
-        {
-          $set: {
-            guildId: input.guildId,
-            userId: input.userId,
-            roleId: input.roleId,
-            ruleName: input.ruleName,
-            type: input.type,
-            expiresAt: input.expiresAt ?? null,
-          },
-          $setOnInsert: { createdAt: new Date() },
-          $currentDate: { updatedAt: true },
-        },
-        { upsert: true, new: true, lean: true },
-      );
-      return toAutoRoleGrant(doc as AutoRoleGrantDoc);
-    });
+        $setOnInsert: { createdAt: now },
+      },
+      { returnDocument: "after", upsert: true },
+    );
+    const value =
+      res ??
+      (await col.findOne<AutoRoleGrant>({
+        _id: grantKey(
+          input.guildId,
+          input.userId,
+          input.roleId,
+          input.ruleName,
+          input.type,
+        ),
+      }));
+    if (!value) throw new Error("FAILED_TO_SAVE_GRANT");
+    return toGrantDomain(AutoRoleGrantSchema.parse(value));
   },
 
-  deleteOne(input: RevokeByRuleInput): Promise<boolean> {
-    return withMongo(async () => {
-      const res = await AutoRoleGrantModel.deleteOne({
-        guildId: input.guildId,
-        userId: input.userId,
-        roleId: input.roleId,
-        ruleName: input.ruleName,
-        type: input.type,
-      });
-      return (res.deletedCount ?? 0) > 0;
+  async deleteOne(input: RevokeByRuleInput): Promise<boolean> {
+    const col = await grantsCol();
+    const res = await col.deleteOne({
+      guildId: input.guildId,
+      userId: input.userId,
+      roleId: input.roleId,
+      ruleName: input.ruleName,
+      type: input.type,
     });
+    return (res.deletedCount ?? 0) > 0;
   },
 
-  listForMemberRole(
+  async listForMemberRole(
     guildId: string,
     userId: string,
     roleId: string,
   ): Promise<AutoRoleGrantReason[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleGrantModel.find({ guildId, userId, roleId }).lean();
-      return rows.map(toAutoRoleGrant);
-    });
+    const col = await grantsCol();
+    const rows = await col.find<AutoRoleGrant>({ guildId, userId, roleId }).toArray();
+    return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
   },
 
-  listForRule(
+  async listForRule(
     guildId: string,
     ruleName: string,
   ): Promise<AutoRoleGrantReason[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleGrantModel.find({ guildId, ruleName }).lean();
-      return rows.map(toAutoRoleGrant);
-    });
+    const col = await grantsCol();
+    const rows = await col.find<AutoRoleGrant>({ guildId, ruleName }).toArray();
+    return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
   },
 
-  countForRole(
+  async countForRole(
     guildId: string,
     userId: string,
     roleId: string,
   ): Promise<number> {
-    return withMongo(async () => {
-      const total = await AutoRoleGrantModel.countDocuments({
-        guildId,
-        userId,
-        roleId,
-      });
-      return Number(total ?? 0);
+    const col = await grantsCol();
+    const total = await col.countDocuments({
+      guildId,
+      userId,
+      roleId,
     });
+    return Number(total ?? 0);
   },
 
-  purgeForRule(guildId: string, ruleName: string): Promise<number> {
-    return withMongo(async () => {
-      const res = await AutoRoleGrantModel.deleteMany({ guildId, ruleName });
-      return res.deletedCount ?? 0;
-    });
+  async purgeForRule(guildId: string, ruleName: string): Promise<number> {
+    const col = await grantsCol();
+    const res = await col.deleteMany({ guildId, ruleName });
+    return res.deletedCount ?? 0;
   },
 
-  purgeForGuildRole(guildId: string, roleId: string): Promise<number> {
-    return withMongo(async () => {
-      const res = await AutoRoleGrantModel.deleteMany({ guildId, roleId });
-      return res.deletedCount ?? 0;
-    });
+  async purgeForGuildRole(guildId: string, roleId: string): Promise<number> {
+    const col = await grantsCol();
+    const res = await col.deleteMany({ guildId, roleId });
+    return res.deletedCount ?? 0;
   },
 
-  find(
+  async find(
     guildId: string,
     userId: string,
     roleId: string,
     ruleName: string,
     type: "LIVE" | "TIMED",
   ): Promise<AutoRoleGrantReason | null> {
-    return withMongo(async () => {
-      const row = await AutoRoleGrantModel.findOne({
-        guildId,
-        userId,
-        roleId,
-        ruleName,
-        type,
-      }).lean();
-      return row ? toAutoRoleGrant(row) : null;
+    const col = await grantsCol();
+    const row = await col.findOne<AutoRoleGrant>({
+      guildId,
+      userId,
+      roleId,
+      ruleName,
+      type,
     });
+    return row ? toGrantDomain(AutoRoleGrantSchema.parse(row)) : null;
   },
 
-  listDueTimed(reference: Date): Promise<AutoRoleGrantReason[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleGrantModel.find({
+  async listDueTimed(reference: Date): Promise<AutoRoleGrantReason[]> {
+    const col = await grantsCol();
+    const rows = await col
+      .find({
         type: "TIMED",
         expiresAt: { $ne: null, $lte: reference },
-      }).lean();
-      return rows.map(toAutoRoleGrant);
-    });
+      })
+      .toArray();
+    return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
   },
 };
 
 export const AutoRoleTalliesRepo = {
-  deleteForMessage(guildId: string, messageId: string): Promise<number> {
-    return withMongo(async () => {
-      const res = await AutoRoleReactionTallyModel.deleteMany({
-        guildId,
-        messageId,
-      });
-      return res.deletedCount ?? 0;
+  async deleteForMessage(guildId: string, messageId: string): Promise<number> {
+    const col = await talliesCol();
+    const res = await col.deleteMany({
+      guildId,
+      messageId,
     });
+    return res.deletedCount ?? 0;
   },
 
-  listForMessage(
+  async listForMessage(
     guildId: string,
     messageId: string,
   ): Promise<ReactionTallySnapshot[]> {
-    return withMongo(async () => {
-      const rows = await AutoRoleReactionTallyModel.find({ guildId, messageId }).lean();
-      return rows.map(toAutoRoleTally);
-    });
+    const col = await talliesCol();
+    const rows = await col.find<AutoRoleTally>({ guildId, messageId }).toArray();
+    return rows.map((row) => toTallySnapshot(AutoRoleTallySchema.parse(row)));
   },
 
-  increment(
+  async increment(
     key: ReactionTallyKey,
     authorId: string,
   ): Promise<ReactionTallySnapshot> {
-    return withMongo(async () => {
-      const doc = await AutoRoleReactionTallyModel.findOneAndUpdate(
-        { _id: tallyKey(key.guildId, key.messageId, key.emojiKey) },
-        {
-          $setOnInsert: {
-            guildId: key.guildId,
-            messageId: key.messageId,
-            emojiKey: key.emojiKey,
-            count: 0,
-          },
-          $set: { authorId },
-          $inc: { count: 1 },
-          $currentDate: { updatedAt: true },
+    const col = await talliesCol();
+    const now = new Date();
+    const res = await col.findOneAndUpdate(
+      { _id: tallyKey(key.guildId, key.messageId, key.emojiKey) },
+      {
+        $setOnInsert: {
+          guildId: key.guildId,
+          messageId: key.messageId,
+          emojiKey: key.emojiKey,
+          count: 0,
+          createdAt: now,
         },
-        { upsert: true, new: true, lean: true },
-      );
-      return normalizeTally(doc as AutoRoleReactionTallyDoc);
-    });
+        $set: { authorId, updatedAt: now },
+        $inc: { count: 1 },
+      },
+      { upsert: true, returnDocument: "after" },
+    );
+    const row =
+      res ??
+      (await col.findOne<AutoRoleTally>({
+        _id: tallyKey(key.guildId, key.messageId, key.emojiKey),
+      }));
+    if (!row) throw new Error("FAILED_TO_INCREMENT_TALLY");
+    return toTallySnapshot(AutoRoleTallySchema.parse(row));
   },
 
-  decrement(key: ReactionTallyKey): Promise<ReactionTallySnapshot | null> {
-    return withMongo(async () => {
-      const doc = await AutoRoleReactionTallyModel.findOneAndUpdate(
-        { _id: tallyKey(key.guildId, key.messageId, key.emojiKey) },
-        { $inc: { count: -1 }, $currentDate: { updatedAt: true } },
-        { new: true, lean: true },
-      );
-      if (!doc) return null;
+  async decrement(key: ReactionTallyKey): Promise<ReactionTallySnapshot | null> {
+    const col = await talliesCol();
+    const now = new Date();
+    const res = await col.findOneAndUpdate(
+      { _id: tallyKey(key.guildId, key.messageId, key.emojiKey) },
+      { $inc: { count: -1 }, $set: { updatedAt: now } },
+      { returnDocument: "after" },
+    );
+    const doc =
+      res ??
+      (await col.findOne<AutoRoleTally>({
+        _id: tallyKey(key.guildId, key.messageId, key.emojiKey),
+      }));
+    if (!doc) return null;
 
-      if ((doc.count ?? 0) <= 0) {
-        await AutoRoleReactionTallyModel.deleteOne({ _id: doc._id });
-      }
+    if ((doc.count ?? 0) <= 0) {
+      await col.deleteOne({ _id: doc._id });
+    }
 
-      return normalizeTally({
+    return toTallySnapshot(
+      AutoRoleTallySchema.parse({
         ...doc,
         count: Math.max(doc.count ?? 0, 0),
-      } as AutoRoleReactionTallyDoc);
-    });
+      }),
+    );
   },
 
-  read(key: ReactionTallyKey): Promise<ReactionTallySnapshot | null> {
-    return withMongo(async () => {
-      const row = await AutoRoleReactionTallyModel.findOne({
-        guildId: key.guildId,
-        messageId: key.messageId,
-        emojiKey: key.emojiKey,
-      }).lean();
-      return row
-        ? normalizeTally({
-          ...row,
-          count: Math.max(row.count ?? 0, 0),
-        } as AutoRoleReactionTallyDoc)
-        : null;
+  async read(key: ReactionTallyKey): Promise<ReactionTallySnapshot | null> {
+    const col = await talliesCol();
+    const row = await col.findOne({
+      guildId: key.guildId,
+      messageId: key.messageId,
+      emojiKey: key.emojiKey,
     });
+    return row ? toTallySnapshot(AutoRoleTallySchema.parse(row)) : null;
   },
 
-  deleteOne(key: ReactionTallyKey): Promise<boolean> {
-    return withMongo(async () => {
-      const res = await AutoRoleReactionTallyModel.deleteOne({
-        guildId: key.guildId,
-        messageId: key.messageId,
-        emojiKey: key.emojiKey,
-      });
-      return (res.deletedCount ?? 0) > 0;
+  async deleteOne(key: ReactionTallyKey): Promise<boolean> {
+    const col = await talliesCol();
+    const res = await col.deleteOne({
+      guildId: key.guildId,
+      messageId: key.messageId,
+      emojiKey: key.emojiKey,
     });
+    return (res.deletedCount ?? 0) > 0;
   },
 };

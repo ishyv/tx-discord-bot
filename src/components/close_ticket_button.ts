@@ -83,7 +83,8 @@ export default class CloseTicketButton extends ComponentCommand {
       });
       return null;
     });
-    const ticketLogsChannelId = guildChannels?.core?.ticketLogs?.channelId ?? null;
+    const core = guildChannels?.core as Record<string, { channelId: string } | null> | undefined;
+    const ticketLogsChannelId = core?.ticketLogs?.channelId ?? null;
 
     const closingEmbed = new Embed()
       .setColor(Colors.info)

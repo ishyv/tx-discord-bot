@@ -1,5 +1,5 @@
-import net from "net";
-import repl, { REPLServer } from "repl";
+import net from "node:net";
+import repl, { REPLServer } from "node:repl";
 
 export type DebugScope = Record<string, any>;
 

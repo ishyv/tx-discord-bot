@@ -4,31 +4,35 @@
  * Idea/concepto: agrupa helpers y orquestadores bajo un mismo dominio para evitar acoplamientos dispersos.
  *
  * Alcance: soporte de dominio; no sustituye a los comandos o servicios que consumen el módulo.
+ *
+ * Nota: usa el repositorio nativo (`@/db/repositories/offers`) y los tipos Zod (`@/db/schemas/offers`)
+ * para que los comandos no tengan que manipular directamente el driver de Mongo ni shapes duplicadas.
  */
 import { randomBytes } from "node:crypto";
 import { type Embed, type UsingClient } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
 import {
-	createOffer,
-	findActiveByAuthor,
-	findById,
-	updateOffer,
+  createOffer,
+  findActiveByAuthor,
+  findById,
+  updateOffer,
 } from "@/db/repositories/offers";
 import { getGuildChannels } from "@/modules/guild-channels";
+import type { CoreChannelRecord } from "@/db/schemas/guild";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { type Result, OkResult, ErrResult } from "@/utils/result";
 import {
-	buildOfferEmbed,
-	buildReviewButtons,
-	buildStatusEmbed,
-	getUserEmbedFromOffer,
+  buildOfferEmbed,
+  buildReviewButtons,
+  buildStatusEmbed,
+  getUserEmbedFromOffer,
 } from "./embeds";
 import {
-	ACTIVE_STATUSES,
-	type Offer,
-	type OfferDetails,
-	type OfferStatus,
+  ACTIVE_STATUSES,
+  type Offer,
+  type OfferDetails,
+  type OfferStatus,
 } from "./types";
 
 export { ACTIVE_STATUSES };
@@ -49,9 +53,10 @@ async function applyStatus(
 
 async function resolveChannels(guildId: string) {
 	const channels = await getGuildChannels(guildId);
-	const reviewChannelId = channels.core?.offersReview?.channelId ?? null;
-	const approvedChannelId = channels.core?.approvedOffers?.channelId ?? null;
-	const generalLogsId = channels.core?.generalLogs?.channelId ?? null;
+	const core = channels.core as Record<string, CoreChannelRecord | null>;
+	const reviewChannelId = core.offersReview?.channelId ?? null;
+	const approvedChannelId = core.approvedOffers?.channelId ?? null;
+	const generalLogsId = core.generalLogs?.channelId ?? null;
 	return { reviewChannelId, approvedChannelId, generalLogsId };
 }
 
@@ -185,27 +190,25 @@ export async function createOfferForReview(
 			authorAvatar: params.authorAvatar,
 			includeMeta: false,
 		});
-  const statusEmbed = buildStatusEmbed(
-    {
-      id,
-      guildId: params.guildId,
-      authorId: params.authorId,
-			status: "PENDING_REVIEW",
-			details: params.details as any,
-			embed: userEmbed.toJSON(),
-			reviewMessageId: null,
-			reviewChannelId: null,
-			publishedMessageId: null,
-			publishedChannelId: null,
-			rejectionReason: null,
-			changesNote: null,
-			lastModeratorId: null,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		} as unknown as Offer,
-		"PENDING_REVIEW",
-		null,
-	);
+  const pendingOffer: Offer = {
+    _id: id,
+    id,
+    guildId: params.guildId,
+    authorId: params.authorId,
+    status: "PENDING_REVIEW",
+    details: params.details,
+    embed: userEmbed.toJSON(),
+    reviewMessageId: null,
+    reviewChannelId: null,
+    publishedMessageId: null,
+    publishedChannelId: null,
+    rejectionReason: null,
+    changesNote: null,
+    lastModeratorId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  const statusEmbed = buildStatusEmbed(pendingOffer, "PENDING_REVIEW", null);
 
 	try {
 		const message = await client.messages.write(reviewChannelId, {

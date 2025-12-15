@@ -1,8 +1,16 @@
+/**
+ * Inventory transactions: apply item costs/rewards with optimistic concurrency on user inventory.
+ */
 import { ErrResult, OkResult, Result } from "@/utils/result";
 import { ItemId } from "./definitions";
-import { UserInventory, addItem, removeItem, hasItem } from "./inventory";
-import { ensureUser, toUser } from "@/db/repositories";
-import { connectMongo, UserModel } from "@/db";
+import {
+  UserInventory,
+  addItem,
+  removeItem,
+  hasItem,
+  normalizeInventory,
+} from "./inventory";
+import { ensureUser, replaceInventoryIfMatch } from "@/db/repositories";
 
 export type ItemAmount = {
     itemId: ItemId;
@@ -25,7 +33,7 @@ export async function itemTransaction(
     const userResult = await ensureUser(userID);
     if (userResult.isErr()) return ErrResult(userResult.error);
     const user = userResult.unwrap();
-    let inv = user.inventory;
+    let inv = normalizeInventory(user.inventory);
 
     // Optimistic retry loop to avoid lost updates under concurrent writes.
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -51,23 +59,17 @@ export async function itemTransaction(
             nextInv = addItem(nextInv, reward.itemId, reward.quantity);
         }
 
-        await connectMongo();
-        const doc = await UserModel.findOneAndUpdate(
-            { _id: userID, inventory: inv },
-            { $set: { inventory: nextInv } },
-            { new: true, lean: true },
-        );
-
-        if (doc) {
-            const mapped = toUser(doc);
-            return mapped ? OkResult(mapped.inventory) : ErrResult(new Error("USER_NOT_FOUND"));
+        const updated = await replaceInventoryIfMatch(userID, inv, nextInv);
+        if (updated.isErr()) return ErrResult(updated.error);
+        const updatedUser = updated.unwrap();
+        if (updatedUser) {
+            return OkResult(updatedUser.inventory as UserInventory);
         }
 
         // Inventory changed concurrently; reload and retry.
-        const fresh = await UserModel.findById(userID).lean();
-        const mapped = toUser(fresh);
-        if (!mapped) return ErrResult(new Error("USER_NOT_FOUND"));
-        inv = mapped.inventory;
+        const fresh = await ensureUser(userID);
+        if (fresh.isErr()) return ErrResult(fresh.error);
+        inv = normalizeInventory(fresh.unwrap().inventory);
     }
 
     return ErrResult(new Error("ITEM_TX_CONFLICT"));

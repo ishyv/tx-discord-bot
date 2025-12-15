@@ -6,7 +6,7 @@
  * Alcance: solo construcción de UI; no realiza operaciones de I/O ni lógica de estado.
  */
 import { ActionRow, Button, Embed } from "seyfert";
-import { ButtonStyle } from "seyfert/lib/types";
+import { ButtonStyle, type APIEmbed } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 import type { Offer, OfferDetails, OfferStatus } from "./types";
 
@@ -134,7 +134,8 @@ export function buildStatusEmbed(
 
 /** Reconstruye el embed del usuario desde los datos guardados. */
 export function getUserEmbedFromOffer(offer: Offer): Embed {
-    return new Embed(offer.embed);
+    const embedData = (offer.embed ?? {}) as Partial<APIEmbed>;
+    return new Embed(embedData);
 }
 
 /** Crea los botones de moderación. */

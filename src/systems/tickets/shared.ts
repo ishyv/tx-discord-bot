@@ -9,8 +9,7 @@
  *
  * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
  */
-import { removeOpenTicketByChannel } from "@/db/repositories";
-import { withGuild } from "@/db/repositories/with_guild";
+import { recordTicketClosure } from "@/modules/tickets/service";
 
 /**
  * Synchronises repository state when a ticket channel is closed.
@@ -18,25 +17,12 @@ import { withGuild } from "@/db/repositories/with_guild";
  * that still references it inside `openTickets`.
  */
 export async function closeTicket(guildId: string, channelId: string): Promise<void> {
-  await withGuild(guildId, (guild) => {
-    const pending = Array.isArray((guild as any).pendingTickets)
-      ? [...(guild as any).pendingTickets]
-      : [];
-    const next = pending.filter((id: string | null | undefined) => id && id !== channelId);
-    (guild as any).pendingTickets = next;
-    return next;
-  }).catch((error) => {
-    console.error("[tickets] failed to update pending tickets during close", {
-      error,
+  const result = await recordTicketClosure(guildId, channelId);
+  if (result.isErr()) {
+    console.error("[tickets] failed to update ticket state during close", {
+      error: result.error,
       guildId,
       channelId,
     });
-  });
-
-  await removeOpenTicketByChannel(channelId).catch((error) => {
-    console.error("[tickets] failed to update user open tickets during close", {
-      error,
-      channelId,
-    });
-  });
+  }
 }

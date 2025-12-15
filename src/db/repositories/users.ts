@@ -1,49 +1,59 @@
 /**
- * Repositorio de usuarios con una API mínima y legible.
- * Objetivos:
- * - Siempre devolver POJOs (lean) sin exponer objetos de Mongoose.
- * - Usar Result<T> en lugar de lanzar excepciones.
- * - Mantener solo operaciones sencillas: leer, guardar (upsert) y borrar,
- *   más algunos helpers de dominio (reputación, warns, tickets) construidos sobre ellas.
+ * User repository using native Mongo driver and Zod validation.
+ * Purpose: expose user persistence operations with validated reads/writes and small domain helpers.
  */
-import { connectMongo } from "@/db/client";
-import { UserModel, type UserData, type Warn } from "@/db/models/user.schema";
+import { getDb } from "@/db/mongo";
+import { UserSchema, type User, type Warn } from "@/db/schemas/user";
 import type { UserId, WarnId } from "@/db/types";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 
-const defaultUser = (id: UserId): UserData => ({
-  _id: id,
-  rep: 0,
-  warns: [],
-  openTickets: [],
-  currency: {},
-  inventory: {},
-});
+const usersCollection = async () => (await getDb()).collection<User>("users");
+
+const defaultUser = (id: UserId): User =>
+  UserSchema.parse({
+    _id: id,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
 const mapError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
-export const toUser = (doc: any): UserData | null => {
-  if (!doc) return null;
-  return {
-    _id: doc._id,
-    rep: Number(doc.rep ?? 0),
-    warns: Array.isArray(doc.warns) ? doc.warns.map((w: Warn) => ({ ...w })) : [],
-    openTickets: Array.isArray(doc.openTickets)
-      ? doc.openTickets.filter((v: unknown): v is string => typeof v === "string")
-      : [],
-    currency: doc.currency ?? {},
-    inventory: doc.inventory ?? {},
-  };
-};
-
 const withDb = async <T>(op: () => Promise<T>): Promise<Result<T>> => {
   try {
-    await connectMongo();
     return OkResult(await op());
   } catch (error) {
     return ErrResult(mapError(error));
   }
+};
+
+const parseUser = (doc: unknown): User => UserSchema.parse(doc);
+
+const loadUser = async (id: UserId): Promise<User | null> => {
+  const col = await usersCollection();
+  const doc = await col.findOne({ _id: id });
+  return doc ? parseUser(doc) : null;
+};
+
+const saveUserDocument = async (user: User): Promise<User> => {
+  const col = await usersCollection();
+  const now = new Date();
+  const next = parseUser({
+    ...user,
+    _id: user._id,
+    updatedAt: now,
+    createdAt: user.createdAt ?? now,
+  });
+  await col.replaceOne({ _id: next._id }, next, { upsert: true });
+  return next;
+};
+
+const mutateUser = async (
+  id: UserId,
+  mutator: (current: User) => User,
+): Promise<User> => {
+  const current = (await loadUser(id)) ?? defaultUser(id);
+  return saveUserDocument(mutator(current));
 };
 
 /* ------------------------------------------------------------------------- */
@@ -51,45 +61,38 @@ const withDb = async <T>(op: () => Promise<T>): Promise<Result<T>> => {
 /* ------------------------------------------------------------------------- */
 
 /** Lee un usuario por id, devolviendo un POJO o null. */
-export async function findUser(id: UserId): Promise<Result<UserData | null>> {
-  return withDb(async () => {
-    const doc = await UserModel.findById(id).lean();
-    return toUser(doc);
-  });
+export async function findUser(id: UserId): Promise<Result<User | null>> {
+  return withDb(async () => loadUser(id));
 }
 
 /** Crea o actualiza un usuario aplicando un patch. */
 export async function saveUser(
   id: UserId,
-  patch: Partial<UserData>,
-): Promise<Result<UserData>> {
-  return withDb(async () => {
-    const doc = await UserModel.findByIdAndUpdate(
-      id,
-      { $set: patch, $setOnInsert: defaultUser(id) },
-      { new: true, upsert: true, lean: true },
-    );
-    const mapped = toUser(doc);
-    if (!mapped) throw new Error("FAILED_TO_SAVE_USER");
-    return mapped;
-  });
+  patch: Partial<User>,
+): Promise<Result<User>> {
+  return withDb(async () =>
+    mutateUser(id, (current) => parseUser({ ...current, ...patch, _id: id })),
+  );
 }
 
 /** Elimina un usuario; retorna true si se borró algo. */
 export async function deleteUser(id: UserId): Promise<Result<boolean>> {
   return withDb(async () => {
-    const res = await UserModel.deleteOne({ _id: id }).lean();
-    return (res as any)?.deletedCount > 0;
+    const col = await usersCollection();
+    const res = await col.deleteOne({ _id: id });
+    return (res.deletedCount ?? 0) > 0;
   });
 }
 
 /** Obtiene un usuario o lo crea con defaults. */
-export async function ensureUser(id: UserId): Promise<Result<UserData>> {
-  const existing = await findUser(id);
-  if (existing.isErr()) return ErrResult(existing.error);
-  const value = existing.unwrap();
-  if (value) return OkResult(value);
-  return saveUser(id, defaultUser(id));
+export async function ensureUser(id: UserId): Promise<Result<User>> {
+  return withDb(async () => {
+    const existing = await loadUser(id);
+    if (existing) return existing;
+    const next = defaultUser(id);
+    await saveUserDocument(next);
+    return next;
+  });
 }
 
 /* ------------------------------------------------------------------------- */
@@ -109,12 +112,11 @@ export async function updateUserReputation(
   updater: (current: number) => number,
 ): Promise<Result<number>> {
   return withDb(async () => {
-    const current = await getUserReputation(id);
-    if (current.isErr()) throw current.error;
-    const next = clampRep(updater(current.unwrap()));
-    const saved = await saveUser(id, { rep: next });
-    if (saved.isErr()) throw saved.error;
-    return clampRep(saved.unwrap().rep ?? next);
+    const updated = await mutateUser(id, (u) => {
+      const next = clampRep(updater(clampRep(u.rep ?? 0)));
+      return { ...u, rep: next };
+    });
+    return clampRep(updated.rep ?? 0);
   });
 }
 
@@ -129,13 +131,11 @@ export const adjustUserReputation = (id: UserId, delta: number) =>
 
 export async function addWarn(id: UserId, warn: Warn): Promise<Result<Warn[]>> {
   return withDb(async () => {
-    await ensureUser(id);
-    const doc = await UserModel.findByIdAndUpdate(
-      id,
-      { $push: { warns: warn } },
-      { new: true, lean: true },
-    );
-    return (doc?.warns as Warn[]) ?? [];
+    const updated = await mutateUser(id, (u) => ({
+      ...u,
+      warns: [...(u.warns ?? []), warn],
+    }));
+    return updated.warns ?? [];
   });
 }
 
@@ -146,20 +146,19 @@ export async function listWarns(id: UserId): Promise<Result<Warn[]>> {
 }
 
 export async function setWarns(id: UserId, warns: Warn[]): Promise<Result<Warn[]>> {
-  const saved = await saveUser(id, { warns });
-  if (saved.isErr()) return ErrResult(saved.error);
-  return OkResult(saved.unwrap().warns ?? []);
+  return withDb(async () => {
+    const updated = await mutateUser(id, (u) => ({ ...u, warns: [...warns] }));
+    return updated.warns ?? [];
+  });
 }
 
 export async function removeWarn(id: UserId, warnId: WarnId): Promise<Result<Warn[]>> {
   return withDb(async () => {
-    await ensureUser(id);
-    const doc = await UserModel.findByIdAndUpdate(
-      id,
-      { $pull: { warns: { warn_id: warnId } } },
-      { new: true, lean: true },
-    );
-    return (doc?.warns as Warn[]) ?? [];
+    const updated = await mutateUser(id, (u) => ({
+      ...u,
+      warns: (u.warns ?? []).filter((w) => w.warn_id !== warnId),
+    }));
+    return updated.warns ?? [];
   });
 }
 
@@ -181,20 +180,23 @@ export async function listOpenTickets(id: UserId): Promise<Result<string[]>> {
 }
 
 export async function setOpenTickets(id: UserId, tickets: string[]): Promise<Result<string[]>> {
-  const saved = await saveUser(id, { openTickets: sanitizeTickets(tickets) });
-  if (saved.isErr()) return ErrResult(saved.error);
-  return OkResult(saved.unwrap().openTickets ?? []);
+  return withDb(async () => {
+    const updated = await mutateUser(id, (u) => ({
+      ...u,
+      openTickets: sanitizeTickets(tickets),
+    }));
+    return updated.openTickets ?? [];
+  });
 }
 
 export async function addOpenTicket(id: UserId, channelId: string): Promise<Result<string[]>> {
   return withDb(async () => {
-    await ensureUser(id);
-    const doc = await UserModel.findByIdAndUpdate(
-      id,
-      { $addToSet: { openTickets: channelId } },
-      { new: true, lean: true },
-    );
-    return (doc?.openTickets as string[]) ?? [];
+    const updated = await mutateUser(id, (u) => {
+      const next = new Set(u.openTickets ?? []);
+      next.add(channelId);
+      return { ...u, openTickets: Array.from(next) };
+    });
+    return updated.openTickets ?? [];
   });
 }
 
@@ -203,22 +205,67 @@ export async function removeOpenTicket(
   channelId: string,
 ): Promise<Result<string[]>> {
   return withDb(async () => {
-    await ensureUser(id);
-    const doc = await UserModel.findByIdAndUpdate(
-      id,
-      { $pull: { openTickets: channelId } },
-      { new: true, lean: true },
-    );
-    return (doc?.openTickets as string[]) ?? [];
+    const updated = await mutateUser(id, (u) => ({
+      ...u,
+      openTickets: (u.openTickets ?? []).filter((t) => t !== channelId),
+    }));
+    return updated.openTickets ?? [];
   });
 }
 
 export async function removeOpenTicketByChannel(channelId: string): Promise<Result<void>> {
   if (!channelId) return OkResult(undefined);
   return withDb(async () => {
-    const owners = await UserModel.find({ openTickets: channelId }, { _id: 1 }).lean();
-    const ids = owners.map((o: any) => o._id);
-    if (ids.length === 0) return;
-    await UserModel.updateMany({ _id: { $in: ids } }, { $pull: { openTickets: channelId } });
+    const col = await usersCollection();
+    await col.updateMany({ openTickets: channelId }, { $pull: { openTickets: channelId } });
   });
 }
+
+/* ------------------------------------------------------------------------- */
+/* CAS helpers for inventory/currency                                       */
+/* ------------------------------------------------------------------------- */
+
+export async function replaceInventoryIfMatch(
+  id: UserId,
+  expected: Record<string, unknown>,
+  next: Record<string, unknown>,
+): Promise<Result<User | null>> {
+  return withDb(async () => {
+    const col = await usersCollection();
+    const now = new Date();
+    const res = await col.findOneAndUpdate(
+      { _id: id, inventory: expected },
+      { $set: { inventory: next, updatedAt: now } },
+      { returnDocument: "after" },
+    );
+    const value = res ?? (await col.findOne<User>({ _id: id }));
+    return value ? parseUser(value) : null;
+  });
+}
+
+export async function replaceCurrencyIfMatch(
+  id: UserId,
+  expected: Record<string, unknown>,
+  next: Record<string, unknown>,
+): Promise<Result<User | null>> {
+  return withDb(async () => {
+    const col = await usersCollection();
+    const now = new Date();
+    const res = await col.findOneAndUpdate(
+      { _id: id, currency: expected },
+      { $set: { currency: next, updatedAt: now } },
+      { returnDocument: "after" },
+    );
+    const value = res ?? (await col.findOne<User>({ _id: id }));
+    return value ? parseUser(value) : null;
+  });
+}
+
+// Export parser for compatibility with callers expecting toUser.
+export const toUser = (doc: unknown): User | null => {
+  try {
+    return parseUser(doc);
+  } catch {
+    return null;
+  }
+};

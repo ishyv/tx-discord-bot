@@ -4,7 +4,7 @@ Fotografía de cómo están orquestadas las piezas principales del runtime. Esta
 
 ## Puntos de entrada y ciclo de vida
 
-- `src/index.ts` es el arranque único: carga augmentations de UI antes que nada, extiende el contexto de Seyfert con helpers de logging, aplica middlewares globales y lanza `fixDb()` para normalizar la base antes de iniciar el cliente. Al finalizar, sube los comandos con `uploadCommands` usando el `commands.json` cacheado.
+- `src/index.ts` es el arranque único: carga augmentations de UI antes que nada, extiende el contexto de Seyfert con helpers de logging, aplica middlewares globales y arranca la conexión Mongo (`getDb()`) antes de inicializar el cliente. Al finalizar, sube los comandos con `uploadCommands` usando el `commands.json` cacheado.
 - Los _handlers_ de eventos en `src/events/handlers/*.ts` actúan como puente entre el gateway de Seyfert y los hooks internos. Cada handler solo recibe el evento y re-emite a los hooks tipados para mantener el código de negocio desacoplado del framework.
 - Los _hooks_ en `src/events/hooks/*.ts` son pequeños buses en memoria creados con `createEventHook.ts`. Permiten que cualquier módulo registre listeners o los quite sin tocar el wiring de Seyfert.
 - Los _listeners_ en `src/events/listeners/*.ts` contienen la lógica de negocio por evento (logs, automod, reputación, tops, etc.) y se auto-registran importando el hook correspondiente. Esta separación facilita probar o desactivar listeners sin tocar el transporte del evento.
@@ -29,7 +29,7 @@ Fotografía de cómo están orquestadas las piezas principales del runtime. Esta
 ## Flujo de datos
 
 - Los repositorios de datos (`src/db/repositories/*`) son la frontera con Mongo. Los módulos/sistemas los consumen en vez de usar modelos directos para mantener reglas de dominio y normalización en un solo lugar.
-- `src/db/fixDb.ts` se ejecuta al inicio para rellenar defaults y sanear estructuras; está pensado como guardarraíles en entornos en vivo, no como reemplazo de migraciones.
+- Las formas de datos viven en esquemas Zod (`src/db/schemas/*`). Los repos validan lecturas/escrituras con esos esquemas, aplican defaults y devuelven POJOs ya normalizados; no hay fixers ni modelos mágicos.
 
 ## Filosofía general
 

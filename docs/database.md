@@ -1,128 +1,113 @@
-# Capa de datos (Mongo + Mongoose)
+# Capa de datos (Mongo driver + Zod)
 
-Guia para entender y usar la persistencia del bot. Todo vive en `src/db` y se apoya en Mongoose sobre MongoDB.
+Guía para entender y usar la persistencia del bot. Todo vive en `src/db` y se apoya en el driver nativo de Mongo con Zod como única fuente de verdad.
 
-## TL;DR rapido
+## TL;DR rápido
 
-- Usa `@/db/repositories/*` en lugar de hablar directo con los modelos.
-- No necesitas abrir la conexion: cada repo llama `connectMongo()` de `src/db/client.ts`, que reutiliza una promesa global.
-- Variables de entorno: `MONGO_URI` o `DB_URI` (URI completa) y `MONGO_DB_NAME` o `DB_NAME` (por defecto `pyebot`).
-- `fixDb()` se ejecuta en el bootstrap (`src/index.ts`) para rellenar defaults y tipos en documentos existentes; no sustituye migraciones estructurales.
-- IDs clave: usuarios y guilds usan el Discord ID como `_id`, y varias colecciones usan claves compuestas (`guildId:name`, `guildId:userId:roleId:ruleName:type`).
+- Usa `@/db/repositories/*`; no hables directo con colecciones.
+- Conexión: `src/db/mongo.ts` exporta `getDb()` (MongoClient singleton). `src/index.ts` la inicializa en el arranque.
+- Variables de entorno: `MONGO_URI` (URI completa) y `DB_NAME` (por defecto `pyebot`).
+- Schemas: Zod en `src/db/schemas/*.ts` aplican defaults y validan lecturas/escrituras.
+- IDs clave: usuarios y guilds usan el Discord ID como `_id`; otras colecciones usan claves compuestas (`guildId:name`, `guildId:userId:roleId:ruleName:type`, etc.).
 
 ## Mapa de carpetas
 
-- `src/db/client.ts`: abre/cierra la conexion a Mongo de forma perezosa.
-- `src/db/helpers.ts`: utilidades puras (`deepClone`) usadas para copiar documentos sin referencias compartidas.
-- `src/db/fixDb.ts`: normaliza documentos existentes segun los defaults y tipos de cada schema.
-- `src/db/models/*`: definicion de esquemas Mongoose (shape y indices por coleccion).
-- `src/db/repositories/*`: API de acceso a datos; exponen funciones de dominio y encapsulan Mongoose.
-- `src/db/index.ts`: reexporta modelos/repositorios para importacion unica.
+- `src/db/mongo.ts`: abre/cierra la conexión nativa (MongoClient singleton).
+- `src/db/schemas/*.ts`: Zod schemas (única definición de shape + defaults).
+- `src/db/repositories/*`: API de acceso a datos; exponen funciones de dominio y encapsulan el driver nativo.
+- `src/db/helpers.ts`: utilidades puras (`deepClone`).
+- `src/db/normalizers.ts`: helpers para listas, fechas, números.
+- `src/db/index.ts`: fachada de la capa de persistencia (reexporta schemas, repos y helper de mongo).
 
-## Conexion y ciclo de vida
+## Conexión y ciclo de vida
 
-- `connectMongo({ uri?, dbName? })` lee `MONGO_URI`/`DB_URI` y `MONGO_DB_NAME`/`DB_NAME`, memoiza la promesa y habilita `serverApi` v1.
-- `disconnectMongo()` existe para tests/apagados; en runtime normal no es necesario llamarlo manualmente.
-- Los repositorios llaman `connectMongo()` al inicio de cada operacion, asi que no mezcles conexiones externas.
+- `getDb()` lee `MONGO_URI` y `DB_NAME` (default `pyebot`), memoiza el MongoClient y devuelve el `Db`.
+- `disconnectDb()` existe para tests/apagados; en runtime normal no es necesario llamarlo manualmente.
+- Los repositorios obtienen la colección vía `getDb().collection("nombre")`; no mezcles conexiones externas.
 
-## Normalizacion en arranque: `fixDb()`
+## Colecciones (Zod schemas en `src/db/schemas`)
 
-- Recorre cada schema y construye un `$set` que rellena valores faltantes y corrige tipos basandose en defaults del schema.
-- Casos especiales: fusiona defaults en subdocs de `warns`, limpia arreglos de `openTickets`/`pendingTickets` dejando solo strings.
-- Se ejecuta al iniciar el bot (`src/index.ts`). Si cambias defaults o agregas campos, vuelve a correr el bot para que `fixDb()` alinee documentos antiguos.
-- No reemplaza migraciones de datos complejas (renombrar campos, mover colecciones); esas siguen siendo manuales.
+### `users` (`user.ts`)
 
-## Modelos y colecciones
-
-### `users` (`src/db/models/user.ts`)
-
-- `_id`: Discord userId. Campos numericos: `rep`, `bank`, `cash`.
-- `warns`: arreglo de objetos `{ reason, warn_id, moderator, timestamp }`.
+- `_id`: Discord userId. Campos numéricos: `rep`.
+- `warns`: arreglo `{ reason, warn_id, moderator, timestamp }`.
 - `openTickets`: arreglo de ids de canales.
-- `currency` e `inventory`: `Schema.Types.Mixed` para saldos e inventario del juego.
-- Virtual `id` expone `_id` como alias. Sin versionado Mongoose (`versionKey: false`).
+- `currency` e `inventory`: objetos abiertos (records) para saldos e inventario del juego.
+- Timestamps opcionales (`createdAt`/`updatedAt`).
 
-### `guilds` (`src/db/models/guild.ts`)
+### `guilds` (`guild.ts`)
 
 - `_id`: Discord guildId. Campos mixtos para `roles`, `channels`, `features`.
 - `pendingTickets`: ids de tickets abiertos; `reputation.keywords`: palabras clave configurables.
 - Features disponibles en `Features` (tickets, automod, autoroles, warns, roles, reputation, reputationDetection, tops, suggest, economy, game) con defaults `true`.
-- Timestamps `createdAt`/`updatedAt` habilitados.
+- Timestamps opcionales.
 
-### Autoroles (`src/db/models/autorole.ts`)
+### Autoroles (`autorole.ts`)
 
-- Reglas (`autorole_rules`): `_id = guildId:name`, `triggerType` (mensaje, reaccion, reputacion, antiguedad), `args` dinamicos, `roleId`, `durationMs`, `enabled`, `createdBy`. Indices por `guildId`, por `guildId+roleId`.
-- Grants (`autorole_role_grants`): `_id = guildId:userId:roleId:ruleName:type`, `type` `LIVE|TIMED`, `expiresAt`. Indices para lookups por guild/usuario/rol y expiracion.
-- Contadores (`autorole_reaction_tallies`): `_id = guildId:messageId:emojiKey`, guarda `authorId`, `count`, `updatedAt`. Indice por `guildId+emojiKey`.
+- Reglas (`autorole_rules`): `_id = guildId:name`, `trigger` discriminado (mensaje/reacción/umbral/etc), `roleId`, `durationMs`, `enabled`, `createdBy`.
+- Grants (`autorole_role_grants`): `_id = guildId:userId:roleId:ruleName:type`, `type` `LIVE|TIMED`, `expiresAt`.
+- Contadores (`autorole_reaction_tallies`): `_id = guildId:messageId:emojiKey`, `authorId`, `count`, `updatedAt`.
 
-### `offers` (`src/db/models/offers.ts`)
+### `offers` (`offers.ts`)
 
 - Estados: `PENDING_REVIEW`, `APPROVED`, `REJECTED`, `CHANGES_REQUESTED`, `WITHDRAWN`.
-- Campos clave: `details` (schema embebido con titulo/descripcion/etc), `embed` serializado, mensajes/canales de revision y publicacion, `rejectionReason`, `changesNote`, `lastModeratorId`.
-- Indices: `{ guildId, authorId }` unico parcial cuando el estado es activo (`PENDING_REVIEW` o `CHANGES_REQUESTED`); indices por estado y guild.
+- Campos clave: `details` (titulo/descripcion/etc), `embed` serializado, mensajes/canales de revisión/publicación, `rejectionReason`, `changesNote`, `lastModeratorId`.
 
-### TOPs (`src/db/models/tops.ts`)
+### TOPs (`tops.ts`)
 
-- Ventana activa (`top_windows`): `_id = guildId`, `channelId`, `intervalMs` (default 7d), `topSize` (default 10), `windowStartedAt`, `lastReportAt`, mapas numericos (`emojiCounts`, `channelCounts`, `reputationDeltas`). Indice por `guildId`.
-- Reportes (`top_reports`): snapshots historicos con `periodStart/periodEnd`, conteos y metadata opcional. Indices por `guildId` descendente y `periodEnd`.
+- Ventana activa (`top_windows`): `_id = guildId`, `channelId`, `intervalMs` (default 7d), `topSize` (default 10), `windowStartedAt`, `lastReportAt`, mapas numéricos (`emojiCounts`, `channelCounts`, `reputationDeltas`).
+- Reportes (`top_reports`): snapshots históricos con `periodStart/periodEnd`, conteos y metadata opcional.
 
-## Repositorios: como usarlos
+## Repositorios: cómo usarlos
 
 ### `repositories/users.ts`
 
-- `getUser`, `userExists`, `ensureUser`, `updateUser`, `removeUser`: gestion basica del documento; `ensureUser` crea con defaults.
-- Economia: `bumpBalance`, `depositCoins`, `withdrawCoins` (las dos ultimas devuelven `Result` con errores `INVALID_AMOUNT` o `INSUFFICIENT_FUNDS`).
-- Reputacion: `getUserReputation`, `setUserReputation`, `adjustUserReputation` (usa pipeline para clamp a 0).
+- Core: `findUser`, `ensureUser`, `saveUser`, `deleteUser`.
+- Reputación: `getUserReputation`, `setUserReputation`, `adjustUserReputation`.
 - Warns: `listWarns`, `setWarns`, `addWarn`, `removeWarn`, `clearWarns`.
-- Tickets: `listOpenTickets`, `setOpenTickets`, `addOpenTicket`, `removeOpenTicket`, `removeOpenTicketByChannel` (deduplica y limpia valores no string).
-- `currency` e `inventory` se manipulan via `ensureUser`/`updateUser` desde los modulos de economia/juego.
+- Tickets: `listOpenTickets`, `setOpenTickets`, `addOpenTicket`, `removeOpenTicket`, `removeOpenTicketByChannel` (sanitiza/deduplica).
+- CAS helpers: `replaceInventoryIfMatch`, `replaceCurrencyIfMatch` para transacciones optimistas en inventario/moneda.
 
 ### `repositories/guilds.ts`
 
 - Core CRUD: `getGuild`, `ensureGuild`, `updateGuild`, `deleteGuild` (rellena defaults de features/channels/roles).
-- Features: `readFeatures`, `setFeature`, `setAllFeatures` con validacion contra `DEFAULT_GUILD_FEATURES`.
+- Features: `readFeatures`, `setFeature`, `setAllFeatures` con validación contra `DEFAULT_GUILD_FEATURES`.
 - Canales: `readChannels`/`writeChannels` (mutador funcional), `setCoreChannel`, `getCoreChannel`, `setTicketCategory`, `setTicketMessage`.
 - Canales gestionados: `listManagedChannels`, `addManagedChannel`, `updateManagedChannel`, `removeManagedChannel` (genera claves a partir del label).
 - Tickets pendientes: `getPendingTickets`, `setPendingTickets` (sanitiza y deduplica).
 - Roles de guild: `readRoles`, `writeRoles`, `getRole`, `updateRole`, `removeRole`, `ensureRoleExists`.
-- Overrides y limites: `getRoleOverrides`, `setRoleOverride`, `clearRoleOverride`, `resetRoleOverrides`, `getRoleLimits`, `setRoleLimit`, `clearRoleLimit` (normaliza las keys a snake_case).
+- Overrides y límites: `getRoleOverrides`, `setRoleOverride`, `clearRoleOverride`, `resetRoleOverrides`, `getRoleLimits`, `setRoleLimit`, `clearRoleLimit`.
 
 ### `repositories/with_guild.ts`
 
-- Patrion funcional para mutar un documento completo de guild: `withGuild(id, callback)` crea si no existe, ejecuta el callback y marca campos mixtos como modificados.
-- Uso recomendado para configuraciones de baja concurrencia (dashboard). No usar para contadores o operaciones que requieran atomicidad; para eso existen los metodos de `repositories/guilds.ts`.
+- Patrón funcional legacy para mutar un documento completo de guild: `withGuild(id, callback)` crea si no existe, ejecuta el callback sobre una copia y persiste el resultado.
+- Uso recomendado para configuraciones de baja concurrencia (dashboard). Para contadores atomicos usar `repositories/guilds.ts`.
 
 ### `repositories/autorole.ts`
 
-- Reglas: `autoRoleFetchRulesByGuild/All`, `autoRoleFetchRule`, `autoRoleInsertRule`, `autoRoleUpdateRuleEnabled`, `autoRoleDeleteRule`, wrappers `createRule`, `enableRule`, `disableRule`, `deleteRule`, `refreshGuildRules`, `loadRulesIntoCache`.
-- Grants: `autoRoleUpsertGrant`, `autoRoleDeleteGrant`, `autoRoleListReasonsForMemberRole`, `autoRoleListReasonsForRule`, `autoRoleCountReasonsForRole`, `autoRoleFindGrant`, `autoRoleListDueTimedGrants`, `autoRolePurgeGrantsForRule`, `autoRolePurgeGrantsForGuildRole`, helpers de alto nivel `grantByRule`, `revokeByRule`, `purgeRule`.
-- Tallies de reacciones: `autoRoleIncrementReactionTally`, `autoRoleDecrementReactionTally`, `autoRoleReadReactionTally`, `autoRoleDeleteReactionTally`, `autoRoleListTalliesForMessage`, `autoRoleDeleteTalliesForMessage`, helpers `incrementReactionTally`, `decrementReactionTally`, `readReactionTally`, `removeReactionTally`, `drainMessageState`.
-- Cache: integra con `@/modules/autorole/cache` para mantener reglas y contadores en memoria; los helpers `trackPresence/clearTrackedPresence` escriben solo en cache.
-- Reglas de reputacion: `updateReputationRule`, `applyReputationPreset` crean/actualizan presets y limpian reglas sobrantes del mismo tipo.
+- Reglas: fetch/list/insert/upsert/updateEnabled/delete con triggers discriminados; IDs compuestos `guildId:name`.
+- Grants: upsert/delete/list/find/purge; IDs compuestos `guildId:userId:roleId:ruleName:type`.
+- Tallies: increment/decrement/read/list/delete con `_id = guildId:messageId:emojiKey`.
 
 ### `repositories/offers.ts`
 
-- Devuelven `Result` para manejo explicito de errores.
-- Creacion: `createOffer` (falla con `ACTIVE_OFFER_EXISTS` si hay oferta activa del autor).
-- Lectura: `findById`, `findActiveByAuthor`.
-- Escritura: `updateOffer` (patch libre, con guardas opcionales de estado).
-- Listado: `listByStatus` por guild y estado.
+- `createOffer` (falla con `ACTIVE_OFFER_EXISTS` en duplicados activos), `findById`, `findActiveByAuthor`, `updateOffer` (con guardas opcionales de estado), `listByStatus`, `removeOffer`.
 
 ### `repositories/tops.ts`
 
-- Configuracion/ventana: `ensureTopWindow`, `getTopWindow`, `updateTopConfig`, `resetTopWindow` (abre nueva ventana limpiando contadores).
-- Contadores: `bumpEmojiCounts`, `bumpChannelCount`, `bumpReputationDelta` (usan `$inc` atomico).
-- Scheduler: `findDueWindows` devuelve ventanas cuya `windowStartedAt + intervalMs <= now`.
-- Reportes: `persistTopReport` guarda snapshot historico, `rotateWindowAfterReport` reinicia ventana al emitir, `listReports` lee historico.
+- Configuración/ventana: `ensureTopWindow`, `getTopWindow`, `updateTopConfig`, `resetTopWindow`.
+- Contadores: `bumpEmojiCounts`, `bumpChannelCount`, `bumpReputationDelta`.
+- Scheduler: `findDueWindows`.
+- Reportes: `persistTopReport`, `rotateWindowAfterReport`, `listReports`.
 
-## Como extender la capa de datos
+## Cómo extender la capa de datos
 
-- Nuevos campos: agrega el campo al schema correspondiente en `src/db/models/*` con `default` si aplica. Considera si necesitas un indice.
-- Normalizacion: tras cambiar defaults/campos, reinicia el bot para que `fixDb()` aplique a documentos existentes.
-- Nuevos repos o metodos: crea funciones pequenas que llamen `connectMongo()`, usen operaciones atomicas (`$inc`, `findOneAndUpdate`) y devuelvan datos ya mapeados (evita exponer documentos de Mongoose).
-- Cambios de estructura (renombrar campos, mover colecciones): escribe scripts/migraciones dedicadas; `fixDb()` no cubre ese caso.
+- Nuevos campos: agrega el campo al schema Zod correspondiente en `src/db/schemas/*` con `default` si aplica. Considera si necesitas un índice (usa `createIndex`/`updateMany` ad hoc).
+- Validación: deja que los repos `parse`en lecturas/escrituras con Zod; no dupliques shape en tipos sueltos.
+- Nuevos repos o métodos: usa `getDb().collection(...)`, operaciones atómicas (`$inc`, `findOneAndUpdate`) y devuelve datos ya validados.
+- Cambios de estructura (renombrar campos, mover colecciones): escribe scripts/migraciones dedicadas; la validación de Zod no cubre migraciones históricas.
 
 ## Desarrollo local
 
-- Configura `MONGO_URI` apuntando a tu instancia (local o contenedor). `MONGO_DB_NAME` permite aislar bases por desarrollador.
-- `fixDb()` se llama siempre en el arranque; si necesitas ejecutar solo la normalizacion, puedes importar y correr `await fixDb()` en un script ad hoc.
+- Configura `MONGO_URI` apuntando a tu instancia (local o contenedor). Usa `DB_NAME` para aislar bases por desarrollador (default `pyebot`).
+- `getDb()` se inicializa en el bootstrap; no necesitas abrir conexiones en los módulos de negocio.

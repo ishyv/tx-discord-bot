@@ -4,7 +4,7 @@ Guía rápida para entender las piezas que gobiernan qué features están encend
 
 ## Features y toggles
 
-- Catálogo en `src/modules/features/index.ts` usando el enum `Features` de `src/db/models/guild.schema.ts`. Se cachea por guild 30s para evitar Golpear Mongo en cada comando.
+- Catálogo en `src/modules/features/index.ts` usando el enum `Features` de `src/db/schemas/guild.ts`. Se cachea por guild 30s para evitar golpear Mongo en cada comando.
 - El decorador `@BindDisabled` (`src/modules/features/decorator.ts`) marca comandos que dependen de una feature. El middleware `featureToggle` (`src/middlewares/featureToggle.ts`) consulta `isFeatureEnabled` y corta la ejecución con un mensaje efímero si la flag está apagada.
 - `setFeatureFlag` y `setAllFeatureFlags` escriben en Mongo vía `withGuild` (`src/db/repositories/with_guild.ts`), centralizando el origen de verdad para dashboards o comandos de configuración.
 - Racional: permitir que administradores apaguen sistemas completos (economía, tickets, automod, etc.) sin desplegar código ni borrar comandos, y que los comandos fallen de forma amable.
@@ -12,7 +12,7 @@ Guía rápida para entender las piezas que gobiernan qué features están encend
 ## Canales administrados
 
 - `src/modules/guild-channels/index.ts` ofrece helpers para leer/escribir los canales "core" (tickets, logs, rep, ofertas, etc.) y una colección `managed` para canales arbitrarios creados por el bot.
-- El esquema vive en `src/db/models/guild.schema.ts` bajo `channels.core` y `channels.managed`. La función `removeInvalidChannels` revisa contra la API de Discord y limpia canales borrados.
+- El esquema vive en `src/db/schemas/guild.ts` bajo `channels.core` y `channels.managed`. La función `removeInvalidChannels` revisa contra la API de Discord y limpia canales borrados.
 - Comandos de configuración en `src/commands/moderation/channels/*.ts` y `src/commands/moderation/tickets/config.command.ts` son las entradas de usuario; todos delegan en el módulo para evitar diferencias de formato.
 - Racional: consolidar IDs de canales sensibles (logs, staff, tickets) en un único documento por guild y reducir riesgo de referencias rotas.
 

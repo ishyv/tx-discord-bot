@@ -1,6 +1,6 @@
 # Economía e inventario
 
-Marco de referencia para entender la lógica del sistema económico y de ítems sin leer la implementación. Todo persiste en el documento `users` (ver `src/db/models/user.schema.ts`) usando campos mixtos `currency` e `inventory`.
+Marco de referencia para entender la lógica del sistema económico y de ítems sin leer la implementación. Todo persiste en el documento `users` (ver `src/db/schemas/user.ts`) usando Zod para validar y aplicar defaults a los mapas `currency` e `inventory`.
 
 ## Diseño de monedas
 
@@ -29,5 +29,5 @@ Marco de referencia para entender la lógica del sistema económico y de ítems 
 
 ## Relación con la capa de datos
 
-- `users.currency` y `users.inventory` son `Schema.Types.Mixed` en la base para permitir evolución de formato sin migraciones recurrentes. `fixDb` rellena defaults cuando faltan campos.
+- `users.currency` y `users.inventory` son `record<string, unknown>` en el esquema Zod para permitir evolución de formato sin migraciones recurrentes. Los repos aplican defaults/normalizaciones en cada escritura y lectura, así no se depende de jobs de saneo adicionales.
 - La combinación de motor + repositorio evita que una UI antigua escriba estructuras incompatibles; siempre que use los módulos, los checks de validación y los retires optimistas protegen la integridad del estado económico.

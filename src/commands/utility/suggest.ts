@@ -127,12 +127,9 @@ export default class SuggestCommand extends Command {
 
 async function resolveSuggestChannel(guildId: string): Promise<string | null> {
   const channels = await getGuildChannels(guildId);
-  return (
-    channels.core?.suggestions?.channelId ??
-    channels.managed?.suggestions?.channelId ??
-    CHANNELS_ID.suggestions ??
-    null
-  );
+  const core = channels.core as Record<string, { channelId: string } | null | undefined>;
+  const managed = channels.managed as Record<string, { channelId: string } | null | undefined>;
+  return core?.suggestions?.channelId ?? managed?.suggestions?.channelId ?? CHANNELS_ID.suggestions ?? null;
 }
 
 

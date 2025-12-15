@@ -13,7 +13,7 @@ Tres flujos clave orientados a la interacción con miembros: tickets de soporte,
 
 - Servicio de dominio en `src/modules/offers/service.ts` con tipos en `src/modules/offers/types.ts` y UI en `modules/offers/embeds.ts`. Los comandos viven en `src/commands/offers/*.ts`.
 - Flujo: el autor envía la oferta -> se crea un mensaje en el canal de revisión configurado (`channels.core.offersReview`) -> moderadores aprueban, piden cambios o rechazan. Las aprobadas se publican en `channels.core.approvedOffers`; todas las transiciones se loguean con `logModerationAction`.
-- La persistencia está en `src/db/models/offers.schema.ts` y repositorio `src/db/repositories/offers.ts`, que impone unicidad de oferta activa por autor y estados permitidos por transición. El servicio usa un `Result` explícito para forzar a los comandos a manejar errores de negocio.
+- La persistencia está en `src/db/schemas/offers.ts` y repositorio `src/db/repositories/offers.ts`, que impone unicidad de oferta activa por autor y estados permitidos por transición. El servicio usa un `Result` explícito para forzar a los comandos a manejar errores de negocio.
 - Racional: separar la UI de los estados del dominio, mantener trazabilidad (último moderador, nota de cambio/rechazo) y evitar ofertas duplicadas de un mismo usuario mientras otra está activa.
 
 ## Autoroles

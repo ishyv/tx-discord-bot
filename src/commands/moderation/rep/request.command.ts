@@ -14,7 +14,8 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
-import { getGuildChannels } from "@/modules/guild-channels";
+import { getCoreChannel } from "@/modules/guild-channels";
+import { CoreChannelNames } from "@/modules/guild-channels/constants";
 import { requireRepContext, sendReputationRequest } from "./shared";
 
 const options = {
@@ -48,8 +49,11 @@ export default class RepRequestCommand extends SubCommand {
         const context = await requireRepContext(ctx, { requirePermission: false });
         if (!context) return;
 
-        const guildChannels = await getGuildChannels(context.guildId);
-        const repChannelId = guildChannels?.core?.repRequests?.channelId;
+        const repChannelConfig = await getCoreChannel(
+            context.guildId,
+            CoreChannelNames.RepRequests
+        );
+        const repChannelId = repChannelConfig?.channelId;
 
         if (!repChannelId) {
             await ctx.write({
@@ -60,7 +64,7 @@ export default class RepRequestCommand extends SubCommand {
         }
 
         const repChannel = await ctx.client.channels.fetch(repChannelId);
-        if (!repChannel || !repChannel.isTextGuild()) {
+        if (!repChannel?.isTextGuild()) {
             await ctx.write({
                 content: "El canal de solicitudes de reputacion no es valido o no es de texto.",
                 flags: MessageFlags.Ephemeral,

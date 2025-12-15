@@ -5,7 +5,7 @@
  *
  * Alcance: soporte de dominio; no sustituye a los comandos o servicios que consumen el módulo.
  */
-import type { OfferData as Offer, OfferDetails, OfferStatus } from "@/db/models/offers.schema";
+import type { Offer, OfferDetails, OfferStatus } from "@/db/schemas/offers";
 
 export type { Offer, OfferDetails, OfferStatus };
 

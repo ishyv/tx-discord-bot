@@ -12,10 +12,9 @@
  */
 
 import { getGuildChannels } from "@/modules/guild-channels";
-import { addOpenTicket, listOpenTickets } from "@/db/repositories";
-import { withGuild } from "@/db/repositories/with_guild";
 import { Colors } from "@/modules/ui/colors";
 import { isFeatureEnabled, Features } from "@/modules/features";
+import { openTicket } from "@/modules/tickets/service";
 import {
   ActionRow,
   Button,
@@ -28,7 +27,6 @@ import {
 } from "seyfert";
 import {
   ButtonStyle,
-  ChannelType,
   MessageFlags,
   TextInputStyle,
 } from "seyfert/lib/types";
@@ -115,7 +113,8 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
     }
 
     const channels = await getGuildChannels(guildId);
-    const ticketChannel = channels.core.tickets;
+    const core = channels.core as Record<string, { channelId: string } | null>;
+    const ticketChannel = core.tickets;
 
     const channelId = ticketChannel?.channelId;
     if (!channelId) {
@@ -221,27 +220,10 @@ export function buildTicketModal(category: TicketCategory): Modal {
           return;
         }
 
-        const openTicketsResult = await listOpenTickets(userId);
-        if (openTicketsResult.isErr()) {
-          await ctx.write({
-            content: "No se pudo verificar tus tickets abiertos.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-        const openTickets = openTicketsResult.unwrap();
-        if (openTickets.length >= MAX_TICKETS_PER_USER) {
-          await ctx.write({
-            content:
-              "Ya tienes un ticket abierto. Cierra el anterior antes de crear uno nuevo.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
         const channels = await getGuildChannels(guildId);
         const ticketCategoryId =
-          channels.core?.ticketCategory?.channelId ?? null;
+          (channels.core as Record<string, { channelId: string } | null | undefined>)?.ticketCategory
+            ?.channelId ?? null;
 
         if (!ticketCategoryId) {
           await ctx.write({
@@ -254,44 +236,36 @@ export function buildTicketModal(category: TicketCategory): Modal {
 
         const channelName = buildTicketChannelName(ctx.user?.username);
 
-        let ticketChannel;
-        try {
-          ticketChannel = await ctx.client.guilds.channels.create(guildId, {
-            name: channelName,
-            type: ChannelType.GuildText,
-            parent_id: ticketCategoryId,
-          });
-        } catch (error) {
-          ctx.client.logger?.error?.("[tickets] failed to create ticket channel", {
-            error,
+        const opened = await openTicket(
+          ctx.client,
+          {
             guildId,
-            userId: ctx.user?.id,
-          });
+            userId,
+            parentId: ticketCategoryId,
+            channelName,
+          },
+          MAX_TICKETS_PER_USER,
+        );
+        if (opened.isErr()) {
+          const reason =
+            opened.error?.message === "TICKET_LIMIT_REACHED"
+              ? "Ya tienes un ticket abierto. Cierra el anterior antes de crear uno nuevo."
+              : "Ocurrio un error al crear tu ticket. Intentalo nuevamente en unos segundos.";
+          if (opened.error?.message !== "TICKET_LIMIT_REACHED") {
+            ctx.client.logger?.error?.("[tickets] failed to open ticket", {
+              error: opened.error,
+              guildId,
+              userId,
+            });
+          }
           await ctx.write({
-            content:
-              "Ocurrio un error al crear tu ticket. Intentalo nuevamente en unos segundos.",
+            content: reason,
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        // Marcar el ticket como abierto en la base de datos
-        await withGuild(guildId, (guild) => {
-          const pending = Array.isArray((guild as any).pendingTickets)
-            ? (guild as any).pendingTickets as string[]
-            : [];
-          pending.push(ticketChannel.id);
-          (guild as any).pendingTickets = pending;
-          return pending;
-        });
-        const addTicketResult = await addOpenTicket(userId, ticketChannel.id);
-        if (addTicketResult.isErr()) {
-          ctx.client.logger?.warn?.("[tickets] no se pudo registrar openTicket", {
-            error: addTicketResult.error,
-            userId,
-            channelId: ticketChannel.id,
-          });
-        }
+        const ticketChannelId = opened.unwrap().channelId;
 
         const welcomeEmbed = new Embed()
           .setColor(Colors.info)
@@ -310,19 +284,19 @@ export function buildTicketModal(category: TicketCategory): Modal {
 
         const row = new ActionRow<Button>().addComponents(
           new Button()
-            .setCustomId(TICKET_CLOSE_BUTTON_ID + ":" + ticketChannel.id)
+            .setCustomId(TICKET_CLOSE_BUTTON_ID + ":" + ticketChannelId)
             .setLabel("Cerrar Ticket")
             .setStyle(ButtonStyle.Danger) // Discord no admite botones naranja; Danger es lo más cercano.
         );
 
-        await ctx.client.messages.write(ticketChannel.id, {
+        await ctx.client.messages.write(ticketChannelId, {
           embeds: [welcomeEmbed],
           allowed_mentions: {
             parse: [] as ("roles" | "users" | "everyone")[],
           },
         });
 
-        await ctx.client.messages.write(ticketChannel.id, {
+        await ctx.client.messages.write(ticketChannelId, {
           embeds: [reasonEmbed],
           components: [row],
           allowed_mentions: {
@@ -331,7 +305,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
         });
 
         await ctx.write({
-          content: `✅ Gracias! Tu ticket fue enviado: <#${ticketChannel.id}>`,
+          content: `✅ Gracias! Tu ticket fue enviado: <#${ticketChannelId}>`,
           flags: MessageFlags.Ephemeral,
         });
       })
@@ -394,4 +368,3 @@ function buildTicketChannelName(username: string | undefined): string {
   const suffix = sanitized || "usuario";
   return `reporte-${suffix}`.slice(0, 100);
 }
-

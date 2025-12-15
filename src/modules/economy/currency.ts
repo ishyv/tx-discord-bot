@@ -1,14 +1,7 @@
-import { Schema } from "mongoose";
-
 export type CurrencyId = string;
 
-export type CurrencyInventory = Record<CurrencyId, any>;
-
-export const CurrencyInventorySchema = new Schema<Record<string, any>>(
-  {},
-  { strict: false, _id: false },
-);
-
+// Currency inventory shape mirrors `User["currency"]` from the DB schema (Record<string, unknown>).
+export type CurrencyInventory = Record<CurrencyId, unknown>;
 
 export interface Currency<TValue> {
   /** Unique id for registry and DB keys. */

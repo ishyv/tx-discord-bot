@@ -1,10 +1,12 @@
-import { CurrencyId, CurrencyInventory } from "./currency";
+/**
+ * Currency transactions: apply costs/rewards with optimistic concurrency on user currency balances.
+ */
+import { CurrencyId, type CurrencyInventory } from "./currency";
 import { CurrencyRegistry, currencyRegistry } from "./currencyRegistry";
 import { ErrResult, OkResult, Result } from "@/utils/result";
 
 import "./currencies/coin";
-import { ensureUser, toUser } from "@/db/repositories";
-import { connectMongo, UserModel } from "@/db";
+import { ensureUser, replaceCurrencyIfMatch } from "@/db/repositories";
 export { registerCurrency, currencyRegistry } from "./currencyRegistry";
 
 export type CurrencyAmount<TValue = unknown> = {
@@ -100,7 +102,7 @@ export async function currencyTransaction(
 ): Promise<TransactionResult> {
   const userResult = await ensureUser(userId);
   if (userResult.isErr()) return ErrResult(userResult.error);
-  let inv: CurrencyInventory = userResult.unwrap().currency ?? {};
+  let inv: CurrencyInventory = (userResult.unwrap().currency as CurrencyInventory) ?? {};
 
   // Optimistic retry loop to avoid lost updates under concurrent writes.
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -109,23 +111,17 @@ export async function currencyTransaction(
       return result;
     }
 
-    await connectMongo();
-    const updated = await UserModel.findOneAndUpdate(
-      { _id: userId, currency: inv },
-      { $set: { currency: result.unwrap() } },
-      { new: true, lean: true },
-    );
-
-    if (updated) {
-      const mapped = toUser(updated);
-      return mapped ? OkResult(mapped.currency ?? {}) : ErrResult(new Error("USER_NOT_FOUND"));
+    const updated = await replaceCurrencyIfMatch(userId, inv, result.unwrap());
+    if (updated.isErr()) return ErrResult(updated.error);
+    const updatedUser = updated.unwrap();
+    if (updatedUser) {
+      return OkResult(updatedUser.currency ?? {});
     }
 
     // Currency changed concurrently; reload and retry.
-    const fresh = await UserModel.findById(userId).lean();
-    const mapped = toUser(fresh);
-    if (!mapped) return ErrResult(new Error("USER_NOT_FOUND"));
-    inv = mapped.currency ?? {};
+    const fresh = await ensureUser(userId);
+    if (fresh.isErr()) return ErrResult(fresh.error);
+    inv = fresh.unwrap().currency ?? {};
   }
 
   return ErrResult(new Error("CURRENCY_TX_CONFLICT"));

@@ -70,17 +70,17 @@ export function formatTrigger(trigger: AutoRoleTrigger): string {
     case "MESSAGE_REACT_ANY":
       return "`onMessageReactAny`";
     case "REACT_SPECIFIC":
-      return "`onReactSpecific` " +
-        `message=\`${trigger.args.messageId}\` emoji=${trigger.args.emojiKey}`;
+      return `\`onReactSpecific\` message=\`${trigger.args.messageId}\` emoji=${trigger.args.emojiKey}`;
     case "REACTED_THRESHOLD":
-      return "`onAuthorReactionThreshold` " +
-        `emoji=${trigger.args.emojiKey} count=${trigger.args.count}`;
+      return `\`onAuthorReactionThreshold\` emoji=${trigger.args.emojiKey} count=${trigger.args.count}`;
     case "REPUTATION_THRESHOLD":
-      return "`onReputationAtLeast` " +
-        `rep>=${trigger.args.minRep}`;
+      return `\`onReputationAtLeast\` rep>=${trigger.args.minRep}`;
     case "ANTIQUITY_THRESHOLD":
-      return "`onAntiquityAtLeast` " +
-        `duration>=${formatDuration(trigger.args.durationMs)}`;
+      return `\`onAntiquityAtLeast\` duration>=${formatDuration(trigger.args.durationMs)}`;
+    case "MESSAGE_CONTAINS":
+      return `\`onMessageContains\` ${trigger.args.keywords.join(", ")}`;
+    default:
+      return "`onUnknownTrigger`";
   }
 }
 

@@ -4,6 +4,7 @@ import { ConfigurableModule } from "./constants";
 
 export { z };
 
+// biome-ignore lint/suspicious/noEmptyInterface: Interface enables module augmentation per feature configs.
 export interface ConfigDefinitions {
     // To be extended by module augmentations
 }

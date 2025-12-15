@@ -10,10 +10,11 @@ import { getGuild } from "@/db/repositories/with_guild";
 import {
   type RoleCommandOverride,
   type RoleLimitRecord,
-} from "@/db/models/guild.schema";
+  type GuildRoleRecord,
+} from "@/db/schemas/guild";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
-export type { RoleCommandOverride } from "@/db/models/guild.schema";
+export type { RoleCommandOverride } from "@/db/schemas/guild";
 
 export interface RoleLimitUsage {
   roleKey: string;
@@ -322,7 +323,7 @@ export async function clearRoleLimit(
 ): Promise<void> {
   await withGuild(guildId, (guild) => {
     if (!guild.roles) return;
-    const role = guild.roles[roleKey];
+    const role = guild.roles[roleKey] as GuildRoleRecord | undefined;
     if (!role || !role.limits) return;
 
     const action = normaliseAction(actionKey);
@@ -338,13 +339,13 @@ export async function getManagedRole(guildId: string, key: string): Promise<Role
 export async function resetRoleOverrides(guildId: string, roleKey: string): Promise<void> {
   await withGuild(guildId, (guild) => {
     if (!guild.roles?.[roleKey]) return;
-    guild.roles[roleKey].reach = {};
+    (guild.roles[roleKey] as GuildRoleRecord).reach = {};
   });
 }
 
 export async function getRoleOverrides(guildId: string, roleKey: string): Promise<Record<string, RoleCommandOverride>> {
   const guild = await getGuild(guildId);
-  return (guild?.roles?.[roleKey]?.reach as Record<string, RoleCommandOverride>) ?? {};
+  return (guild?.roles?.[roleKey] as GuildRoleRecord)?.reach ?? {};
 }
 
 export async function setRoleOverride(
@@ -356,10 +357,11 @@ export async function setRoleOverride(
   await withGuild(guildId, (guild) => {
     if (!guild.roles) guild.roles = {};
     if (!guild.roles[roleKey]) return; // Don't create if not exists
-    if (!guild.roles[roleKey].reach) guild.roles[roleKey].reach = {};
+    const role = guild.roles[roleKey] as GuildRoleRecord;
+    if (!role.reach) role.reach = {};
 
     // Normalize action key
     const action = normaliseAction(actionKey);
-    guild.roles[roleKey].reach[action] = override;
+    role.reach[action] = override;
   });
 }

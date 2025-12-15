@@ -29,6 +29,7 @@ const CANON_REACT_SPECIFIC = "onreactspecific";
 const CANON_REACTION_THRESHOLD = "onauthorreactionthreshold";
 const CANON_REPUTATION_THRESHOLD = "onreputationatleast";
 const CANON_ANTIQUITY_THRESHOLD = "onantiquityatleast";
+const CANON_MESSAGE_CONTAINS = "onmessagecontains";
 
 const CUSTOM_EMOJI_PATTERN = /^<a?:[a-zA-Z0-9_~]+:(\d{2,})>$/;
 const RAW_ID_PATTERN = /^\d{16,}$/;
@@ -73,8 +74,12 @@ export function parseTrigger(input: string): AutoRoleTrigger {
     return expectAntiquityThreshold(rest);
   }
 
+  if (head === CANON_MESSAGE_CONTAINS) {
+    return expectMessageContains(rest);
+  }
+
   throw new TriggerParseError(
-    `Trigger no soportado: "${headRaw}". Usa onMessageReactAny, onReactSpecific, onAuthorReactionThreshold, onReputationAtLeast u onAntiquityAtLeast.`,
+    `Trigger no soportado: "${headRaw}". Usa onMessageReactAny, onReactSpecific, onAuthorReactionThreshold, onReputationAtLeast, onAntiquityAtLeast u onMessageContains.`,
   );
 }
 
@@ -196,6 +201,26 @@ function expectAntiquityThreshold(args: string[]): AntiquityThresholdTrigger {
   };
 }
 
+function expectMessageContains(args: string[]): AutoRoleTrigger {
+  if (!args.length) {
+    throw new TriggerParseError(
+      "El trigger 'onMessageContains' requiere al menos una palabra clave.",
+    );
+  }
+
+  const keywords = normalizeKeywords(args);
+  if (!keywords.length) {
+    throw new TriggerParseError(
+      "El trigger 'onMessageContains' requiere palabras clave no vacías.",
+    );
+  }
+
+  return {
+    type: "MESSAGE_CONTAINS",
+    args: { keywords },
+  };
+}
+
 export function normalizeEmojiKey(emoji: APIEmoji | string | null): string {
   // We deliberately collapse the various emoji representations to a single key so
   // rule comparisons work regardless of whether an admin pasted the raw emoji,
@@ -244,4 +269,13 @@ export function isLiveRule(durationMs: number | null | undefined): boolean {
 
 function normalizeToken(token: string): string {
   return token.toLowerCase().replace(/[_-\s]/g, "");
+}
+
+function normalizeKeywords(tokens: string[]): string[] {
+  const keywords = tokens
+    .join(" ")
+    .split(/[,]+|\s+/)
+    .map((kw) => kw.trim().toLowerCase())
+    .filter(Boolean);
+  return Array.from(new Set(keywords)).slice(0, 50);
 }

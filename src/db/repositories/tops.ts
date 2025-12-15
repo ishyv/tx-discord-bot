@@ -1,117 +1,62 @@
 /**
- * Motivación: concentrar operaciones de acceso a datos del sistema de TOPs en una API reutilizable.
- *
- * Idea/concepto: funciones pequeñas que manipulan la ventana activa, los contadores y el historial
- * de reportes sin exponer detalles de Mongoose al resto del código.
- *
- * Alcance: CRUD de configuraciones/ventanas y snapshots históricos; no genera embeds ni envía mensajes.
+ * TOPs repository using native Mongo driver and Zod validation.
+ * Purpose: manage TOP windows and reports with validated data and simple helpers.
  */
-import { connectMongo } from "@/db/client";
-import { TOP_DEFAULTS, TopReportModel, TopWindowModel } from "@/db/models/tops.schema";
+import { getDb } from "@/db/mongo";
+import {
+  TopWindowSchema,
+  TopReportSchema,
+  type TopWindow,
+  type TopReport,
+  TOP_DEFAULTS,
+} from "@/db/schemas/tops";
 import { deepClone } from "@/db/helpers";
-import type { TopReportRecord, TopWindowRecord } from "@/db/models/tops.schema";
 import type { ChannelId, GuildId } from "@/db/types";
 
-const EMPTY_COUNTS: Record<string, number> = {};
+const windowsCol = async () => (await getDb()).collection<TopWindow>("top_windows");
+const reportsCol = async () => (await getDb()).collection<TopReport>("top_reports");
 
-const asDate = (value: unknown, fallback: Date | null): Date | null => {
-  if (!value) return fallback;
-  if (value instanceof Date) return value;
-  const parsed = new Date(value as string);
-  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
-};
+const parseWindow = (doc: unknown): TopWindow => TopWindowSchema.parse(doc);
+const parseReport = (doc: unknown): TopReport => TopReportSchema.parse(doc);
 
-const normalizeNumberMap = (value: unknown): Record<string, number> => {
-  if (!value || typeof value !== "object") return {};
-  const entries =
-    value instanceof Map
-      ? Array.from(value.entries())
-      : Object.entries(value as Record<string, unknown>);
-
-  const acc: Record<string, number> = {};
-  for (const [key, raw] of entries) {
-    const num = Number(raw);
-    if (Number.isFinite(num)) {
-      acc[key] = num;
-    }
-  }
-  return acc;
-};
-
-const toWindow = (doc: unknown): TopWindowRecord | null => {
-  if (!doc) return null;
-  const base = doc as unknown as Record<string, unknown>;
-  return {
-    guildId: (base.guildId as string) ?? (base._id as string),
-    channelId:
-      typeof base.channelId === "string" && base.channelId.length > 0
-        ? (base.channelId as string)
-        : null,
-    intervalMs: Number(base.intervalMs ?? TOP_DEFAULTS.intervalMs),
-    topSize: Number(base.topSize ?? TOP_DEFAULTS.topSize),
-    windowStartedAt: asDate(base.windowStartedAt, new Date()) as Date,
-    lastReportAt: asDate(base.lastReportAt, null),
-    emojiCounts: normalizeNumberMap(base.emojiCounts),
-    channelCounts: normalizeNumberMap(base.channelCounts),
-    reputationDeltas: normalizeNumberMap(base.reputationDeltas),
-    createdAt: asDate(base.createdAt, null) ?? undefined,
-    updatedAt: asDate(base.updatedAt, null) ?? undefined,
-  } as unknown as TopWindowRecord;
-};
-
-const toReport = (doc: unknown): TopReportRecord | null => {
-  if (!doc) return null;
-  const base = doc as unknown as Record<string, unknown>;
-  return {
-    id: base._id ? String(base._id) : String(base.id ?? ""),
-    guildId: base.guildId ? String(base.guildId) : "",
-    periodStart: asDate(base.periodStart, new Date()) as Date,
-    periodEnd: asDate(base.periodEnd, new Date()) as Date,
-    intervalMs: Number(base.intervalMs ?? 0),
-    emojiCounts: normalizeNumberMap(base.emojiCounts),
-    channelCounts: normalizeNumberMap(base.channelCounts),
-    reputationDeltas: normalizeNumberMap(base.reputationDeltas),
-    metadata: (base.metadata as Record<string, unknown> | null) ?? null,
-    createdAt: asDate(base.createdAt, null) ?? undefined,
-    updatedAt: asDate(base.updatedAt, null) ?? undefined,
-  } as unknown as TopReportRecord;
-};
+const defaultWindow = (guildId: GuildId, now = new Date()): TopWindow =>
+  parseWindow({
+    _id: guildId,
+    guildId,
+    channelId: null,
+    intervalMs: TOP_DEFAULTS.intervalMs,
+    topSize: TOP_DEFAULTS.topSize,
+    windowStartedAt: now,
+    lastReportAt: null,
+    emojiCounts: {},
+    channelCounts: {},
+    reputationDeltas: {},
+    createdAt: now,
+    updatedAt: now,
+  });
 
 /**
  * Asegura que exista una ventana de TOPs para el guild indicado.
  */
-export async function ensureTopWindow(guildId: GuildId): Promise<TopWindowRecord> {
-  await connectMongo();
+export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
+  const col = await windowsCol();
   const now = new Date();
-  const doc = await TopWindowModel.findOneAndUpdate(
+  const res = await col.findOneAndUpdate(
     { _id: guildId },
     {
-      $setOnInsert: {
-        _id: guildId,
-        guildId,
-        channelId: null,
-        intervalMs: TOP_DEFAULTS.intervalMs,
-        topSize: TOP_DEFAULTS.topSize,
-        windowStartedAt: now,
-        lastReportAt: null,
-        emojiCounts: {},
-        channelCounts: {},
-        reputationDeltas: {},
-      },
+      $setOnInsert: defaultWindow(guildId, now),
     },
-    { new: true, upsert: true, lean: true },
+    { returnDocument: "after", upsert: true },
   );
-  const mapped = toWindow(doc);
-  if (!mapped) {
-    throw new Error(`No se pudo inicializar la ventana de TOPs para ${guildId}`);
-  }
-  return mapped;
+  const doc = res ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  if (!doc) throw new Error(`No se pudo inicializar la ventana de TOPs para ${guildId}`);
+  return parseWindow(doc);
 }
 
 /**
  * Obtiene la ventana de TOPs actual para el guild.
  */
-export async function getTopWindow(guildId: GuildId): Promise<TopWindowRecord> {
+export async function getTopWindow(guildId: GuildId): Promise<TopWindow> {
   const window = await ensureTopWindow(guildId);
   return deepClone(window);
 }
@@ -121,8 +66,8 @@ export async function getTopWindow(guildId: GuildId): Promise<TopWindowRecord> {
  */
 export async function updateTopConfig(
   guildId: GuildId,
-  patch: Partial<Pick<TopWindowRecord, "channelId" | "intervalMs" | "topSize">>,
-): Promise<TopWindowRecord> {
+  patch: Partial<Pick<TopWindow, "channelId" | "intervalMs" | "topSize">>,
+): Promise<TopWindow> {
   const safeInterval =
     typeof patch.intervalMs === "number" && Number.isFinite(patch.intervalMs)
       ? Math.max(1, Math.trunc(patch.intervalMs))
@@ -153,26 +98,20 @@ export async function updateTopConfig(
     return getTopWindow(guildId);
   }
 
-  await connectMongo();
-  const doc = await TopWindowModel.findOneAndUpdate(
+  const col = await windowsCol();
+  const doc = await col.findOneAndUpdate(
     { _id: guildId },
     {
       $set: set,
-      $setOnInsert: {
-        windowStartedAt: new Date(),
-        lastReportAt: null,
-        emojiCounts: {},
-        channelCounts: {},
-        reputationDeltas: {},
-      },
+      $setOnInsert: defaultWindow(guildId),
     },
-    { new: true, upsert: true, lean: true },
+    { returnDocument: "after", upsert: true },
   );
-  const mapped = toWindow(doc);
+  const mapped = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
   if (!mapped) {
     throw new Error(`No se pudo actualizar la configuración de TOPs para ${guildId}`);
   }
-  return mapped;
+  return parseWindow(mapped);
 }
 
 /**
@@ -181,9 +120,9 @@ export async function updateTopConfig(
 export async function resetTopWindow(
   guildId: GuildId,
   startedAt: Date = new Date(),
-): Promise<TopWindowRecord> {
-  await connectMongo();
-  const doc = await TopWindowModel.findOneAndUpdate(
+): Promise<TopWindow> {
+  const col = await windowsCol();
+  const doc = await col.findOneAndUpdate(
     { _id: guildId },
     {
       $set: {
@@ -194,20 +133,13 @@ export async function resetTopWindow(
         reputationDeltas: {},
         updatedAt: new Date(),
       },
-      $setOnInsert: {
-        guildId,
-        channelId: null,
-        intervalMs: TOP_DEFAULTS.intervalMs,
-        topSize: TOP_DEFAULTS.topSize,
-      },
+      $setOnInsert: defaultWindow(guildId, startedAt),
     },
-    { new: true, upsert: true, lean: true },
+    { returnDocument: "after", upsert: true },
   );
-  const mapped = toWindow(doc);
-  if (!mapped) {
-    throw new Error(`No se pudo reiniciar la ventana de TOPs para ${guildId}`);
-  }
-  return mapped;
+  const value = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  if (!value) throw new Error(`No se pudo reiniciar la ventana de TOPs para ${guildId}`);
+  return parseWindow(value);
 }
 
 /**
@@ -227,7 +159,8 @@ export async function bumpEmojiCounts(
   if (!Object.keys(inc).length) return;
 
   await ensureTopWindow(guildId);
-  await TopWindowModel.updateOne(
+  const col = await windowsCol();
+  await col.updateOne(
     { _id: guildId },
     { $inc: inc, $set: { updatedAt: new Date() } },
   );
@@ -246,7 +179,8 @@ export async function bumpChannelCount(
   if (amount === 0) return;
 
   await ensureTopWindow(guildId);
-  await TopWindowModel.updateOne(
+  const col = await windowsCol();
+  await col.updateOne(
     { _id: guildId },
     {
       $inc: { [`channelCounts.${channelId}`]: amount },
@@ -268,7 +202,8 @@ export async function bumpReputationDelta(
   if (amount === 0) return;
 
   await ensureTopWindow(guildId);
-  await TopWindowModel.updateOne(
+  const col = await windowsCol();
+  await col.updateOne(
     { _id: guildId },
     {
       $inc: { [`reputationDeltas.${userId}`]: amount },
@@ -282,16 +217,18 @@ export async function bumpReputationDelta(
  */
 export async function findDueWindows(
   now: Date = new Date(),
-): Promise<TopWindowRecord[]> {
-  await connectMongo();
-  const docs = await TopWindowModel.find({
-    channelId: { $ne: null },
-    intervalMs: { $gt: 0 },
-    windowStartedAt: { $exists: true },
-    $expr: { $lte: [{ $add: ["$windowStartedAt", "$intervalMs"] }, now] },
-  }).lean();
+): Promise<TopWindow[]> {
+  const col = await windowsCol();
+  const docs = await col
+    .find({
+      channelId: { $ne: null },
+      intervalMs: { $gt: 0 },
+      windowStartedAt: { $exists: true },
+      $expr: { $lte: [{ $add: ["$windowStartedAt", "$intervalMs"] }, now] },
+    })
+    .toArray();
 
-  return docs.map((doc) => toWindow(doc)).filter(Boolean) as TopWindowRecord[];
+  return docs.map(parseWindow);
 }
 
 /**
@@ -308,24 +245,23 @@ export async function persistTopReport(
     reputationDeltas: Record<string, number>;
     metadata?: Record<string, unknown> | null;
   },
-): Promise<TopReportRecord> {
-  await connectMongo();
-  const created = await TopReportModel.create({
+): Promise<TopReport> {
+  const col = await reportsCol();
+  const created = parseReport({
     guildId: payload.guildId,
     periodStart: payload.periodStart,
     periodEnd: payload.periodEnd,
     intervalMs: payload.intervalMs,
-    emojiCounts: payload.emojiCounts ?? EMPTY_COUNTS,
-    channelCounts: payload.channelCounts ?? EMPTY_COUNTS,
-    reputationDeltas: payload.reputationDeltas ?? EMPTY_COUNTS,
+    emojiCounts: payload.emojiCounts ?? {},
+    channelCounts: payload.channelCounts ?? {},
+    reputationDeltas: payload.reputationDeltas ?? {},
     metadata: payload.metadata ?? null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
-  const lean = created.toObject();
-  const mapped = toReport(lean);
-  if (!mapped) {
-    throw new Error(`No se pudo guardar el reporte de TOPs para ${payload.guildId}`);
-  }
-  return mapped;
+  const result = await col.insertOne(created);
+  const persisted = { ...created, _id: result.insertedId ?? created._id };
+  return parseReport(persisted);
 }
 
 /**
@@ -334,9 +270,9 @@ export async function persistTopReport(
 export async function rotateWindowAfterReport(
   guildId: string,
   now: Date = new Date(),
-): Promise<TopWindowRecord | null> {
-  await connectMongo();
-  const doc = await TopWindowModel.findOneAndUpdate(
+): Promise<TopWindow | null> {
+  const col = await windowsCol();
+  const doc = await col.findOneAndUpdate(
     { _id: guildId },
     {
       $set: {
@@ -348,9 +284,10 @@ export async function rotateWindowAfterReport(
         updatedAt: new Date(),
       },
     },
-    { new: true, lean: true },
+    { returnDocument: "after" },
   );
-  return toWindow(doc);
+  const value = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  return value ? parseWindow(value) : null;
 }
 
 /**
@@ -359,13 +296,14 @@ export async function rotateWindowAfterReport(
 export async function listReports(
   guildId: string,
   limit = 10,
-): Promise<TopReportRecord[]> {
-  await connectMongo();
-  const docs = await TopReportModel.find({ guildId })
+): Promise<TopReport[]> {
+  const col = await reportsCol();
+  const docs = await col
+    .find({ guildId })
     .sort({ createdAt: -1 })
     .limit(limit)
-    .lean();
-  return docs.map((doc) => toReport(doc)).filter(Boolean) as TopReportRecord[];
+    .toArray();
+  return docs.map(parseReport);
 }
 
-export type { TopWindowRecord, TopReportRecord };
+export type { TopWindow, TopReport };

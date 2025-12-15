@@ -17,7 +17,7 @@ import {
   getTopWindow,
   persistTopReport,
   rotateWindowAfterReport,
-  type TopWindowRecord,
+  type TopWindow,
 } from "@/db/repositories";
 import { format as formatMs } from "@/utils/ms";
 
@@ -50,20 +50,22 @@ const toChannelId = (payload: MessageLike): string | null => {
   );
 };
 
-const CUSTOM_EMOJI_REGEX = /<a?:[a-zA-Z0-9_~\-]+:(\d+)>/g;
+const CUSTOM_EMOJI_REGEX = /<a?:[a-zA-Z0-9_~-]+:(\d+)>/g;
 const UNICODE_EMOJI_REGEX = /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu;
 
 const extractEmojiOccurrences = (content: string | null | undefined): string[] => {
   if (!content) return [];
   const result: string[] = [];
 
-  let customMatch: RegExpExecArray | null;
-  while ((customMatch = CUSTOM_EMOJI_REGEX.exec(content)) !== null) {
+  while (true) {
+    const customMatch = CUSTOM_EMOJI_REGEX.exec(content);
+    if (!customMatch) break;
     result.push(customMatch[0]);
   }
 
-  let unicodeMatch: RegExpExecArray | null;
-  while ((unicodeMatch = UNICODE_EMOJI_REGEX.exec(content)) !== null) {
+  while (true) {
+    const unicodeMatch = UNICODE_EMOJI_REGEX.exec(content);
+    if (!unicodeMatch) break;
     result.push(unicodeMatch[0]);
   }
 
@@ -103,7 +105,7 @@ const formatTopLines = (
 };
 
 const buildReportEmbed = (
-  window: TopWindowRecord,
+  window: TopWindow,
   periodEnd: Date,
   topSize: number,
 ): Embed => {
@@ -156,15 +158,15 @@ const buildReportEmbed = (
 };
 
 const isActive = (
-  window: TopWindowRecord | null,
-): window is TopWindowRecord => {
+  window: TopWindow | null,
+): window is TopWindow => {
   if (!window) return false;
   return Boolean(window.channelId && window.intervalMs > 0);
 };
 
 async function sendReport(
   client: UsingClient,
-  window: TopWindowRecord,
+  window: TopWindow,
   now: Date,
 ): Promise<boolean> {
   if (!window.channelId) return false;
@@ -190,7 +192,7 @@ async function sendReport(
   }
 }
 
-const hasIntervalElapsed = (window: TopWindowRecord, now: Date): boolean => {
+const hasIntervalElapsed = (window: TopWindow, now: Date): boolean => {
   const start = window.windowStartedAt?.getTime?.() ?? new Date(window.windowStartedAt).getTime();
   const dueAt = start + Number(window.intervalMs ?? 0);
   return now.getTime() >= dueAt;
@@ -199,7 +201,7 @@ const hasIntervalElapsed = (window: TopWindowRecord, now: Date): boolean => {
 async function emitIfDue(
   client: UsingClient,
   guildId: string,
-  preloaded?: TopWindowRecord | null,
+  preloaded?: TopWindow | null,
 ): Promise<void> {
   if (inFlight.has(guildId)) return;
   const now = new Date();

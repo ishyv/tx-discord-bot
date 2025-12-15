@@ -11,7 +11,7 @@ import {
   DEFAULT_GUILD_FEATURES,
   Features,
   type GuildFeaturesRecord,
-} from "@/db/models/guild.schema";
+} from "@/db/schemas/guild";
 
 import { withGuild } from "@/db/repositories/with_guild";
 
@@ -67,7 +67,7 @@ export async function isFeatureEnabled(
 ): Promise<boolean> {
   const features = await getFeatureFlags(guildId);
   const value = features[feature];
-  return value === undefined ? DEFAULT_GUILD_FEATURES[feature] : value;
+  return value === undefined || value === null ? DEFAULT_GUILD_FEATURES[feature] : Boolean(value);
 }
 
 export async function setFeatureFlag(

@@ -15,7 +15,7 @@ import {
 	SubCommand,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import type { Warn } from "@/db/models/user.schema";
+import type { Warn } from "@/db/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
 import { addWarn, listWarns } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";

@@ -45,6 +45,7 @@ function ensureCache(guildId: string): GuildRuleCache {
       anyReact: [],
       reactSpecific: new Map(),
       reactedByEmoji: new Map(),
+      messageContains: [],
       repThresholds: [],
       antiquityThresholds: [],
     };
@@ -61,6 +62,7 @@ export function setGuildRules(
     anyReact: [],
     reactSpecific: new Map(),
     reactedByEmoji: new Map(),
+    messageContains: [],
     repThresholds: [],
     antiquityThresholds: [],
   };
@@ -83,6 +85,7 @@ export function upsertRule(rule: AutoRoleRule): void {
   for (const [, list] of cache.reactedByEmoji) {
     filterInPlace(list, (r) => r.name !== rule.name);
   }
+  cache.messageContains = cache.messageContains.filter((r) => r.name !== rule.name);
   cache.repThresholds = cache.repThresholds.filter((r) => r.name !== rule.name);
   cache.antiquityThresholds = cache.antiquityThresholds.filter((r) => r.name !== rule.name);
 
@@ -113,6 +116,7 @@ export function removeRule(
       cache.reactedByEmoji.set(key, next);
     }
   }
+  cache.messageContains = cache.messageContains.filter((r) => r.name !== ruleName);
   cache.repThresholds = cache.repThresholds.filter((r) => r.name !== ruleName);
   cache.antiquityThresholds = cache.antiquityThresholds.filter((r) => r.name !== ruleName);
 }
@@ -164,6 +168,9 @@ function bucketRule(cache: GuildRuleCache, rule: AutoRoleRule) {
             ? b.trigger.args.durationMs
             : 0),
       );
+      break;
+    case "MESSAGE_CONTAINS":
+      cache.messageContains.push(rule);
       break;
   }
 }

@@ -5,15 +5,15 @@
  *
  * Alcance: fachada de la capa de persistencia; no agrega lógica adicional.
  */
-// Mongo backend wiring lives here. Import this module when you want to switch
-// the data layer to MongoDB without touching business logic.
+// Mongo backend wiring lives here using the native driver and Zod schemas.
 
-export * from "./client";
-export * from "./models/user.schema";
-export * from "./models/guild.schema";
-export * from "./models/autorole.schema";
-export * from "./models/offers.schema";
-export * from "./models/tops.schema";
+export * from "./normalizers";
+export * from "./mongo";
+export * as DbSchemas from "./schemas/user";
+export * as GuildSchemas from "./schemas/guild";
+export * as AutoRoleSchemas from "./schemas/autorole";
+export * as OfferSchemas from "./schemas/offers";
+export * as TopSchemas from "./schemas/tops";
 
 export * as MongoUsersRepo from "./repositories/users";
 export * as MongoWithGuildRepo from "./repositories/with_guild";

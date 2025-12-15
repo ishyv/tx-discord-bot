@@ -8,7 +8,7 @@
 import type { Guild, GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import type { Warn } from "@/db/models/user.schema";
+import type { Warn } from "@/db/schemas/user";
 import { getMemberName } from "@/utils/guild";
 import { listWarns } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";

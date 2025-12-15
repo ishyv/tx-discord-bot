@@ -2,7 +2,7 @@
  * Exposes the interactive embed designer for quick testing.
  * Responsibility: launch the designer and echo the resulting embed and JSON back to the user.
  */
-import { Command, Declare, type CommandContext } from "seyfert";
+import { Command, Declare, type CommandContext, type Embed } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { startEmbedDesigner } from "@/modules/prefabs/embedDesigner";
 
@@ -17,7 +17,7 @@ export default class EmbedPlayCommand extends Command {
   async run(ctx: CommandContext) {
     const sendFollowup = async (
       content: string,
-      embeds: any[] = [],
+      embeds: Embed[] = [],
     ): Promise<void> => {
       if (!ctx.followup) return;
       await ctx.followup({
@@ -38,7 +38,7 @@ export default class EmbedPlayCommand extends Command {
 
         const embedJson = embed.toJSON();
         await sendFollowup(
-          "```json\n" + JSON.stringify(embedJson, null, 2) + "\n```",
+          `\`\`\`json\n${JSON.stringify(embedJson, null, 2)}\n\`\`\``,
         );
       },
     });

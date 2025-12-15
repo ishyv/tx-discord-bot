@@ -6,7 +6,7 @@
  *
  * Alcance: solo define el decorador; la validación real ocurre en el middleware.
  */
-import type { Features } from "@/db/models/guild.schema";
+import type { Features } from "@/db/schemas/guild";
 
 export interface BindDisabledProps {
   feature: Features;

@@ -8,6 +8,7 @@
 import type { Message, UsingClient } from "seyfert";
 import { scamFilterList, spamFilterList } from "@/constants/automod";
 import { getGuildChannels } from "@/modules/guild-channels";
+import type { CoreChannelRecord } from "@/db/schemas/guild";
 import { recognizeText } from "@/services/ocr";
 import { Cache } from "@/utils/cache";
 import { phash } from "@/utils/phash";
@@ -180,7 +181,7 @@ export class AutoModSystem {
       return;
     }
     const channels = await getGuildChannels(guildId);
-    const staffChannel = channels.core.staff;
+    const staffChannel = (channels.core as Record<string, CoreChannelRecord | null>).staff;
     if (!staffChannel) {
       console.error(
         "AutoModSystem: no se pudo obtener canal de staff de la guild al tratar de notificar al staff.",

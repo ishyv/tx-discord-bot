@@ -1,5 +1,9 @@
+/**
+ * Guild configuration provider backed by Mongo (native driver via guild repository).
+ * Purpose: read/write per-guild configuration slices (features, channels, reputation) without exposing persistence details.
+ */
 
-import { GuildModel } from "@/db/models/guild.schema";
+import { ensureGuild, updateGuild } from "@/db/repositories/guilds";
 import { ConfigurableModule } from "./constants";
 
 export interface ConfigProvider {
@@ -29,7 +33,7 @@ export class MongoGuildConfigProvider implements ConfigProvider {
             throw new Error(`No mapped path for config key '${key}'`);
         }
 
-        const guild = await GuildModel.findById(guildId).select(path).lean();
+        const guild = await ensureGuild(guildId);
         if (!guild) return {};
 
         // Navigate to the nested property manually
@@ -50,22 +54,26 @@ export class MongoGuildConfigProvider implements ConfigProvider {
             throw new Error(`No mapped path for config key '${key}'`);
         }
 
-        const guild = await GuildModel.findById(guildId);
-        if (!guild) {
-            await GuildModel.updateOne({ _id: guildId }, {}, { upsert: true });
-            const newDoc = await GuildModel.findById(guildId);
-            if (!newDoc) throw new Error("Failed to create guild doc");
-
-            return this.setConfig(guildId, key, partial); // Retry
-        }
+        const guild = await ensureGuild(guildId);
+        const updated = { ...guild };
 
         for (const [subKey, value] of Object.entries(partial)) {
-            // Check if schema is "flattened" directly or creates sub-doc?
-            // "channels.core" + "tickets" -> "channels.core.tickets"
-            guild.set(`${path}.${subKey}`, value);
+            setNested(updated, `${path}.${subKey}`, value);
         }
 
-        guild.markModified(path);
-        await guild.save();
+        await updateGuild(guildId, updated);
     }
+}
+
+function setNested(obj: Record<string, any>, dottedPath: string, value: unknown): void {
+    const parts = dottedPath.split('.');
+    const last = parts.pop() as string;
+    let curr: any = obj;
+    for (const part of parts) {
+        if (curr[part] === undefined || curr[part] === null || typeof curr[part] !== 'object') {
+            curr[part] = {};
+        }
+        curr = curr[part];
+    }
+    curr[last] = value;
 }

@@ -15,6 +15,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { PermissionFlagsBits } from "seyfert/lib/types";
 
 import {
   isValidRuleSlug,
@@ -55,9 +56,9 @@ const options = {
 };
 
 const DANGEROUS_ROLE_PERMISSIONS = [
-  "Administrator",
-  "ManageGuild",
-  "ManageRoles",
+  PermissionFlagsBits.Administrator,
+  PermissionFlagsBits.ManageGuild,
+  PermissionFlagsBits.ManageRoles,
 ] as const;
 
 @Declare({
@@ -90,7 +91,7 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-    let trigger;
+    let trigger: AutoRoleTrigger;
     try {
       trigger = parseTrigger(ctx.options.trigger);
     } catch (error) {
@@ -100,12 +101,12 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-    const roleId = ctx.options.role.id;
-    if (
-      ctx.options.role.permissions?.has?.(
-        DANGEROUS_ROLE_PERMISSIONS as unknown as any,
-      )
-    ) {
+  const roleId = ctx.options.role.id;
+  if (
+    ctx.options.role.permissions?.has?.(
+        [...DANGEROUS_ROLE_PERMISSIONS],
+    )
+  ) {
       await ctx.write({
         content:
           "No puedes crear una regla que otorgue un rol con permisos administrativos (Administrator / ManageGuild / ManageRoles).",

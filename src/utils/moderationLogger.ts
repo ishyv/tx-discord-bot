@@ -46,7 +46,8 @@ export async function logModerationAction(
 
   try {
     const channels = await getGuildChannels(guildId);
-    const logs = channels.core?.[channel];
+    const core = channels.core as Record<string, { channelId: string } | null>;
+    const logs = core?.[channel];
     if (!logs?.channelId) return;
 
     const embed = new Embed({

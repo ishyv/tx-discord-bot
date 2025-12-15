@@ -209,6 +209,6 @@ export function detectCodeLanguage(text: string): Detection {
 export function toFencedBlock(text: string): string | null {
     const det = detectCodeLanguage(text);
     if (!det.isCode || !det.markdownLang) return null;
-    const fence = '```' + det.markdownLang + '\n' + text.replace(/\s+$/, '') + '\n```';
+    const fence = `\`\`\`${det.markdownLang}\n${text.replace(/\s+$/, '')}\n\`\`\``;
     return fence;
 }

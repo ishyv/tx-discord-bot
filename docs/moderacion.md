@@ -11,7 +11,7 @@ Resumen de los sistemas que protegen el servidor y registran acciones disciplina
 
 ## Warns y reputación
 
-- Warns se almacenan en `users.warns` (schema en `src/db/models/user.schema.ts`) y se gestionan a través del repositorio `src/db/repositories/users.ts` para deduplicar IDs y normalizar el formato.
+- Warns se almacenan en `users.warns` (schema en `src/db/schemas/user.ts`) y se gestionan a través del repositorio `src/db/repositories/users.ts` para deduplicar IDs y normalizar el formato.
 - Comandos `/moderation warn *` (`src/commands/moderation/warn/*.ts`) generan IDs legibles con `utils/warnId.ts`, registran al moderador que aplicó la acción y envían logs mediante `logModerationAction`.
 - El flujo de reputación tiene dos frentes: comandos manuales (`src/commands/moderation/rep/*.ts`) y detección automática (`src/events/listeners/reputationDetection.ts`). Este último escucha mensajes, busca keywords configuradas en `guild.reputation.keywords` y envía solicitudes al canal `repRequests` si la feature `Features.ReputationDetection` está activa.
 - Racional: separar la captura de eventos (mensajes) de la aplicación de reputación efectiva, de modo que el staff confirme o revise solicitudes en lugar de otorgar puntos automáticamente.

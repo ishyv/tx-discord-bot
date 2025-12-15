@@ -17,7 +17,7 @@ import type {
   LimitWindow,
   RoleCommandOverride,
   RoleLimitRecord,
-} from "@/db/models/guild.schema";
+} from "@/db/schemas/guild";
 import {
   GUILD_ONLY_MESSAGE,
   requireGuildPermission,

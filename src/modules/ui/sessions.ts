@@ -139,7 +139,7 @@ export const removeSessionCallback = (id: string | CallbackId<any, any>): boolea
  */
 export function makeID(base: string, defer: boolean = true): string {
     const suffix = Math.random().toString(36).slice(2, 10);
-    return `${base}:${suffix}` + (defer ? ":defer" : "");
+    return `${base}:${suffix}${defer ? ":defer" : ""}`;
 }
 
 

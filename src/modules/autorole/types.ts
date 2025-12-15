@@ -12,64 +12,33 @@
  */
 
 import type {
-  AutoRoleGrantData as AutoRoleGrant,
-  AutoRoleReactionTallyData as AutoRoleReactionTally,
-  AutoRoleRuleData as AutoRoleRuleRow,
-} from "@/db/models/autorole.schema";
-import {
-  autoRoleTriggerType,
-  roleGrantType,
-} from "@/db/models/autorole.schema";
-
-export const AUTO_ROLE_TRIGGER_TYPES = autoRoleTriggerType.enumValues;
-export const AUTO_ROLE_GRANT_TYPES = roleGrantType.enumValues;
+  AutoRoleGrant,
+  AutoRoleTally as AutoRoleReactionTally,
+  AutoRoleRule as AutoRoleRuleRow,
+  AutoRoleTrigger as AutoRoleTriggerSchema,
+} from "@/db/schemas/autorole";
+export const AUTO_ROLE_TRIGGER_TYPES = [
+  "MESSAGE_REACT_ANY",
+  "REACT_SPECIFIC",
+  "REACTED_THRESHOLD",
+  "REPUTATION_THRESHOLD",
+  "ANTIQUITY_THRESHOLD",
+  "MESSAGE_CONTAINS",
+] as const;
+export const AUTO_ROLE_GRANT_TYPES = ["LIVE", "TIMED"] as const;
 
 export type AutoRoleTriggerType = (typeof AUTO_ROLE_TRIGGER_TYPES)[number];
 export type AutoRoleGrantType = (typeof AUTO_ROLE_GRANT_TYPES)[number];
 
-export interface MessageReactAnyTrigger {
-  type: "MESSAGE_REACT_ANY";
-  args: Record<string, never>;
-}
+export type AutoRoleTrigger = AutoRoleTriggerSchema;
 
-export interface ReactSpecificTrigger {
-  type: "REACT_SPECIFIC";
-  args: {
-    messageId: string;
-    emojiKey: string;
-  };
-}
+export type MessageReactAnyTrigger = Extract<AutoRoleTriggerSchema, { type: "MESSAGE_REACT_ANY" }>;
+export type ReactSpecificTrigger = Extract<AutoRoleTriggerSchema, { type: "REACT_SPECIFIC" }>;
+export type ReactedThresholdTrigger = Extract<AutoRoleTriggerSchema, { type: "REACTED_THRESHOLD" }>;
+export type ReputationThresholdTrigger = Extract<AutoRoleTriggerSchema, { type: "REPUTATION_THRESHOLD" }>;
+export type AntiquityThresholdTrigger = Extract<AutoRoleTriggerSchema, { type: "ANTIQUITY_THRESHOLD" }>;
 
-export interface ReactedThresholdTrigger {
-  type: "REACTED_THRESHOLD";
-  args: {
-    emojiKey: string;
-    count: number;
-  };
-}
-
-export interface ReputationThresholdTrigger {
-  type: "REPUTATION_THRESHOLD";
-  args: {
-    minRep: number;
-  };
-}
-
-export interface AntiquityThresholdTrigger {
-  type: "ANTIQUITY_THRESHOLD";
-  args: {
-    durationMs: number;
-  };
-}
-
-export type AutoRoleTrigger =
-  | MessageReactAnyTrigger
-  | ReactSpecificTrigger
-  | ReactedThresholdTrigger
-  | ReputationThresholdTrigger
-  | AntiquityThresholdTrigger;
-
-export interface AutoRoleRule {
+export type AutoRoleRule = {
   guildId: string;
   name: string;
   trigger: AutoRoleTrigger;
@@ -79,7 +48,7 @@ export interface AutoRoleRule {
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
-}
+};
 
 export interface CreateAutoRoleRuleInput {
   guildId: string;
@@ -130,6 +99,7 @@ export interface GuildRuleCache {
   anyReact: AutoRoleRule[];
   reactSpecific: Map<string, AutoRoleRule[]>;
   reactedByEmoji: Map<string, AutoRoleRule[]>;
+  messageContains: AutoRoleRule[];
   repThresholds: AutoRoleRule[];
   antiquityThresholds: AutoRoleRule[];
 }

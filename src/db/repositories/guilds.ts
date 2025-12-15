@@ -1,127 +1,130 @@
 /**
- * CRUD y utilidades sobre documentos de guild.
- * Mantiene la forma persistida en un solo lugar y expone helpers usados por
- * roles, tickets y features.
+ * Guild repository using native Mongo driver and Zod validation.
+ * Purpose: expose guild persistence operations with normalized/defaulted data, hiding Mongo specifics.
  */
-import { deepClone } from "@/db/helpers";
-import { MongoStore } from "@/db/store";
+import { getDb } from "@/db/mongo";
 import {
-  DEFAULT_GUILD_FEATURES,
-  Features,
-  GuildModel,
-  type CoreChannelRecord,
+  GuildSchema,
+  type Guild,
   type GuildChannelsRecord,
-  type GuildData as BaseGuildData,
   type GuildFeaturesRecord,
   type GuildRolesRecord,
   type ManagedChannelRecord,
-} from "@/db/models/guild.schema";
+  type CoreChannelRecord,
+  Features,
+  DEFAULT_GUILD_FEATURES,
+} from "@/db/schemas/guild";
+import { normalizeStringArray } from "@/db/normalizers";
 import type { GuildId } from "@/db/types";
+import { deepClone } from "@/db/helpers";
 
-type GuildData = BaseGuildData & Record<string, unknown>;
+const guildsCollection = async () => (await getDb()).collection<Guild>("guilds");
 
-type ChannelsMutator = (current: GuildChannelsRecord) => GuildChannelsRecord;
-type RolesMutator = (current: GuildRolesRecord) => GuildRolesRecord;
+const defaultGuild = (id: GuildId): Guild =>
+  GuildSchema.parse({
+    _id: id,
+    features: DEFAULT_GUILD_FEATURES,
+    channels: undefined, // let schema defaults apply
+    roles: {},
+    pendingTickets: [],
+    reputation: { keywords: [] },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
-const EMPTY_CHANNELS: GuildChannelsRecord = {
-  core: {} as Record<string, CoreChannelRecord | null>,
-  managed: {},
-  ticketMessageId: null,
-  ticketHelperRoles: [],
-  // ticketCategoryId might be missing in type def but present in usage? Checking usage below.
-  // Usage: setTicketCategory uses ticketCategoryId.
-} as GuildChannelsRecord;
+const mergeFeatures = (features: GuildFeaturesRecord | null | undefined): GuildFeaturesRecord => ({
+  ...DEFAULT_GUILD_FEATURES,
+  ...(features ?? {}),
+});
 
-const normAction = (k: string) => k.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const normalizeChannels = (channels: Partial<GuildChannelsRecord>): GuildChannelsRecord => {
+  const core =
+    channels.core ??
+    ({
+      welcome: null,
+      goodbye: null,
+      logs: null,
+      reports: null,
+      suggestions: null,
+      tickets: null,
+    } as Record<string, CoreChannelRecord | null>);
 
-function mergeFeatures(
-  features: GuildFeaturesRecord | null | undefined,
-): GuildFeaturesRecord {
-  return { ...DEFAULT_GUILD_FEATURES, ...(features ?? {}) };
-}
-
-function normalizeGuild(doc: GuildData | null): GuildData | null {
-  if (!doc) return null;
   return {
-    ...doc,
-    roles: (doc.roles as GuildRolesRecord) ?? {},
-    channels: (doc.channels as GuildChannelsRecord) ?? deepClone(EMPTY_CHANNELS),
-    features: mergeFeatures(doc.features as GuildFeaturesRecord),
-    pendingTickets: Array.isArray(doc.pendingTickets)
-      ? doc.pendingTickets.filter((v): v is string => typeof v === "string")
-      : [],
-  } as unknown as GuildData;
-}
-
-function normalizeChannels(channels: Partial<GuildChannelsRecord>): GuildChannelsRecord {
-  return {
-    ...channels,
-    core: channels.core ?? {},
+    core,
     managed: channels.managed ?? {},
     ticketMessageId:
       typeof channels.ticketMessageId === "string" || channels.ticketMessageId === null
         ? channels.ticketMessageId
         : null,
-    ticketHelperRoles: Array.isArray((channels as any).ticketHelperRoles)
-      ? (channels as any).ticketHelperRoles.filter(
-        (roleId: any): roleId is string => typeof roleId === "string" && roleId.length > 0,
-      )
-      : [],
+    ticketHelperRoles: normalizeStringArray((channels as any).ticketHelperRoles ?? []),
+    ticketCategoryId:
+      typeof channels.ticketCategoryId === "string" || channels.ticketCategoryId === null
+        ? channels.ticketCategoryId
+        : null,
   } as GuildChannelsRecord;
-}
+};
 
-const defaultGuild = (id: string): GuildData =>
-  ({
-    _id: id,
-    roles: {},
-    channels: deepClone(EMPTY_CHANNELS),
-    pendingTickets: [],
-    features: { ...DEFAULT_GUILD_FEATURES },
-    reputation: { keywords: [] },
-  } as unknown as GuildData);
+const normalizeGuild = (doc: Guild): Guild => ({
+  ...doc,
+  roles: (doc.roles as GuildRolesRecord) ?? {},
+  channels: normalizeChannels(doc.channels as Partial<GuildChannelsRecord>),
+  features: mergeFeatures(doc.features as GuildFeaturesRecord),
+  pendingTickets: normalizeStringArray(doc.pendingTickets),
+  reputation: doc.reputation ?? { keywords: [] },
+});
 
-class GuildStore extends MongoStore<GuildData> {
-  constructor() {
-    super(GuildModel, defaultGuild);
-  }
+const parseGuild = (doc: unknown): Guild => normalizeGuild(GuildSchema.parse(doc));
 
-  // Override get to normalize
-  async get(id: string): Promise<GuildData | null> {
-    const doc = await super.get(id);
-    return normalizeGuild(doc);
-  }
+const loadGuild = async (id: GuildId): Promise<Guild | null> => {
+  const col = await guildsCollection();
+  const doc = await col.findOne({ _id: id });
+  return doc ? parseGuild(doc) : null;
+};
 
-  async ensure(id: string): Promise<GuildData> {
-    const doc = await super.ensure(id);
-    return normalizeGuild(doc) as GuildData;
-  }
+const saveGuildDocument = async (guild: Guild): Promise<Guild> => {
+  const col = await guildsCollection();
+  const now = new Date();
+  const parsed = parseGuild({
+    ...guild,
+    updatedAt: now,
+    createdAt: guild.createdAt ?? now,
+  });
+  await col.replaceOne({ _id: parsed._id }, parsed, { upsert: true });
+  return parsed;
+};
 
-  async update(id: string, partial: Partial<GuildData>): Promise<GuildData | null> {
-    const doc = await super.update(id, partial);
-    return normalizeGuild(doc);
-  }
-}
+export const ensureGuild = async (id: GuildId): Promise<Guild> => {
+  const existing = await loadGuild(id);
+  if (existing) return existing;
+  const next = defaultGuild(id);
+  await saveGuildDocument(next);
+  return next;
+};
 
-export const guildStore = new GuildStore();
+const mutateGuild = async (
+  id: GuildId,
+  mutator: (current: Guild) => Guild,
+): Promise<Guild> => {
+  const current = (await loadGuild(id)) ?? defaultGuild(id);
+  return saveGuildDocument(mutator(current));
+};
 
-/* ------------------------------------------------------------------------- */
-/* Core entity helpers                                                       */
-/* ------------------------------------------------------------------------- */
-
-export async function getGuild(id: GuildId) { return guildStore.get(id); }
-export async function ensureGuild(id: GuildId) { return guildStore.ensure(id); }
-export async function updateGuild(id: GuildId, update: Partial<GuildData>) {
-  return guildStore.update(id, { ...(update as Record<string, unknown>), updatedAt: new Date() });
-}
-export async function deleteGuild(id: GuildId) { return guildStore.remove(id); }
+export const getGuild = async (id: GuildId) => loadGuild(id);
+export const updateGuild = async (id: GuildId, patch: Partial<Guild>) =>
+  mutateGuild(id, (g) => parseGuild({ ...g, ...patch, _id: id }));
+export const deleteGuild = async (id: GuildId) => {
+  const col = await guildsCollection();
+  const res = await col.deleteOne({ _id: id });
+  return (res.deletedCount ?? 0) > 0;
+};
 
 /* ------------------------------------------------------------------------- */
 /* Feature flags                                                             */
 /* ------------------------------------------------------------------------- */
 
 export async function readFeatures(id: GuildId): Promise<GuildFeaturesRecord> {
-  const g = await guildStore.ensure(id);
-  return mergeFeatures(g.features);
+  const g = await ensureGuild(id);
+  return mergeFeatures(g.features as GuildFeaturesRecord);
 }
 
 export async function setFeature(
@@ -129,25 +132,27 @@ export async function setFeature(
   feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  // assertFeatureName(feature); // Validation moved or assumed safe
-  // Direct dot notation update
-  const doc = await guildStore.update(id, {
-    [`features.${feature}`]: enabled,
-    updatedAt: new Date()
-  } as any);
-  return mergeFeatures(doc?.features);
+  const doc = await mutateGuild(id, (g) => ({
+    ...g,
+    features: { ...mergeFeatures(g.features), [feature]: enabled },
+    updatedAt: new Date(),
+  }));
+  return mergeFeatures(doc.features);
 }
 
 export async function setAllFeatures(
   id: GuildId,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  const updates: Record<string, boolean> = {};
-  for (const key of Object.keys(DEFAULT_GUILD_FEATURES)) {
-    updates[`features.${key}`] = enabled;
-  }
-  const doc = await guildStore.update(id, { ...updates, updatedAt: new Date() } as any);
-  return mergeFeatures(doc?.features);
+  const doc = await mutateGuild(id, (g) => ({
+    ...g,
+    features: Object.keys(DEFAULT_GUILD_FEATURES).reduce(
+      (acc, key) => ({ ...acc, [key]: enabled }),
+      mergeFeatures(g.features),
+    ),
+    updatedAt: new Date(),
+  }));
+  return mergeFeatures(doc.features);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -155,23 +160,22 @@ export async function setAllFeatures(
 /* ------------------------------------------------------------------------- */
 
 export async function readChannels(id: GuildId): Promise<GuildChannelsRecord> {
-  const g = await guildStore.ensure(id);
-  const channels = deepClone(g.channels ?? {}) as Partial<GuildChannelsRecord>;
-  return normalizeChannels(channels);
+  const g = await ensureGuild(id);
+  return normalizeChannels(deepClone(g.channels ?? {}) as Partial<GuildChannelsRecord>);
 }
 
 export async function writeChannels(
   guildID: GuildId,
-  mutate: ChannelsMutator,
+  mutate: (current: GuildChannelsRecord) => GuildChannelsRecord,
 ): Promise<GuildChannelsRecord> {
   const current = await readChannels(guildID);
   const next = deepClone(mutate(current));
-  // We update the whole "channels" object.
-  const doc = await guildStore.update(
-    guildID,
-    { channels: next, updatedAt: new Date() } as any,
-  );
-  return normalizeChannels(doc?.channels ?? {});
+  const doc = await mutateGuild(guildID, (g) => ({
+    ...g,
+    channels: next,
+    updatedAt: new Date(),
+  }));
+  return normalizeChannels(doc.channels ?? {});
 }
 
 export async function setCoreChannel(
@@ -182,8 +186,7 @@ export async function setCoreChannel(
   return writeChannels(id, (c) => {
     const next = deepClone(c);
     next.core = next.core ?? {};
-    const key = name as keyof typeof next.core;
-    next.core[key] = { channelId } as CoreChannelRecord;
+    next.core[name] = { channelId } as CoreChannelRecord;
     return next;
   });
 }
@@ -202,7 +205,6 @@ export async function setTicketCategory(
   id: GuildId,
   categoryId: string | null,
 ): Promise<GuildChannelsRecord> {
-  // Assuming ticketCategoryId exists on type or is allowed
   return writeChannels(id, (c) => ({
     ...c,
     ticketCategoryId: categoryId,
@@ -222,6 +224,28 @@ export async function listManagedChannels(id: GuildId): Promise<ManagedChannelRe
   const c = await readChannels(id);
   return Object.values(c.managed ?? {}) as ManagedChannelRecord[];
 }
+
+const generateKey = (label: string, existing: string[]): string => {
+  let base = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  if (!base) base = "channel";
+  let candidate = base;
+  let counter = 1;
+  while (existing.includes(candidate)) {
+    candidate = `${base}-${counter++}`;
+  }
+  return candidate;
+};
+
+const resolveManagedKey = (
+  map: Record<string, any>,
+  identifier: string,
+): string | null => {
+  if (map[identifier]) return identifier;
+  const found = Object.values(map).find(
+    (entry: any) => entry.label === identifier || entry.id === identifier,
+  );
+  return found ? (found as any).id : null;
+};
 
 export async function addManagedChannel(
   id: GuildId,
@@ -271,30 +295,24 @@ export async function removeManagedChannel(
 /* ------------------------------------------------------------------------- */
 
 export async function getPendingTickets(guildId: GuildId): Promise<string[]> {
-  const g = await guildStore.ensure(guildId);
-  return Array.isArray(g.pendingTickets) ? deepClone(g.pendingTickets) : [];
+  const g = await ensureGuild(guildId);
+  return normalizeStringArray(g.pendingTickets);
 }
 
 export async function setPendingTickets(
   guildId: GuildId,
   update: (tickets: string[]) => string[],
 ): Promise<string[]> {
-  // This requires read-modify-write as well
-  const g = await guildStore.ensure(guildId);
+  const g = await ensureGuild(guildId);
   const current = Array.isArray(g.pendingTickets) ? deepClone(g.pendingTickets) : [];
   const next = update(current);
-  const sanitized = Array.from(new Set(next.filter(s => typeof s === 'string')));
-
-  // We could optimize with $addToSet or $pull if we knew the operation, but generic update function implies full replacement
-  const doc = await guildStore.update(
-    guildId,
-    {
-      pendingTickets: sanitized,
-      updatedAt: new Date()
-    } as any,
-  );
-  const pending = doc && Array.isArray(doc.pendingTickets) ? doc.pendingTickets : [];
-  return deepClone(pending as string[]);
+  const sanitized = Array.from(new Set(next.filter((s) => typeof s === "string")));
+  const doc = await mutateGuild(guildId, (guild) => ({
+    ...guild,
+    pendingTickets: sanitized,
+    updatedAt: new Date(),
+  }));
+  return normalizeStringArray(doc.pendingTickets);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -302,17 +320,21 @@ export async function setPendingTickets(
 /* ------------------------------------------------------------------------- */
 
 export async function readRoles(id: GuildId): Promise<GuildRolesRecord> {
-  const g = await guildStore.ensure(id);
+  const g = await ensureGuild(id);
   return deepClone((g.roles as GuildRolesRecord) ?? {});
 }
 
 export async function writeRoles(
   id: GuildId,
-  mutate: RolesMutator,
+  mutate: (current: GuildRolesRecord) => GuildRolesRecord,
 ): Promise<GuildRolesRecord> {
   const current = await readRoles(id);
   const next = deepClone(mutate(current));
-  const doc = await guildStore.update(id, { roles: next, updatedAt: new Date() } as any);
+  const doc = await mutateGuild(id, (g) => ({
+    ...g,
+    roles: next,
+    updatedAt: new Date(),
+  }));
   return deepClone((doc?.roles as GuildRolesRecord) ?? {});
 }
 
@@ -358,6 +380,8 @@ export async function ensureRoleExists(
 }
 
 /* Role overrides & limits -------------------------------------------------- */
+
+const normAction = (k: string) => k.trim().toLowerCase().replace(/[\s-]+/g, "_");
 
 export async function getRoleOverrides(
   guildId: string,
@@ -460,30 +484,4 @@ export async function clearRoleLimit(
     return roles;
   });
   return removed;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Helpers                                                                   */
-/* ------------------------------------------------------------------------- */
-
-function generateKey(label: string, existing: string[]): string {
-  let base = label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  if (!base) base = "channel";
-  let candidate = base;
-  let counter = 1;
-  while (existing.includes(candidate)) {
-    candidate = `${base}-${counter++}`;
-  }
-  return candidate;
-}
-
-function resolveManagedKey(
-  map: Record<string, any>,
-  identifier: string,
-): string | null {
-  if (map[identifier]) return identifier;
-  const found = Object.values(map).find(
-    (entry: any) => entry.label === identifier || entry.id === identifier,
-  );
-  return found ? (found as any).id : null;
 }

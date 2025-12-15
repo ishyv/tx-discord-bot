@@ -11,14 +11,52 @@ import type {
 	CoreChannelRecord,
 	GuildChannelsRecord,
 	ManagedChannelRecord,
-} from "@/db/models/guild.schema";
+} from "@/db/schemas/guild";
 import type { CoreChannelName } from "./constants";
 import { UsingClient } from "seyfert";
+
+const emptyChannels = (): GuildChannelsRecord => ({
+	core: {
+		messageLogs: null,
+		voiceLogs: null,
+		ticketLogs: null,
+		tickets: null,
+		ticketCategory: null,
+		pointsLog: null,
+		generalLogs: null,
+		banSanctions: null,
+		staff: null,
+		suggestions: null,
+		repRequests: null,
+		offersReview: null,
+		approvedOffers: null,
+	},
+	managed: {},
+	ticketMessageId: null,
+	ticketHelperRoles: [],
+	ticketCategoryId: null,
+});
+
+const getCoreChannelRecord = (
+	channels: GuildChannelsRecord | undefined | null,
+	name: string,
+): CoreChannelRecord | null => {
+	if (!channels?.core) return null;
+	return (channels.core as Record<string, CoreChannelRecord | null | undefined>)[name] ?? null;
+};
+
+export const getCoreChannelId = (
+	channels: GuildChannelsRecord | undefined | null,
+	name: string,
+): string | null => {
+	const record = getCoreChannelRecord(channels, name);
+	return record?.channelId ?? null;
+};
 
 /** Get the full channels JSON for a guild. */
 export async function getGuildChannels(guildId: string): Promise<GuildChannelsRecord> {
 	const guild = await getGuild(guildId);
-	return guild?.channels ?? { core: {}, managed: {}, ticketMessageId: null, ticketHelperRoles: [] } as any;
+	return guild?.channels ?? emptyChannels();
 }
 
 /** Get a specific core channel record. */
@@ -27,7 +65,7 @@ export async function getCoreChannel(
 	name: CoreChannelName,
 ): Promise<CoreChannelRecord | null> {
 	const guild = await getGuild(guildId);
-	return guild?.channels?.core?.[name] ?? null;
+	return getCoreChannelRecord(guild?.channels, name);
 }
 
 /** Set a core channel and return that single core entry. */
@@ -37,9 +75,10 @@ export async function setCoreChannel(
 	channelId: string,
 ): Promise<CoreChannelRecord> {
 	return withGuild(guildId, (guild) => {
-		if (!guild.channels.core) guild.channels.core = {} as any;
-		guild.channels.core[name] = { channelId };
-		return guild.channels.core[name]!;
+		if (!guild.channels.core) guild.channels.core = {} as Record<string, CoreChannelRecord | null>;
+		const record: CoreChannelRecord = { channelId };
+		guild.channels.core[name] = record;
+		return record;
 	});
 }
 
@@ -76,9 +115,8 @@ export async function removeManagedChannel(
 		}
 
 		// Try to find by label
-		const entry = Object.entries(guild.channels.managed).find(
-			([_, m]) => m?.label === identifier
-		);
+		const managed = guild.channels.managed as Record<string, ManagedChannelRecord | undefined>;
+		const entry = Object.entries(managed).find(([, m]) => m?.label === identifier);
 
 		if (entry) {
 			delete guild.channels.managed[entry[0]];
@@ -102,23 +140,24 @@ export async function removeInvalidChannels(
 
 		// Check core channels
 		if (channels.core) {
-			for (const [name, record] of Object.entries(channels.core)) {
+			const core = channels.core as Record<string, CoreChannelRecord | null>;
+			for (const [name, record] of Object.entries(core)) {
 				if (!record) continue;
 				const channel = await client.channels.fetch(record.channelId).catch(() => null);
 				if (!channel) {
-					// @ts-ignore
-					channels.core[name] = null;
+					core[name] = null;
 				}
 			}
 		}
 
 		// Check managed channels
 		if (channels.managed) {
-			for (const [key, record] of Object.entries(channels.managed)) {
+			const managed = channels.managed as Record<string, ManagedChannelRecord>;
+			for (const [key, record] of Object.entries(managed)) {
 				if (!record) continue;
 				const channel = await client.channels.fetch(record.channelId).catch(() => null);
 				if (!channel) {
-					delete channels.managed[key];
+					delete managed[key];
 				}
 			}
 		}

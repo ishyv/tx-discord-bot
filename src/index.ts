@@ -14,7 +14,7 @@ import type { ParseClient, ParseMiddlewares } from "seyfert";
 import { Client, extendContext } from "seyfert";
 import { CooldownManager } from "@/modules/cooldown";
 import { GuildLogger } from "@/utils/guildLogger";
-import { fixDb } from "@/db/fixDb";
+import { getDb } from "@/db/mongo";
 import { middlewares } from "./middlewares";
 
 import "./events/handlers"; // ! Cargar manejadores de eventos base (messageCreate, reactions, etc.) se encarga de emitir eventos a los listeners
@@ -56,7 +56,7 @@ client.setServices({
 
 async function bootstrap(): Promise<void> {
   console.log("[bootstrap] Starting bot...");
-  await fixDb();
+  await getDb(); // initialize Mongo connection once at startup
   await client.start();
   await client.uploadCommands({ cachePath: "./commands.json" });
 }
