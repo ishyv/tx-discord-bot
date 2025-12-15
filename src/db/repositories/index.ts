@@ -1,9 +1,14 @@
 /**
- * Motivación: concentrar operaciones de acceso a datos de index en una API reutilizable.
+ * Repositorios de base de datos (MongoDB).
  *
- * Idea/concepto: envuelve modelos y consultas en funciones claras para que el resto del código no conozca detalles de persistencia.
+ * Este directorio centraliza el acceso a datos y es el único lugar donde deberíamos
+ * hablar “Mongo” (colecciones, queries, upserts, etc.). El resto del bot consume
+ * funciones con nombres claros y tipos estables.
  *
- * Alcance: provee CRUD y helpers de datos; no define reglas de negocio ni validaciones complejas.
+ * Alcance:
+ * - CRUD + helpers pequeños de persistencia/normalización.
+ * - Validación y defaults vía schemas (Zod) cuando aplica.
+ * - No implementa reglas de negocio (eso vive en `modules/*` o `services/*`).
  */
 export * from "./users";
 export * from "./guilds";

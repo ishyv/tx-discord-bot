@@ -7,6 +7,15 @@
  */
 import { UsingClient } from "seyfert";
 
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 /**
  * Crea un archivo html con la transcripción de un ticket
  * Retorna un buffer con el contenido del archivo
@@ -49,22 +58,28 @@ export async function create_transcription(
         .message { margin-bottom: 15px; padding: 10px; background-color: #fff; border-radius: 5px; }    
         .author { font-weight: bold; }
         .timestamp { color: #888; font-size: 0.9em; }
-        .content { margin-top: 5px; }
+        .content { margin-top: 5px; white-space: pre-wrap; word-break: break-word; }
     </style>
 </head>
 <body>
     <h1>Transcripción de Ticket</h1>
     ${messages
         .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
-        .map(
-            (msg) => `
+        .map((msg) => {
+            const author = escapeHtml(msg.author?.username || "Desconocido");
+            const timestamp = escapeHtml(
+                new Date(msg.timestamp ?? 0).toLocaleString(),
+            );
+            const content = escapeHtml(msg.content || "");
+
+            return `
     <div class="message">
-        <div class="author">${msg.author?.username || "Desconocido"}</div>
-        <div class="timestamp">${new Date(msg.timestamp ?? 0).toLocaleString()}</div>
-        <div class="content">${msg.content || ""}</div>
+        <div class="author">${author}</div>
+        <div class="timestamp">${timestamp}</div>
+        <div class="content">${content}</div>
     </div>
-    `,
-        ).join("")}
+    `;
+        }).join("")}
 </body>
 </html>`;
 

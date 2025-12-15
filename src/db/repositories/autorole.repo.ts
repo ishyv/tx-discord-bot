@@ -1,6 +1,14 @@
 /**
- * Autorole repository using native Mongo driver and Zod validation.
- * Purpose: CRUD for rules, grants, tallies with validated shapes and stable domain return types.
+ * Repositorio de Autorole (reglas, grants y contadores de reacciones).
+ *
+ * Responsabilidad:
+ * - Persistencia y lectura desde MongoDB para el sistema de autoroles.
+ * - Validación de documentos con Zod (schemas en `src/db/schemas/autorole.ts`).
+ * - Mapeo a “domain types” para que el resto del bot no consuma documentos crudos del driver.
+ *
+ * @remarks
+ * Este archivo es deliberadamente “bajo nivel”: no decide cuándo otorgar/revocar roles.
+ * Esa lógica vive en `src/db/repositories/autorole.service.ts` y módulos relacionados.
  */
 import { getDb } from "@/db/mongo";
 import {
@@ -28,6 +36,7 @@ const rulesCol = async () => (await getDb()).collection<AutoRoleRule>("autorole_
 const grantsCol = async () => (await getDb()).collection<AutoRoleGrant>("autorole_role_grants");
 const talliesCol = async () => (await getDb()).collection<AutoRoleTally>("autorole_reaction_tallies");
 
+// Keys compuestas estables: evitan colisiones sin depender de ObjectIds.
 const ruleKey = (guildId: string, name: string) => `${guildId}:${name}`;
 const grantKey = (
   guildId: string,
@@ -39,6 +48,7 @@ const grantKey = (
 const tallyKey = (guildId: string, messageId: string, emojiKey: string) =>
   `${guildId}:${messageId}:${emojiKey}`;
 
+// Mapea documentos de DB a tipos de dominio (evita exponer resultados crudos del driver).
 const toRuleDomain = (doc: AutoRoleRule): AutoRoleRuleDomain => ({
   guildId: doc.guildId,
   name: doc.name,
@@ -73,31 +83,58 @@ const toTallySnapshot = (doc: AutoRoleTally): ReactionTallySnapshot => ({
   updatedAt: doc.updatedAt ?? new Date(0),
 });
 
+/**
+ * Operaciones de persistencia para reglas de autorole.
+ *
+ * @remarks
+ * Las reglas se identifican por `(guildId, name)` y usan una clave primaria determinística.
+ */
 export const AutoRoleRulesRepo = {
+  /**
+   * Lista reglas (habilitadas y deshabilitadas) para un guild.
+   */
   async fetchByGuild(guildId: string): Promise<AutoRoleRuleDomain[]> {
     const col = await rulesCol();
     const rows = await col.find<AutoRoleRule>({ guildId }).toArray();
     return rows.map((row) => toRuleDomain(AutoRoleRuleSchema.parse(row)));
   },
 
+  /**
+   * Lista todas las reglas de todos los guilds.
+   *
+   * @remarks
+   * Útil en arranque para poblar cachés en memoria.
+   */
   async fetchAll(): Promise<AutoRoleRuleDomain[]> {
     const col = await rulesCol();
     const rows = await col.find<AutoRoleRule>({}).toArray();
     return rows.map((row) => toRuleDomain(AutoRoleRuleSchema.parse(row)));
   },
 
+  /**
+   * Obtiene una regla por `(guildId, name)`.
+   */
   async fetchOne(guildId: string, name: string): Promise<AutoRoleRuleDomain | null> {
     const col = await rulesCol();
     const row = await col.findOne<AutoRoleRule>({ guildId, name });
     return row ? toRuleDomain(AutoRoleRuleSchema.parse(row)) : null;
   },
 
+  /**
+   * Lista solo los nombres de las reglas del guild.
+   */
   async listNames(guildId: string): Promise<string[]> {
     const col = await rulesCol();
     const rows = await col.find({ guildId }).project({ name: 1, _id: 0 }).toArray();
     return rows.map((row: any) => row.name);
   },
 
+  /**
+   * Inserta una regla nueva.
+   *
+   * @remarks
+   * La clave primaria es determinística (`_id = guildId:name`) para evitar duplicados por nombre.
+   */
   async insert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRuleDomain> {
     const doc = AutoRoleRuleSchema.parse({
       _id: ruleKey(input.guildId, input.name),
@@ -117,6 +154,13 @@ export const AutoRoleRulesRepo = {
     return toRuleDomain(doc);
   },
 
+  /**
+   * Upsert de una regla (crea o actualiza).
+   *
+   * @remarks
+   * - `createdAt` se setea solo al insertar.
+   * - `updatedAt` se actualiza siempre.
+   */
   async upsert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRuleDomain> {
     const col = await rulesCol();
     const now = new Date();
@@ -148,6 +192,11 @@ export const AutoRoleRulesRepo = {
     return toRuleDomain(AutoRoleRuleSchema.parse(value));
   },
 
+  /**
+   * Habilita o deshabilita una regla.
+   *
+   * @returns La regla resultante o `null` si no existe.
+   */
   async updateEnabled({
     guildId,
     name,
@@ -163,6 +212,12 @@ export const AutoRoleRulesRepo = {
     return value ? toRuleDomain(AutoRoleRuleSchema.parse(value)) : null;
   },
 
+  /**
+   * Elimina una regla y sus grants asociados.
+   *
+   * @remarks
+   * Primero borra grants por `(guildId, ruleName)` para no dejar “razones” colgantes.
+   */
   async delete(input: DeleteRuleInput): Promise<boolean> {
     const colGrants = await grantsCol();
     const colRules = await rulesCol();
@@ -178,7 +233,17 @@ export const AutoRoleRulesRepo = {
   },
 };
 
+/**
+ * Operaciones de persistencia para grants (razones por las que un usuario debe tener un rol).
+ *
+ * @remarks
+ * Un grant NO es “el rol en Discord”; es una razón persistida. El service decide si tiene que
+ * encolar un grant/revoke real en Discord dependiendo de cuántas razones existan.
+ */
 export const AutoRoleGrantsRepo = {
+  /**
+   * Upsert de un grant (razón) por regla + tipo.
+   */
   async upsert(input: GrantByRuleInput): Promise<AutoRoleGrantReason> {
     const col = await grantsCol();
     const now = new Date();
@@ -221,6 +286,9 @@ export const AutoRoleGrantsRepo = {
     return toGrantDomain(AutoRoleGrantSchema.parse(value));
   },
 
+  /**
+   * Elimina una razón específica (por regla + tipo).
+   */
   async deleteOne(input: RevokeByRuleInput): Promise<boolean> {
     const col = await grantsCol();
     const res = await col.deleteOne({
@@ -233,6 +301,9 @@ export const AutoRoleGrantsRepo = {
     return (res.deletedCount ?? 0) > 0;
   },
 
+  /**
+   * Lista las razones existentes para un usuario y rol en un guild.
+   */
   async listForMemberRole(
     guildId: string,
     userId: string,
@@ -243,6 +314,9 @@ export const AutoRoleGrantsRepo = {
     return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
   },
 
+  /**
+   * Lista las razones generadas por una regla (útil para purgas/reportes).
+   */
   async listForRule(
     guildId: string,
     ruleName: string,
@@ -252,6 +326,9 @@ export const AutoRoleGrantsRepo = {
     return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
   },
 
+  /**
+   * Cuenta cuántas razones existen para un (guildId, userId, roleId).
+   */
   async countForRole(
     guildId: string,
     userId: string,
@@ -266,18 +343,23 @@ export const AutoRoleGrantsRepo = {
     return Number(total ?? 0);
   },
 
+  /** Borra todas las razones asociadas a una regla; retorna cuántas se eliminaron. */
   async purgeForRule(guildId: string, ruleName: string): Promise<number> {
     const col = await grantsCol();
     const res = await col.deleteMany({ guildId, ruleName });
     return res.deletedCount ?? 0;
   },
 
+  /** Borra todas las razones asociadas a un rol en un guild; retorna cuántas se eliminaron. */
   async purgeForGuildRole(guildId: string, roleId: string): Promise<number> {
     const col = await grantsCol();
     const res = await col.deleteMany({ guildId, roleId });
     return res.deletedCount ?? 0;
   },
 
+  /**
+   * Busca una razón puntual (user, role, rule, type).
+   */
   async find(
     guildId: string,
     userId: string,
@@ -296,6 +378,9 @@ export const AutoRoleGrantsRepo = {
     return row ? toGrantDomain(AutoRoleGrantSchema.parse(row)) : null;
   },
 
+  /**
+   * Lista grants `TIMED` vencidos a una fecha de referencia.
+   */
   async listDueTimed(reference: Date): Promise<AutoRoleGrantReason[]> {
     const col = await grantsCol();
     const rows = await col
@@ -308,7 +393,16 @@ export const AutoRoleGrantsRepo = {
   },
 };
 
+/**
+ * Operaciones de persistencia para tallies de reacciones (por mensaje + emoji).
+ *
+ * @remarks
+ * Los tallies son “contadores” usados por triggers basados en reacciones.
+ */
 export const AutoRoleTalliesRepo = {
+  /**
+   * Elimina todos los tallies para un mensaje; retorna cuántos documentos borró.
+   */
   async deleteForMessage(guildId: string, messageId: string): Promise<number> {
     const col = await talliesCol();
     const res = await col.deleteMany({
@@ -318,6 +412,9 @@ export const AutoRoleTalliesRepo = {
     return res.deletedCount ?? 0;
   },
 
+  /**
+   * Lista los tallies guardados para un mensaje.
+   */
   async listForMessage(
     guildId: string,
     messageId: string,
@@ -327,6 +424,12 @@ export const AutoRoleTalliesRepo = {
     return rows.map((row) => toTallySnapshot(AutoRoleTallySchema.parse(row)));
   },
 
+  /**
+   * Incrementa el tally para una key (guildId + messageId + emojiKey).
+   *
+   * @remarks
+   * Hace upsert: si no existía, crea el documento y luego incrementa.
+   */
   async increment(
     key: ReactionTallyKey,
     authorId: string,
@@ -357,6 +460,11 @@ export const AutoRoleTalliesRepo = {
     return toTallySnapshot(AutoRoleTallySchema.parse(row));
   },
 
+  /**
+   * Decrementa el tally; si llega a 0 (o menos), borra el documento.
+   *
+   * @returns Snapshot actualizado o `null` si no existía.
+   */
   async decrement(key: ReactionTallyKey): Promise<ReactionTallySnapshot | null> {
     const col = await talliesCol();
     const now = new Date();
@@ -384,6 +492,9 @@ export const AutoRoleTalliesRepo = {
     );
   },
 
+  /**
+   * Lee un tally por key.
+   */
   async read(key: ReactionTallyKey): Promise<ReactionTallySnapshot | null> {
     const col = await talliesCol();
     const row = await col.findOne({
@@ -394,6 +505,9 @@ export const AutoRoleTalliesRepo = {
     return row ? toTallySnapshot(AutoRoleTallySchema.parse(row)) : null;
   },
 
+  /**
+   * Elimina un tally por key; retorna `true` si se borró algo.
+   */
   async deleteOne(key: ReactionTallyKey): Promise<boolean> {
     const col = await talliesCol();
     const res = await col.deleteOne({

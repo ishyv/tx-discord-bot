@@ -1,7 +1,8 @@
 /**
- * Author: Repositories team
- * Purpose: Barrel file that exposes the autorole data stack (mappers, repos, cache-service, service, presets).
- * Why exists: Gives consumers a single import surface instead of reaching into individual implementation files.
+ * Autorole: API pública de persistencia/servicios del sistema.
+ *
+ * Este barrel exporta repos, cache-service, service y presets para que el resto del bot
+ * importe desde un solo lugar (`@/db/repositories`).
  */
 export * from "./autorole.repo";
 export * from "./autorole.cache-service";

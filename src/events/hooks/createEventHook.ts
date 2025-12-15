@@ -87,7 +87,15 @@ export const createEventHook = <TArgs extends readonly unknown[]>(): EventHook<T
 
   const emit = async (...args: TArgs): Promise<void> => {
     for (const listener of Array.from(listeners)) {
-      await listener(...args);
+      try {
+        await listener(...args);
+      } catch (error) {
+        const name = (listener as { name?: string })?.name;
+        console.warn(
+          `[events] Listener${name ? ` (${name})` : ""} failed:`,
+          error,
+        );
+      }
     }
   };
 

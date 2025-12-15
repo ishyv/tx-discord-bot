@@ -218,7 +218,7 @@ export async function createOfferForReview(
 			allowed_mentions: { users: [params.authorId] },
 		});
 
-		return createOffer({
+		const created = await createOffer({
 			id,
 			guildId: params.guildId,
 			authorId: params.authorId,
@@ -227,6 +227,23 @@ export async function createOfferForReview(
 			reviewMessageId: message.id,
 			reviewChannelId,
 		});
+
+		// Si la persistencia falla (incluyendo conflicto por índice único), limpiamos el mensaje
+		// para evitar "huérfanos" en el canal de revisión.
+		if (created.isErr()) {
+			try {
+				await client.messages.delete(message.id, reviewChannelId);
+			} catch (deleteError) {
+				client.logger?.warn?.("[offers] no se pudo eliminar el mensaje de revisión tras fallo de DB", {
+					deleteError,
+					guildId: params.guildId,
+					offerId: id,
+					messageId: message.id,
+				});
+			}
+		}
+
+		return created;
 	} catch (error) {
 		return ErrResult(error instanceof Error ? error : new Error(String(error)));
 	}

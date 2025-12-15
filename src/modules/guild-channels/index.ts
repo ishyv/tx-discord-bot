@@ -6,7 +6,8 @@
  * Alcance: utilidades para canales; no configura permisos detallados ni políticas de moderación.
  */
 // Uses the Mongo-backed repository layer at "@/db/repositories"
-import { getGuild, withGuild } from "@/db/repositories/with_guild";
+import { updateGuildPaths } from "@/db/repositories/guilds";
+import { getGuild } from "@/db/repositories/with_guild";
 import type {
 	CoreChannelRecord,
 	GuildChannelsRecord,
@@ -74,12 +75,11 @@ export async function setCoreChannel(
 	name: CoreChannelName,
 	channelId: string,
 ): Promise<CoreChannelRecord> {
-	return withGuild(guildId, (guild) => {
-		if (!guild.channels.core) guild.channels.core = {} as Record<string, CoreChannelRecord | null>;
-		const record: CoreChannelRecord = { channelId };
-		guild.channels.core[name] = record;
-		return record;
+	const record: CoreChannelRecord = { channelId };
+	await updateGuildPaths(guildId, {
+		[`channels.core.${name}`]: record,
 	});
+	return record;
 }
 
 /** Add a managed channel and return the created record. */
@@ -88,16 +88,15 @@ export async function addManagedChannel(
 	label: string,
 	channelId: string,
 ): Promise<ManagedChannelRecord> {
-	return withGuild(guildId, (guild) => {
-		if (!guild.channels.managed) guild.channels.managed = {};
+	// Create a simple slug/key from label if needed, or use a UUID.
+	const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-		// Create a simple slug/key from label if needed, or use a UUID. 
-		const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-		const record: ManagedChannelRecord = { label, channelId, id };
-		guild.channels.managed[id] = record;
-		return record;
+	const record: ManagedChannelRecord = { label, channelId, id };
+	await updateGuildPaths(guildId, {
+		[`channels.managed.${id}`]: record,
 	});
+
+	return record;
 }
 
 /** Remove by key or label; returns true only if something actually got removed. */
@@ -105,26 +104,27 @@ export async function removeManagedChannel(
 	guildId: string,
 	identifier: string,
 ): Promise<boolean> {
-	return withGuild(guildId, (guild) => {
-		if (!guild.channels.managed) return false;
+	const guild = await getGuild(guildId);
+	const managed = (guild?.channels?.managed ?? {}) as Record<
+		string,
+		ManagedChannelRecord | undefined
+	>;
 
-		// Try to find by key
-		if (guild.channels.managed[identifier]) {
-			delete guild.channels.managed[identifier];
-			return true;
-		}
+	// Try to find by key
+	if (managed[identifier]) {
+		await updateGuildPaths(guildId, {}, { unset: [`channels.managed.${identifier}`] });
+		return true;
+	}
 
-		// Try to find by label
-		const managed = guild.channels.managed as Record<string, ManagedChannelRecord | undefined>;
-		const entry = Object.entries(managed).find(([, m]) => m?.label === identifier);
+	// Try to find by label
+	const entry = Object.entries(managed).find(([, m]) => m?.label === identifier);
 
-		if (entry) {
-			delete guild.channels.managed[entry[0]];
-			return true;
-		}
+	if (entry) {
+		await updateGuildPaths(guildId, {}, { unset: [`channels.managed.${entry[0]}`] });
+		return true;
+	}
 
-		return false;
-	});
+	return false;
 }
 
 /**
@@ -134,34 +134,34 @@ export async function removeInvalidChannels(
 	guildId: string,
 	client: UsingClient
 ): Promise<void> {
-	await withGuild(guildId, async (guild) => {
-		const channels = guild.channels;
-		if (!channels) return;
+	const channels = await getGuildChannels(guildId);
 
-		// Check core channels
-		if (channels.core) {
-			const core = channels.core as Record<string, CoreChannelRecord | null>;
-			for (const [name, record] of Object.entries(core)) {
-				if (!record) continue;
-				const channel = await client.channels.fetch(record.channelId).catch(() => null);
-				if (!channel) {
-					core[name] = null;
-				}
-			}
-		}
+	const sets: Record<string, unknown> = {};
+	const unsets: string[] = [];
 
-		// Check managed channels
-		if (channels.managed) {
-			const managed = channels.managed as Record<string, ManagedChannelRecord>;
-			for (const [key, record] of Object.entries(managed)) {
-				if (!record) continue;
-				const channel = await client.channels.fetch(record.channelId).catch(() => null);
-				if (!channel) {
-					delete managed[key];
-				}
-			}
+	// Check core channels
+	const core = channels.core as Record<string, CoreChannelRecord | null>;
+	for (const [name, record] of Object.entries(core)) {
+		if (!record) continue;
+		const channel = await client.channels.fetch(record.channelId).catch(() => null);
+		if (!channel) {
+			sets[`channels.core.${name}`] = null;
 		}
-	});
+	}
+
+	// Check managed channels
+	const managed = channels.managed as Record<string, ManagedChannelRecord>;
+	for (const [key, record] of Object.entries(managed)) {
+		if (!record) continue;
+		const channel = await client.channels.fetch(record.channelId).catch(() => null);
+		if (!channel) {
+			unsets.push(`channels.managed.${key}`);
+		}
+	}
+
+	if (!Object.keys(sets).length && !unsets.length) return;
+
+	await updateGuildPaths(guildId, sets, { unset: unsets });
 }
 
 // passthrough exports

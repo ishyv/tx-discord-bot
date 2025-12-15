@@ -3,7 +3,7 @@
  * Purpose: read/write per-guild configuration slices (features, channels, reputation) without exposing persistence details.
  */
 
-import { ensureGuild, updateGuild } from "@/db/repositories/guilds";
+import { ensureGuild, updateGuildPaths } from "@/db/repositories/guilds";
 import { ConfigurableModule } from "./constants";
 
 export interface ConfigProvider {
@@ -19,7 +19,8 @@ const CONFIG_PATHS: Record<string, string> = {
     [ConfigurableModule.Tops]: "features.tops",
     [ConfigurableModule.ChannelsCore]: "channels.core",
     [ConfigurableModule.ChannelsManaged]: "channels.managed",
-    [ConfigurableModule.Tickets]: "channels.core"
+    [ConfigurableModule.Tickets]: "channels.core",
+    [ConfigurableModule.Offers]: "channels.core",
 };
 
 /**
@@ -54,26 +55,15 @@ export class MongoGuildConfigProvider implements ConfigProvider {
             throw new Error(`No mapped path for config key '${key}'`);
         }
 
-        const guild = await ensureGuild(guildId);
-        const updated = { ...guild };
-
+        const updates: Record<string, unknown> = {};
         for (const [subKey, value] of Object.entries(partial)) {
-            setNested(updated, `${path}.${subKey}`, value);
+            if (value === undefined) continue;
+            updates[`${path}.${subKey}`] = value;
         }
 
-        await updateGuild(guildId, updated);
-    }
-}
+        if (!Object.keys(updates).length) return;
 
-function setNested(obj: Record<string, any>, dottedPath: string, value: unknown): void {
-    const parts = dottedPath.split('.');
-    const last = parts.pop() as string;
-    let curr: any = obj;
-    for (const part of parts) {
-        if (curr[part] === undefined || curr[part] === null || typeof curr[part] !== 'object') {
-            curr[part] = {};
-        }
-        curr = curr[part];
+        // Atomic $set update to avoid clobbering unrelated config updates.
+        await updateGuildPaths(guildId, updates);
     }
-    curr[last] = value;
 }

@@ -1,7 +1,9 @@
 /**
- * Author: Repositories team
- * Purpose: Implements autorole business flows (grant, revoke, purge) on top of repos and Discord role operations.
- * Why exists: Separates decision-making and side-effects (DMs, role queueing) from low-level persistence and cache plumbing.
+ * Flujos de negocio para Autorole (grant/revoke/purge).
+ *
+ * Responsabilidad:
+ * - Traducir “reglas” a acciones: guardar razones (grants) y encolar cambios reales de roles en Discord.
+ * - Separar side-effects (cola de role ops, DMs) de la capa de persistencia (`autorole.repo.ts`).
  */
 import type { UsingClient } from "seyfert";
 
@@ -29,6 +31,16 @@ interface AutoroleRevokeContext {
   grantType: "LIVE" | "TIMED";
 }
 
+/**
+ * Registra una razón de autorole (grant) y, si corresponde, otorga el rol real en Discord.
+ *
+ * Semántica (importante):
+ * - Se persiste una “razón” por (rule + type) en `autorole_role_grants`.
+ * - El rol real se otorga solo cuando la razón es nueva y el usuario no tenía ninguna otra razón
+ *   previa para ese rol (`countForRole === 0`).
+ * - Para rules `TIMED`, llamadas repetidas extienden `expiresAt` a partir del máximo entre “ahora”
+ *   y el `expiresAt` existente.
+ */
 export async function grantByRule({
   client,
   rule,
@@ -93,6 +105,11 @@ export async function grantByRule({
   return stored;
 }
 
+/**
+ * Elimina una razón de autorole (grant) y, si era la última, revoca el rol real en Discord.
+ *
+ * @returns `true` si se eliminó algo; `false` si no existía (idempotente).
+ */
 export async function revokeByRule({
   client,
   rule,
@@ -144,6 +161,11 @@ export async function revokeByRule({
   return true;
 }
 
+/**
+ * Purga una regla: elimina todas las razones generadas por `ruleName` y encola revokes necesarios.
+ *
+ * @returns Cantidad de grants borrados y cuántas revocaciones de rol se encolaron.
+ */
 export async function purgeRule(
   client: UsingClient,
   guildId: string,
@@ -191,6 +213,12 @@ export async function purgeRule(
   };
 }
 
+/**
+ * Notificación best-effort por DM cuando se otorga un rol por autorole.
+ *
+ * @remarks
+ * Fallas al DM no rompen el flujo principal (solo se loguean a nivel debug).
+ */
 async function notifyRoleGranted(
   client: UsingClient,
   rule: AutoRoleRule,

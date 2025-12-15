@@ -1,6 +1,13 @@
 /**
- * TOPs repository using native Mongo driver and Zod validation.
- * Purpose: manage TOP windows and reports with validated data and simple helpers.
+ * Repositorio de TOPs (ventanas y reportes).
+ *
+ * Modelo:
+ * - `top_windows`: 1 documento por guild con contadores acumulados durante una “ventana”.
+ * - `top_reports`: snapshots históricos generados al reportar/rotar una ventana.
+ *
+ * Responsabilidad:
+ * - Validar lecturas/escrituras con Zod.
+ * - Mantener defaults y shapes estables para los consumers.
  */
 import { getDb } from "@/db/mongo";
 import {
@@ -16,6 +23,7 @@ import type { ChannelId, GuildId } from "@/db/types";
 const windowsCol = async () => (await getDb()).collection<TopWindow>("top_windows");
 const reportsCol = async () => (await getDb()).collection<TopReport>("top_reports");
 
+// Valida cada lectura/escritura con Zod para mantener defaults y tipos.
 const parseWindow = (doc: unknown): TopWindow => TopWindowSchema.parse(doc);
 const parseReport = (doc: unknown): TopReport => TopReportSchema.parse(doc);
 
@@ -37,6 +45,9 @@ const defaultWindow = (guildId: GuildId, now = new Date()): TopWindow =>
 
 /**
  * Asegura que exista una ventana de TOPs para el guild indicado.
+ *
+ * @remarks
+ * Usa `upsert` + `$setOnInsert` para inicializar una ventana con `_id = guildId`.
  */
 export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
   const col = await windowsCol();
@@ -55,6 +66,8 @@ export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
 
 /**
  * Obtiene la ventana de TOPs actual para el guild.
+ *
+ * @returns Una copia (`deepClone`) para que el caller no mutile el objeto persistido.
  */
 export async function getTopWindow(guildId: GuildId): Promise<TopWindow> {
   const window = await ensureTopWindow(guildId);
@@ -63,6 +76,10 @@ export async function getTopWindow(guildId: GuildId): Promise<TopWindow> {
 
 /**
  * Actualiza configuración (canal, intervalo, tamaño de TOP) sin tocar contadores.
+ *
+ * @remarks
+ * - `intervalMs` y `topSize` se normalizan a enteros positivos.
+ * - `channelId` vacío se convierte a `null` (deshabilita reportes).
  */
 export async function updateTopConfig(
   guildId: GuildId,

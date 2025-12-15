@@ -1,6 +1,15 @@
 /**
- * Guild repository using native Mongo driver and Zod validation.
- * Purpose: expose guild persistence operations with normalized/defaulted data, hiding Mongo specifics.
+ * Repositorio de guilds (servidores).
+ *
+ * Responsabilidad:
+ * - Encapsular el acceso a la colección `guilds` (MongoDB).
+ * - Validar/normalizar documentos con `GuildSchema` (Zod) en cada lectura/escritura.
+ * - Proveer helpers específicos para secciones “anidadas” del documento (features, channels, roles, etc.).
+ *
+ * @remarks
+ * El documento de guild suele evolucionar con el tiempo. Por eso existe una capa de
+ * “sanitizado”/normalización que tolera documentos legacy (campos faltantes) y garantiza
+ * shapes estables para los callers.
  */
 import { getDb } from "@/db/mongo";
 import {
@@ -20,11 +29,33 @@ import { deepClone } from "@/db/helpers";
 
 const guildsCollection = async () => (await getDb()).collection<Guild>("guilds");
 
+// Coerción defensiva: documentos legacy (sin secciones opcionales) deben parsear y tomar defaults.
+const sanitizeGuildDoc = (doc: unknown): Record<string, unknown> => {
+  const copy = { ...(doc as Record<string, unknown> | null | undefined) };
+
+  if (copy.channels === undefined || copy.channels === null) {
+    copy.channels = {};
+  }
+  if (copy.features === undefined || copy.features === null) {
+    copy.features = {};
+  }
+  if (copy.roles === undefined || copy.roles === null) {
+    copy.roles = {};
+  }
+  if (copy.pendingTickets === undefined || copy.pendingTickets === null) {
+    copy.pendingTickets = [];
+  }
+  if (copy.reputation === undefined || copy.reputation === null) {
+    copy.reputation = {};
+  }
+
+  return copy;
+};
+
 const defaultGuild = (id: GuildId): Guild =>
-  GuildSchema.parse({
+  parseGuild({
     _id: id,
     features: DEFAULT_GUILD_FEATURES,
-    channels: undefined, // let schema defaults apply
     roles: {},
     pendingTickets: [],
     reputation: { keywords: [] },
@@ -37,6 +68,7 @@ const mergeFeatures = (features: GuildFeaturesRecord | null | undefined): GuildF
   ...(features ?? {}),
 });
 
+// Acepta estructuras parciales desde DB y garantiza shapes estables para los callers.
 const normalizeChannels = (channels: Partial<GuildChannelsRecord>): GuildChannelsRecord => {
   const core =
     channels.core ??
@@ -73,7 +105,9 @@ const normalizeGuild = (doc: Guild): Guild => ({
   reputation: doc.reputation ?? { keywords: [] },
 });
 
-const parseGuild = (doc: unknown): Guild => normalizeGuild(GuildSchema.parse(doc));
+// Punto único: parsea + normaliza cualquier payload de guild.
+const parseGuild = (doc: unknown): Guild =>
+  normalizeGuild(GuildSchema.parse(sanitizeGuildDoc(doc)));
 
 const loadGuild = async (id: GuildId): Promise<Guild | null> => {
   const col = await guildsCollection();
@@ -81,6 +115,7 @@ const loadGuild = async (id: GuildId): Promise<Guild | null> => {
   return doc ? parseGuild(doc) : null;
 };
 
+// Replace (con upsert) tras revalidación; sella `updatedAt` y asegura `createdAt`.
 const saveGuildDocument = async (guild: Guild): Promise<Guild> => {
   const col = await guildsCollection();
   const now = new Date();
@@ -93,6 +128,9 @@ const saveGuildDocument = async (guild: Guild): Promise<Guild> => {
   return parsed;
 };
 
+/**
+ * Obtiene una guild o la crea con defaults (y la persiste) si no existe.
+ */
 export const ensureGuild = async (id: GuildId): Promise<Guild> => {
   const existing = await loadGuild(id);
   if (existing) return existing;
@@ -101,6 +139,7 @@ export const ensureGuild = async (id: GuildId): Promise<Guild> => {
   return next;
 };
 
+// Helper read-modify-write para que callers se enfoquen en mutaciones puras.
 const mutateGuild = async (
   id: GuildId,
   mutator: (current: Guild) => Guild,
@@ -109,9 +148,103 @@ const mutateGuild = async (
   return saveGuildDocument(mutator(current));
 };
 
+/** Lee una guild por id (normalizada) o `null` si no existe. */
 export const getGuild = async (id: GuildId) => loadGuild(id);
+/**
+ * Aplica un patch y persiste la guild resultante.
+ *
+ * @remarks
+ * El patch pasa por `GuildSchema` y por la capa de normalización.
+ */
 export const updateGuild = async (id: GuildId, patch: Partial<Guild>) =>
   mutateGuild(id, (g) => parseGuild({ ...g, ...patch, _id: id }));
+
+/**
+ * Aplica un `$set` por rutas (dot-notation) sin reescribir el documento completo.
+ *
+ * @remarks
+ * Esto evita el problema de "last write wins" cuando distintos subsistemas actualizan
+ * partes diferentes del documento de guild en paralelo (por ejemplo, configuraciones
+ * en `channels.core` vs `features`).
+ *
+ * Además, repara defensivamente algunos campos legacy donde las secciones anidadas
+ * podían ser `null`/faltantes (lo que rompería un `$set` con rutas).
+ */
+export async function updateGuildPaths(
+  id: GuildId,
+  paths: Record<string, unknown>,
+  options: { unset?: string[] } = {},
+): Promise<void> {
+  const col = await guildsCollection();
+  const now = new Date();
+
+  const removals: Record<string, unknown> = {};
+  for (const path of options.unset ?? []) {
+    if (!path) continue;
+    // `$$REMOVE` elimina el campo en una actualización por pipeline.
+    removals[path] = "$$REMOVE";
+  }
+
+  const pipeline = [
+    {
+      $set: {
+        createdAt: { $ifNull: ["$createdAt", now] },
+        channels: {
+          $cond: [
+            { $eq: [{ $type: "$channels" }, "object"] },
+            "$channels",
+            {},
+          ],
+        },
+        features: {
+          $cond: [
+            { $eq: [{ $type: "$features" }, "object"] },
+            "$features",
+            {},
+          ],
+        },
+        reputation: {
+          $cond: [
+            { $eq: [{ $type: "$reputation" }, "object"] },
+            "$reputation",
+            {},
+          ],
+        },
+        roles: {
+          $cond: [{ $eq: [{ $type: "$roles" }, "object"] }, "$roles", {}],
+        },
+      },
+    },
+    {
+      $set: {
+        "channels.core": {
+          $cond: [
+            { $eq: [{ $type: "$channels.core" }, "object"] },
+            "$channels.core",
+            {},
+          ],
+        },
+        "channels.managed": {
+          $cond: [
+            { $eq: [{ $type: "$channels.managed" }, "object"] },
+            "$channels.managed",
+            {},
+          ],
+        },
+      },
+    },
+    {
+      $set: {
+        ...paths,
+        ...removals,
+        updatedAt: now,
+      },
+    },
+  ];
+
+  await col.updateOne({ _id: id }, pipeline as any, { upsert: true });
+}
+/** Elimina una guild; retorna `true` si se borró un documento. */
 export const deleteGuild = async (id: GuildId) => {
   const col = await guildsCollection();
   const res = await col.deleteOne({ _id: id });
@@ -127,6 +260,11 @@ export async function readFeatures(id: GuildId): Promise<GuildFeaturesRecord> {
   return mergeFeatures(g.features as GuildFeaturesRecord);
 }
 
+/**
+ * Activa o desactiva un feature flag.
+ *
+ * @returns El set completo de features (con defaults aplicados).
+ */
 export async function setFeature(
   id: GuildId,
   feature: Features,
@@ -140,6 +278,9 @@ export async function setFeature(
   return mergeFeatures(doc.features);
 }
 
+/**
+ * Habilita/deshabilita todos los features conocidos.
+ */
 export async function setAllFeatures(
   id: GuildId,
   enabled: boolean,
@@ -164,10 +305,17 @@ export async function readChannels(id: GuildId): Promise<GuildChannelsRecord> {
   return normalizeChannels(deepClone(g.channels ?? {}) as Partial<GuildChannelsRecord>);
 }
 
+/**
+ * Aplica una mutación determinística sobre `channels` y persiste el resultado.
+ *
+ * @param mutate Función pura que recibe el snapshot actual y devuelve el próximo.
+ * @returns La estructura de channels normalizada resultante.
+ */
 export async function writeChannels(
   guildID: GuildId,
   mutate: (current: GuildChannelsRecord) => GuildChannelsRecord,
 ): Promise<GuildChannelsRecord> {
+  // Corremos la mutación sobre un snapshot clonado para evitar efectos colaterales fuera del repo.
   const current = await readChannels(guildID);
   const next = deepClone(mutate(current));
   const doc = await mutateGuild(guildID, (g) => ({
@@ -178,6 +326,12 @@ export async function writeChannels(
   return normalizeChannels(doc.channels ?? {});
 }
 
+/**
+ * Setea un canal “core” (welcome, logs, tickets, etc.).
+ *
+ * @param name Nombre lógico del canal dentro de `channels.core`.
+ * @param channelId Id del canal de Discord.
+ */
 export async function setCoreChannel(
   id: GuildId,
   name: string,
@@ -191,6 +345,9 @@ export async function setCoreChannel(
   });
 }
 
+/**
+ * Obtiene un canal “core” por nombre o `null` si no está configurado.
+ */
 export async function getCoreChannel(
   id: GuildId,
   name: string,
@@ -201,6 +358,7 @@ export async function getCoreChannel(
   return (core[name as keyof typeof core] as CoreChannelRecord | null) ?? null;
 }
 
+/** Setea/limpia la categoría donde se crean tickets. */
 export async function setTicketCategory(
   id: GuildId,
   categoryId: string | null,
@@ -211,6 +369,7 @@ export async function setTicketCategory(
   } as any));
 }
 
+/** Setea/limpia el messageId del mensaje “panel” de tickets. */
 export async function setTicketMessage(
   id: GuildId,
   messageId: string | null,
@@ -220,6 +379,9 @@ export async function setTicketMessage(
 
 /* Managed channels -------------------------------------------------------- */
 
+/**
+ * Lista los canales “managed” (estructura libre para features que gestionan canales).
+ */
 export async function listManagedChannels(id: GuildId): Promise<ManagedChannelRecord[]> {
   const c = await readChannels(id);
   return Object.values(c.managed ?? {}) as ManagedChannelRecord[];
@@ -264,6 +426,13 @@ export async function addManagedChannel(
   });
 }
 
+/**
+ * Actualiza un managed channel por id o label.
+ *
+ * @remarks
+ * Aceptar `label` como identificador ayuda con UX en comandos, pero el id interno (`key`) es el
+ * identificador canónico persistido.
+ */
 export async function updateManagedChannel(
   id: GuildId,
   identifier: string,
@@ -278,6 +447,9 @@ export async function updateManagedChannel(
   });
 }
 
+/**
+ * Elimina un managed channel por id o label.
+ */
 export async function removeManagedChannel(
   guildID: GuildId,
   identifier: string,
@@ -299,6 +471,12 @@ export async function getPendingTickets(guildId: GuildId): Promise<string[]> {
   return normalizeStringArray(g.pendingTickets);
 }
 
+/**
+ * Actualiza la lista de tickets pendientes mediante una función `update`.
+ *
+ * @remarks
+ * Deduplica y filtra valores inválidos antes de persistir.
+ */
 export async function setPendingTickets(
   guildId: GuildId,
   update: (tickets: string[]) => string[],
@@ -306,6 +484,7 @@ export async function setPendingTickets(
   const g = await ensureGuild(guildId);
   const current = Array.isArray(g.pendingTickets) ? deepClone(g.pendingTickets) : [];
   const next = update(current);
+  // Deduplica + elimina inválidos antes de persistir para evitar datos “sucios”.
   const sanitized = Array.from(new Set(next.filter((s) => typeof s === "string")));
   const doc = await mutateGuild(guildId, (guild) => ({
     ...guild,
@@ -324,6 +503,11 @@ export async function readRoles(id: GuildId): Promise<GuildRolesRecord> {
   return deepClone((g.roles as GuildRolesRecord) ?? {});
 }
 
+/**
+ * Aplica una mutación determinística sobre `roles` y persiste el resultado.
+ *
+ * @param mutate Función pura que recibe el snapshot actual y devuelve el próximo.
+ */
 export async function writeRoles(
   id: GuildId,
   mutate: (current: GuildRolesRecord) => GuildRolesRecord,
@@ -346,6 +530,13 @@ export async function getRole(
   return r?.[key] ?? null;
 }
 
+/**
+ * Upsert de un rol por `key`, aplicando un patch y sellando `updatedAt` (string ISO).
+ *
+ * @remarks
+ * El shape interno de cada role es flexible (`any`) porque distintos sistemas guardan
+ * metadatos diferentes.
+ */
 export async function updateRole(
   id: GuildId,
   key: string,
@@ -361,6 +552,9 @@ export async function updateRole(
   }));
 }
 
+/**
+ * Elimina un rol (por key) del registro persistido.
+ */
 export async function removeRole(
   id: GuildId,
   key: string,
@@ -383,6 +577,9 @@ export async function ensureRoleExists(
 
 const normAction = (k: string) => k.trim().toLowerCase().replace(/[\s-]+/g, "_");
 
+/**
+ * Devuelve el mapa de overrides (reach) para un role.
+ */
 export async function getRoleOverrides(
   guildId: string,
   roleKey: string,
@@ -391,6 +588,11 @@ export async function getRoleOverrides(
   return { ...(roles?.[roleKey]?.reach ?? {}) };
 }
 
+/**
+ * Setea un override para una acción.
+ *
+ * @param actionKey Se normaliza a `snake_case` para estabilidad.
+ */
 export async function setRoleOverride(
   guildId: GuildId,
   roleKey: string,
@@ -407,6 +609,9 @@ export async function setRoleOverride(
   });
 }
 
+/**
+ * Elimina un override; retorna `true` si realmente se removió.
+ */
 export async function clearRoleOverride(
   guildId: GuildId,
   roleKey: string,
@@ -427,6 +632,9 @@ export async function clearRoleOverride(
   return removed;
 }
 
+/**
+ * Resetea todos los overrides (reach) para un role.
+ */
 export async function resetRoleOverrides(
   guildId: GuildId,
   roleKey: string,
@@ -438,6 +646,9 @@ export async function resetRoleOverrides(
   });
 }
 
+/**
+ * Devuelve el mapa de límites (limits) para un role.
+ */
 export async function getRoleLimits(
   guildId: GuildId,
   roleKey: string,
@@ -446,6 +657,13 @@ export async function getRoleLimits(
   return { ...(roles?.[roleKey]?.limits ?? {}) };
 }
 
+/**
+ * Setea un límite para una acción.
+ *
+ * @remarks
+ * Se guardan tanto `window` (string) como `windowSeconds` (number) porque hay callers legacy
+ * que usan distintas representaciones.
+ */
 export async function setRoleLimit(
   guildId: GuildId,
   roleKey: string,
@@ -466,6 +684,9 @@ export async function setRoleLimit(
   });
 }
 
+/**
+ * Elimina un límite; retorna `true` si realmente se removió.
+ */
 export async function clearRoleLimit(
   guildId: GuildId,
   roleKey: string,

@@ -1,7 +1,9 @@
 /**
- * Author: Repositories team
- * Purpose: Handles the reputation preset convenience APIs for autoroles.
- * Why exists: Encapsulates preset application and cache refresh so preset logic stays decoupled from generic repo operations.
+ * Presets de Autorole (reputación).
+ *
+ * Responsabilidad:
+ * - Aplicar presets de reglas basadas en reputación.
+ * - Encapsular la lógica de upsert + refresh del cache para mantener el resto del código simple.
  */
 import type { AutoRoleRule } from "@/modules/autorole/types";
 import { AutoRoleRulesRepo } from "./autorole.repo";
@@ -16,6 +18,11 @@ interface ReputationRuleInput {
   createdBy?: string | null;
 }
 
+/**
+ * Crea/actualiza una regla de reputación (`REPUTATION_THRESHOLD`).
+ *
+ * @param options.refreshCache Por defecto `true`.
+ */
 export async function updateReputationRule(
   input: ReputationRuleInput,
   options?: { refreshCache?: boolean },
@@ -41,6 +48,13 @@ export async function updateReputationRule(
   return rule;
 }
 
+/**
+ * Aplica un preset de reglas de reputación para un guild.
+ *
+ * @remarks
+ * Además de upsertear las reglas listadas, elimina reglas existentes de tipo `REPUTATION_THRESHOLD`
+ * que no estén presentes en el preset (para que el preset sea “fuente de verdad”).
+ */
 export async function applyReputationPreset(
   guildId: string,
   entries: Array<{ name: string; minRep: number; roleId: string }>,

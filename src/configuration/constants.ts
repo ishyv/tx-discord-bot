@@ -3,5 +3,6 @@ export enum ConfigurableModule {
     Tops = "tops",
     ChannelsCore = "channels.core",
     ChannelsManaged = "channels.managed",
-    Tickets = "tickets"
+    Tickets = "tickets",
+    Offers = "offers",
 }

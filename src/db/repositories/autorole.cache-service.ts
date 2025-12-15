@@ -1,7 +1,13 @@
 /**
- * Author: Repositories team
- * Purpose: Coordinates Mongo repo operations with the in-memory autorole cache so callers get a single place to refresh, mutate, and mirror state.
- * Why exists: Separates cache bookkeeping from raw persistence and business logic, keeping cache updates consistent whenever rules or tallies change.
+ * Coordinador repo ↔ cache para Autorole.
+ *
+ * Responsabilidad:
+ * - Ejecutar operaciones de persistencia (repos) y reflejar cambios en el cache en memoria.
+ * - Proveer una única superficie para “mutar y mantener consistente” (evita olvidarse de actualizar cache).
+ *
+ * @remarks
+ * Este archivo no decide reglas de negocio (eso vive en `autorole.service.ts` y módulos).
+ * Su foco es sincronización de estado: DB → cache y cache → DB cuando corresponde.
  */
 import {
   clearPresence,
@@ -24,6 +30,12 @@ import type {
 } from "@/modules/autorole/types";
 import { AutoRoleRulesRepo, AutoRoleTalliesRepo } from "./autorole.repo";
 
+/**
+ * Carga todas las reglas desde DB y llena el cache agrupado por guild.
+ *
+ * @remarks
+ * Solo cachea reglas habilitadas (disabled se mantienen en DB pero no participan en triggers).
+ */
 export async function loadRulesIntoCache(): Promise<void> {
   const all = await AutoRoleRulesRepo.fetchAll();
   const byGuild = new Map<string, AutoRoleRule[]>();
@@ -40,6 +52,11 @@ export async function loadRulesIntoCache(): Promise<void> {
   }
 }
 
+/**
+ * Refresca reglas de un guild específico y actualiza el cache (solo habilitadas).
+ *
+ * @returns La lista completa desde DB (incluye habilitadas y deshabilitadas).
+ */
 export async function refreshGuildRules(
   guildId: string,
 ): Promise<AutoRoleRule[]> {
@@ -49,6 +66,9 @@ export async function refreshGuildRules(
   return rules;
 }
 
+/**
+ * Crea una regla y luego refresca el cache del guild.
+ */
 export async function createRule(
   input: CreateAutoRoleRuleInput,
 ): Promise<AutoRoleRule> {
@@ -57,6 +77,9 @@ export async function createRule(
   return rule;
 }
 
+/**
+ * Habilita una regla en DB y la inserta/actualiza en el cache.
+ */
 export async function enableRule(
   guildId: string,
   name: string,
@@ -72,6 +95,9 @@ export async function enableRule(
   return rule;
 }
 
+/**
+ * Deshabilita una regla en DB y la remueve del cache.
+ */
 export async function disableRule(
   guildId: string,
   name: string,
@@ -87,6 +113,9 @@ export async function disableRule(
   return rule;
 }
 
+/**
+ * Elimina una regla en DB (y sus grants asociados) y la remueve del cache.
+ */
 export async function deleteRule(
   guildId: string,
   name: string,
@@ -98,6 +127,9 @@ export async function deleteRule(
   return deleted;
 }
 
+/**
+ * Incrementa (DB) y sincroniza (cache) un contador de reacción.
+ */
 export async function incrementReactionTally(
   key: ReactionTallyKey,
   authorId: string,
@@ -107,6 +139,11 @@ export async function incrementReactionTally(
   return snapshot;
 }
 
+/**
+ * Decrementa (DB) y sincroniza (cache) un contador de reacción.
+ *
+ * @returns Snapshot actualizado o `null` si no existía.
+ */
 export async function decrementReactionTally(
   key: ReactionTallyKey,
 ): Promise<ReactionTallySnapshot | null> {
@@ -122,6 +159,9 @@ export async function decrementReactionTally(
   return snapshot;
 }
 
+/**
+ * Lee un contador de reacción desde cache; si no está, cae a DB y lo cachea.
+ */
 export async function readReactionTally(
   key: ReactionTallyKey,
 ): Promise<ReactionTallySnapshot | null> {
@@ -135,6 +175,9 @@ export async function readReactionTally(
   return snapshot;
 }
 
+/**
+ * Elimina un contador de reacción en DB y lo remueve del cache si existía.
+ */
 export async function removeReactionTally(
   key: ReactionTallyKey,
 ): Promise<void> {
@@ -144,13 +187,18 @@ export async function removeReactionTally(
   }
 }
 
+/**
+ * “Drena” estado asociado a un mensaje: presencia + tallies.
+ *
+ * @remarks
+ * Se usa en flujos donde un mensaje deja de existir (borrado/expirado) y hay que limpiar:
+ * - Presencia: solo memoria.
+ * - Tallies: memoria y DB.
+ */
 export async function drainMessageState(
   guildId: string,
   messageId: string,
-): Promise<{
-    presence: ReactionPresenceKey[];
-    tallies: ReactionTallySnapshot[];
-  }> {
+): Promise<{ presence: ReactionPresenceKey[]; tallies: ReactionTallySnapshot[] }> {
   const presence = clearPresenceForMessage(guildId, messageId);
   const tallies = await AutoRoleTalliesRepo.listForMessage(guildId, messageId);
   deleteTalliesForMessage(guildId, messageId);
@@ -160,10 +208,16 @@ export async function drainMessageState(
   return { presence, tallies };
 }
 
+/**
+ * Marca en cache que un usuario ya “pasó” por una presencia (para deduplicar eventos).
+ */
 export function trackPresence(key: ReactionPresenceKey): void {
   markPresence(key);
 }
 
+/**
+ * Desmarca una presencia previamente registrada.
+ */
 export function clearTrackedPresence(key: ReactionPresenceKey): void {
   clearPresence(key);
 }

@@ -13,7 +13,7 @@ import {
   type GuildFeaturesRecord,
 } from "@/db/schemas/guild";
 
-import { withGuild } from "@/db/repositories/with_guild";
+import { updateGuildPaths } from "@/db/repositories/guilds";
 
 const CACHE_TTL_MS = 30_000;
 const featureCache = new Map<
@@ -75,26 +75,32 @@ export async function setFeatureFlag(
   feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  const updated = await withGuild(guildId, (guild) => {
-    guild.features[feature] = enabled;
-    return guild.features;
-  });
-  setCache(guildId, updated);
-  return updated;
+  await updateGuildPaths(guildId, { [`features.${feature}`]: enabled });
+  const current = getCached(guildId) ?? (await getFeatureFlags(guildId));
+  const next = { ...current, [feature]: enabled };
+  setCache(guildId, next);
+  return next;
 }
 
 export async function setAllFeatureFlags(
   guildId: string,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  const updated = await withGuild(guildId, (guild) => {
-    for (const key of GUILD_FEATURES) {
-      guild.features[key] = enabled;
-    }
-    return guild.features;
-  });
-  setCache(guildId, updated);
-  return updated;
+  const updates: Record<string, unknown> = {};
+  for (const key of GUILD_FEATURES) {
+    updates[`features.${key}`] = enabled;
+  }
+
+  await updateGuildPaths(guildId, updates);
+
+  const current = getCached(guildId) ?? (await getFeatureFlags(guildId));
+  const next: GuildFeaturesRecord = { ...current };
+  for (const key of GUILD_FEATURES) {
+    next[key] = enabled;
+  }
+
+  setCache(guildId, next);
+  return next;
 }
 
 type WritableContext = {
