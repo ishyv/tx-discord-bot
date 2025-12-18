@@ -19,7 +19,9 @@ export type ReactionArgs = ResolveEventParams<"messageReactionAdd">;
 export type ReactionAddListener = AsyncListener<ReactionArgs>;
 export type ReactionAddSubscription = HookSubscription;
 
-const reactionAddHook = createEventHook<ReactionArgs>();
+const reactionAddHook = createEventHook<ReactionArgs>({
+  name: "messageReactionAdd",
+});
 
 /**
  * Registra un listener permanente para `messageReactionAdd`.
@@ -51,15 +53,15 @@ export const emitMessageReactionAdd = reactionAddHook.emit;
 /** Elimina todos los listeners actualmente registrados para `messageReactionAdd`. */
 export const clearMessageReactionAddListeners = reactionAddHook.clear;
 
-
 /** Parametros tipados que Seyfert provee al evento `messageReactionRemove`. */
 export type ReactionRemoveListenerArgs =
   ResolveEventParams<"messageReactionRemove">;
 export type ReactionRemoveListener = AsyncListener<ReactionRemoveListenerArgs>;
-export type ReactionRemoveSubscription =
-  HookSubscription;
+export type ReactionRemoveSubscription = HookSubscription;
 
-const reactionRemoveHook = createEventHook<ReactionRemoveListenerArgs>();
+const reactionRemoveHook = createEventHook<ReactionRemoveListenerArgs>({
+  name: "messageReactionRemove",
+});
 
 /**
  * Registra un listener permanente para `messageReactionRemove`.
@@ -89,17 +91,16 @@ export const emitMessageReactionRemove = reactionRemoveHook.emit;
 /** Elimina todos los listeners actualmente registrados para `messageReactionRemove`. */
 export const clearMessageReactionRemoveListeners = reactionRemoveHook.clear;
 
-
 /** Parametros tipados que Seyfert provee al evento `messageReactionRemoveAll`. */
 export type ReactionRemoveAllListenerArgs =
   ResolveEventParams<"messageReactionRemoveAll">;
 export type ReactionRemoveAllListener =
   AsyncListener<ReactionRemoveAllListenerArgs>;
-export type ReactionRemoveAllSubscription =
-  HookSubscription;
+export type ReactionRemoveAllSubscription = HookSubscription;
 
-const reactionRemoveAllHook =
-  createEventHook<ReactionRemoveAllListenerArgs>();
+const reactionRemoveAllHook = createEventHook<ReactionRemoveAllListenerArgs>({
+  name: "messageReactionRemoveAll",
+});
 
 /**
  * Registra un listener permanente para `messageReactionRemoveAll`.
@@ -130,17 +131,17 @@ export const emitMessageReactionRemoveAll = reactionRemoveAllHook.emit;
 export const clearMessageReactionRemoveAllListeners =
   reactionRemoveAllHook.clear;
 
-
 /** Parametros tipados que Seyfert provee al evento `messageReactionRemoveEmoji`. */
 export type ReactionRemoveEmojiListenerArgs =
   ResolveEventParams<"messageReactionRemoveEmoji">;
 export type ReactionRemoveEmojiListener =
   AsyncListener<ReactionRemoveEmojiListenerArgs>;
-export type ReactionRemoveEmojiSubscription =
-  HookSubscription;
+export type ReactionRemoveEmojiSubscription = HookSubscription;
 
 const reactionRemoveEmojiHook =
-  createEventHook<ReactionRemoveEmojiListenerArgs>();
+  createEventHook<ReactionRemoveEmojiListenerArgs>({
+    name: "messageReactionRemoveEmoji",
+  });
 
 /**
  * Registra un listener permanente para `messageReactionRemoveEmoji`.
@@ -170,6 +171,3 @@ export const emitMessageReactionRemoveEmoji = reactionRemoveEmojiHook.emit;
 /** Elimina todos los listeners actualmente registrados para `messageReactionRemoveEmoji`. */
 export const clearMessageReactionRemoveEmojiListeners =
   reactionRemoveEmojiHook.clear;
-
-
-

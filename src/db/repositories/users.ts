@@ -11,19 +11,26 @@
  * operaciones retornan `Result<T>` para que el caller pueda decidir cómo manejar errores
  * (retry, fallback, logs, etc.).
  */
+
+import type { Filter, UpdateFilter } from "mongodb";
 import { getDb } from "@/db/mongo";
-import { UserSchema, type User, type Warn } from "@/db/schemas/user";
+import {
+  type User,
+  UserSchema,
+  type Warn,
+  WarnSchema,
+} from "@/db/schemas/user";
 import type { UserId, WarnId } from "@/db/types";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 
 const usersCollection = async () => (await getDb()).collection<User>("users");
 
 // Base para nuevos usuarios; se parsea para que los defaults del schema sean la fuente de verdad.
-const defaultUser = (id: UserId): User =>
+const defaultUser = (id: UserId, now: Date = new Date()): User =>
   UserSchema.parse({
     _id: id,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
   });
 
 // Normaliza errores desconocidos a instancias de Error para Result helpers.
@@ -49,25 +56,49 @@ const loadUser = async (id: UserId): Promise<User | null> => {
 };
 
 // Replace (con upsert) tras revalidación; asegura timestamps consistentes.
-const saveUserDocument = async (user: User): Promise<User> => {
+const ensureUserDocument = async (
+  id: UserId,
+  now: Date = new Date(),
+): Promise<User> => {
   const col = await usersCollection();
-  const now = new Date();
-  const next = parseUser({
-    ...user,
-    _id: user._id,
-    updatedAt: now,
-    createdAt: user.createdAt ?? now,
-  });
-  await col.replaceOne({ _id: next._id }, next, { upsert: true });
-  return next;
+  const res = await col.findOneAndUpdate(
+    { _id: id },
+    { $setOnInsert: defaultUser(id, now) },
+    { upsert: true, returnDocument: "after" },
+  );
+  if (!res) throw new Error("No se pudo asegurar el usuario.");
+  return parseUser(res);
 };
 
-const mutateUser = async (
+const updateUserDocument = async (
   id: UserId,
-  mutator: (current: User) => User,
+  update: UpdateFilter<User>,
+  now: Date = new Date(),
 ): Promise<User> => {
-  const current = (await loadUser(id)) ?? defaultUser(id);
-  return saveUserDocument(mutator(current));
+  const col = await usersCollection();
+
+  const existingSet = (update.$set as Partial<User> | undefined) ?? {};
+  const existingSetOnInsert =
+    (update.$setOnInsert as Partial<User> | undefined) ?? {};
+
+  const nextUpdate: UpdateFilter<User> = {
+    ...update,
+    $setOnInsert: {
+      ...defaultUser(id, now),
+      ...existingSetOnInsert,
+    },
+    $set: {
+      ...existingSet,
+      updatedAt: now,
+    },
+  };
+
+  const res = await col.findOneAndUpdate({ _id: id }, nextUpdate, {
+    upsert: true,
+    returnDocument: "after",
+  });
+  if (!res) throw new Error("No se pudo actualizar el usuario.");
+  return parseUser(res);
 };
 
 /* ------------------------------------------------------------------------- */
@@ -90,9 +121,47 @@ export async function saveUser(
   id: UserId,
   patch: Partial<User>,
 ): Promise<Result<User>> {
-  return withDb(async () =>
-    mutateUser(id, (current) => parseUser({ ...current, ...patch, _id: id })),
-  );
+  return withDb(async () => {
+    const set: Partial<User> = {};
+
+    if (patch.rep !== undefined) {
+      const parsed = UserSchema.shape.rep.safeParse(patch.rep);
+      if (!parsed.success) throw parsed.error;
+      set.rep = parsed.data;
+    }
+
+    if (patch.warns !== undefined) {
+      const parsed = WarnSchema.array().safeParse(patch.warns);
+      if (!parsed.success) throw parsed.error;
+      set.warns = parsed.data;
+    }
+
+    if (patch.openTickets !== undefined) {
+      const parsed = UserSchema.shape.openTickets.safeParse(patch.openTickets);
+      if (!parsed.success) throw parsed.error;
+      set.openTickets = parsed.data;
+    }
+
+    if (patch.currency !== undefined) {
+      const parsed = UserSchema.shape.currency.safeParse(patch.currency);
+      if (!parsed.success) throw parsed.error;
+      set.currency = parsed.data;
+    }
+
+    if (patch.inventory !== undefined) {
+      const parsed = UserSchema.shape.inventory.safeParse(patch.inventory);
+      if (!parsed.success) throw parsed.error;
+      set.inventory = parsed.data;
+    }
+
+    if (patch.createdAt !== undefined) {
+      const parsed = UserSchema.shape.createdAt.safeParse(patch.createdAt);
+      if (!parsed.success) throw parsed.error;
+      set.createdAt = parsed.data;
+    }
+
+    return updateUserDocument(id, { $set: set });
+  });
 }
 
 /**
@@ -115,13 +184,7 @@ export async function deleteUser(id: UserId): Promise<Result<boolean>> {
  * Útil para flujos donde el resto del código quiere asumir que el usuario existe.
  */
 export async function ensureUser(id: UserId): Promise<Result<User>> {
-  return withDb(async () => {
-    const existing = await loadUser(id);
-    if (existing) return existing;
-    const next = defaultUser(id);
-    await saveUserDocument(next);
-    return next;
-  });
+  return withDb(async () => ensureUserDocument(id));
 }
 
 /* ------------------------------------------------------------------------- */
@@ -129,7 +192,10 @@ export async function ensureUser(id: UserId): Promise<Result<User>> {
 /* ------------------------------------------------------------------------- */
 
 // Forzamos reputación a enteros no-negativos para evitar fracciones o valores inválidos en DB.
-const clampRep = (value: number): number => Math.max(0, Math.trunc(value));
+const clampRep = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.trunc(value));
+};
 
 /**
  * Obtiene la reputación actual del usuario.
@@ -155,11 +221,35 @@ export async function updateUserReputation(
   updater: (current: number) => number,
 ): Promise<Result<number>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => {
-      const next = clampRep(updater(clampRep(u.rep ?? 0)));
-      return { ...u, rep: next };
-    });
-    return clampRep(updated.rep ?? 0);
+    const col = await usersCollection();
+
+    let snapshot = await ensureUserDocument(id);
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const currentRep = clampRep(snapshot.rep ?? 0);
+      const nextRep = clampRep(updater(currentRep));
+      const now = new Date();
+
+      const filter: Filter<User> = {
+        _id: id,
+        $expr: { $eq: [{ $ifNull: ["$rep", 0] }, currentRep] },
+      };
+
+      const res = await col.findOneAndUpdate(
+        filter,
+        { $set: { rep: nextRep, updatedAt: now } },
+        { returnDocument: "after" },
+      );
+
+      if (res) {
+        const parsed = parseUser(res);
+        return clampRep(parsed.rep ?? 0);
+      }
+
+      snapshot = (await loadUser(id)) ?? (await ensureUserDocument(id));
+    }
+
+    return clampRep(snapshot.rep ?? 0);
   });
 }
 
@@ -179,10 +269,10 @@ export const adjustUserReputation = (id: UserId, delta: number) =>
  */
 export async function addWarn(id: UserId, warn: Warn): Promise<Result<Warn[]>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => ({
-      ...u,
-      warns: [...(u.warns ?? []), warn],
-    }));
+    const parsedWarn = WarnSchema.parse(warn);
+    const updated = await updateUserDocument(id, {
+      $push: { warns: parsedWarn },
+    });
     return updated.warns ?? [];
   });
 }
@@ -203,9 +293,15 @@ export async function listWarns(id: UserId): Promise<Result<Warn[]>> {
  * Normalmente `warns` se trata como un array append-only, pero este helper permite
  * reescrituras (ej: migraciones o moderación).
  */
-export async function setWarns(id: UserId, warns: Warn[]): Promise<Result<Warn[]>> {
+export async function setWarns(
+  id: UserId,
+  warns: Warn[],
+): Promise<Result<Warn[]>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => ({ ...u, warns: [...warns] }));
+    const parsedWarns = WarnSchema.array().parse(warns);
+    const updated = await updateUserDocument(id, {
+      $set: { warns: parsedWarns },
+    });
     return updated.warns ?? [];
   });
 }
@@ -213,12 +309,14 @@ export async function setWarns(id: UserId, warns: Warn[]): Promise<Result<Warn[]
 /**
  * Elimina un warn por `warn_id` y devuelve la lista resultante.
  */
-export async function removeWarn(id: UserId, warnId: WarnId): Promise<Result<Warn[]>> {
+export async function removeWarn(
+  id: UserId,
+  warnId: WarnId,
+): Promise<Result<Warn[]>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => ({
-      ...u,
-      warns: (u.warns ?? []).filter((w) => w.warn_id !== warnId),
-    }));
+    const updated = await updateUserDocument(id, {
+      $pull: { warns: { warn_id: warnId } },
+    });
     return updated.warns ?? [];
   });
 }
@@ -251,12 +349,14 @@ export async function listOpenTickets(id: UserId): Promise<Result<string[]>> {
  * @remarks
  * Aplica deduplicación y filtra valores no-string.
  */
-export async function setOpenTickets(id: UserId, tickets: string[]): Promise<Result<string[]>> {
+export async function setOpenTickets(
+  id: UserId,
+  tickets: string[],
+): Promise<Result<string[]>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => ({
-      ...u,
-      openTickets: sanitizeTickets(tickets),
-    }));
+    const updated = await updateUserDocument(id, {
+      $set: { openTickets: sanitizeTickets(tickets) },
+    });
     return updated.openTickets ?? [];
   });
 }
@@ -264,12 +364,13 @@ export async function setOpenTickets(id: UserId, tickets: string[]): Promise<Res
 /**
  * Agrega un id de canal a la lista de tickets abiertos (idempotente).
  */
-export async function addOpenTicket(id: UserId, channelId: string): Promise<Result<string[]>> {
+export async function addOpenTicket(
+  id: UserId,
+  channelId: string,
+): Promise<Result<string[]>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => {
-      const next = new Set(u.openTickets ?? []);
-      next.add(channelId);
-      return { ...u, openTickets: Array.from(next) };
+    const updated = await updateUserDocument(id, {
+      $addToSet: { openTickets: channelId },
     });
     return updated.openTickets ?? [];
   });
@@ -283,11 +384,54 @@ export async function removeOpenTicket(
   channelId: string,
 ): Promise<Result<string[]>> {
   return withDb(async () => {
-    const updated = await mutateUser(id, (u) => ({
-      ...u,
-      openTickets: (u.openTickets ?? []).filter((t) => t !== channelId),
-    }));
+    const updated = await updateUserDocument(id, {
+      $pull: { openTickets: channelId },
+    });
     return updated.openTickets ?? [];
+  });
+}
+
+/**
+ * Intenta agregar un ticket abierto respetando un l¡mite m ximo.
+ *
+ * @remarks
+ * Operaci¢n at¢mica: si el usuario ya alcanz¢ el l¡mite y el canal a agregar no est  presente,
+ * no se escribe nada y retorna `Ok(false)`.
+ */
+export async function addOpenTicketIfBelowLimit(
+  id: UserId,
+  channelId: string,
+  maxPerUser: number,
+): Promise<Result<boolean>> {
+  return withDb(async () => {
+    if (!channelId) throw new Error("CHANNEL_ID_REQUIRED");
+
+    const max = Number.isFinite(maxPerUser) ? Math.trunc(maxPerUser) : 0;
+    if (max <= 0) throw new Error("INVALID_MAX_TICKETS");
+
+    await ensureUserDocument(id);
+
+    const col = await usersCollection();
+    const now = new Date();
+    const filter: Filter<User> = {
+      _id: id,
+      $or: [
+        { openTickets: channelId },
+        {
+          $expr: {
+            $lt: [{ $size: { $ifNull: ["$openTickets", []] } }, max],
+          },
+        },
+      ],
+    };
+
+    const res = await col.findOneAndUpdate(
+      filter,
+      { $addToSet: { openTickets: channelId }, $set: { updatedAt: now } },
+      { returnDocument: "after" },
+    );
+
+    return Boolean(res);
   });
 }
 
@@ -297,11 +441,16 @@ export async function removeOpenTicket(
  * @remarks
  * Útil cuando un canal de ticket se elimina y hay que limpiar referencias colgantes.
  */
-export async function removeOpenTicketByChannel(channelId: string): Promise<Result<void>> {
+export async function removeOpenTicketByChannel(
+  channelId: string,
+): Promise<Result<void>> {
   if (!channelId) return OkResult(undefined);
   return withDb(async () => {
     const col = await usersCollection();
-    await col.updateMany({ openTickets: channelId }, { $pull: { openTickets: channelId } });
+    await col.updateMany(
+      { openTickets: channelId },
+      { $pull: { openTickets: channelId } },
+    );
   });
 }
 

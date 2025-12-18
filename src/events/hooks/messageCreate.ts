@@ -21,9 +21,9 @@ export type MessageCreateListener = (
 
 export const [
   /**
- * Registra un listener permanente para `messageCreate`.
- * Devuelve una funcion que permite removerlo facilmente.
- */
+   * Registra un listener permanente para `messageCreate`.
+   * Devuelve una funcion que permite removerlo facilmente.
+   */
   onMessageCreate,
 
   /** Registra un listener de unica ejecucion para `messageCreate`. */
@@ -37,6 +37,6 @@ export const [
 
   /** Elimina todos los listeners actualmente registrados para `messageCreate`. */
   clearMessageCreateListeners,
-] = createEventHook<MessageCreateListenerArgs>().make();
-
-
+] = createEventHook<MessageCreateListenerArgs>({
+  name: "messageCreate",
+}).make();

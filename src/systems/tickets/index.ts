@@ -11,10 +11,6 @@
  * lightweight while ensuring every ticket entry point behaves consistently.
  */
 
-import { getGuildChannels } from "@/modules/guild-channels";
-import { Colors } from "@/modules/ui/colors";
-import { isFeatureEnabled, Features } from "@/modules/features";
-import { openTicket } from "@/modules/tickets/service";
 import {
   ActionRow,
   Button,
@@ -25,12 +21,12 @@ import {
   TextInput,
   type UsingClient,
 } from "seyfert";
-import {
-  ButtonStyle,
-  MessageFlags,
-  TextInputStyle,
-} from "seyfert/lib/types";
-
+import { ButtonStyle, MessageFlags, TextInputStyle } from "seyfert/lib/types";
+import { updateGuildPaths } from "@/db/repositories/guilds";
+import { Features, isFeatureEnabled } from "@/modules/features";
+import { getGuildChannels } from "@/modules/guild-channels";
+import { openTicket } from "@/modules/tickets/service";
+import { Colors } from "@/modules/ui/colors";
 
 export const TICKET_SELECT_CUSTOM_ID = "tickets:category";
 export const TICKET_MODAL_PREFIX = "tickets:modal";
@@ -80,17 +76,26 @@ export const TICKET_CATEGORIES: readonly TicketCategory[] = [
   },
 ] as const;
 
-function messageHasTicketSelector(message: any): boolean {
-  if (!message || !Array.isArray(message.components)) return false;
-  return message.components.some(
-    (row: any) =>
-      Array.isArray(row?.components) &&
-      row.components.some(
-        (component: any) =>
-          typeof component?.customId === "string" &&
-          component.customId.startsWith(TICKET_SELECT_CUSTOM_ID),
-      ),
-  );
+function messageHasTicketSelector(message: unknown): boolean {
+  if (!message || typeof message !== "object") return false;
+
+  const maybe = message as { components?: unknown };
+  if (!Array.isArray(maybe.components)) return false;
+
+  return maybe.components.some((row) => {
+    if (!row || typeof row !== "object") return false;
+    const rowObj = row as { components?: unknown };
+    if (!Array.isArray(rowObj.components)) return false;
+
+    return rowObj.components.some((component) => {
+      if (!component || typeof component !== "object") return false;
+      const componentObj = component as { customId?: unknown };
+      return (
+        typeof componentObj.customId === "string" &&
+        componentObj.customId.startsWith(TICKET_SELECT_CUSTOM_ID)
+      );
+    });
+  });
 }
 
 /**
@@ -102,13 +107,17 @@ function messageHasTicketSelector(message: any): boolean {
  */
 export async function ensureTicketMessage(client: UsingClient): Promise<void> {
   const guilds = await client.guilds.list();
+  const botId = client.me?.id ?? null;
 
   for (const guildId of guilds.map((g) => g.id)) {
     const ticketsEnabled = await isFeatureEnabled(guildId, Features.Tickets);
     if (!ticketsEnabled) {
-      client.logger?.info?.("[tickets] dashboard deshabilitado; no se mostrara mensaje", {
-        guildId,
-      });
+      client.logger?.info?.(
+        "[tickets] dashboard deshabilitado; no se mostrara mensaje",
+        {
+          guildId,
+        },
+      );
       continue;
     }
 
@@ -122,49 +131,93 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
       continue;
     }
 
-    // Individually delete leftovers
-    const remaining = await client.messages
+    const storedTicketMessageId =
+      typeof channels.ticketMessageId === "string"
+        ? channels.ticketMessageId
+        : null;
+
+    if (storedTicketMessageId && botId) {
+      const existing = await client.messages
+        .fetch(storedTicketMessageId, channelId)
+        .catch(() => null);
+
+      if (
+        existing &&
+        existing.author?.id === botId &&
+        messageHasTicketSelector(existing)
+      ) {
+        continue;
+      }
+    }
+
+    const recent = await client.messages
       .list(channelId, { limit: 100 })
-      .catch(() => {
-        console.error("[tickets] failed to list messages for channel", {
+      .catch((error) => {
+        client.logger?.warn?.("[tickets] failed to list messages for channel", {
+          error,
+          guildId,
           channelId,
         });
         return [];
       });
-    const botId = client.me?.id ?? null;
 
-    if (
-      remaining.length === 1 &&
-      botId &&
-      remaining[0]?.author?.id === botId &&
-      messageHasTicketSelector(remaining[0])
-    ) {
-      // client.logger?.debug?.(
-      //   "[tickets] found existing ticket prompt; skipping rewrite",
-      //   { channelId },
-      // );
+    const prompts = botId
+      ? recent.filter(
+          (m) => m?.author?.id === botId && messageHasTicketSelector(m),
+        )
+      : recent.filter((m) => messageHasTicketSelector(m));
+
+    if (prompts.length > 0) {
+      const keep = prompts[0];
+
+      for (const m of prompts.slice(1)) {
+        try {
+          await client.messages.delete(m.id, channelId);
+        } catch (error) {
+          client.logger?.warn?.(
+            "[tickets] failed to delete stale prompt message",
+            {
+              error,
+              guildId,
+              channelId,
+              messageId: m.id,
+            },
+          );
+        }
+      }
+
+      if (typeof keep.id === "string") {
+        await updateGuildPaths(guildId, {
+          "channels.ticketMessageId": keep.id,
+        }).catch((error) => {
+          client.logger?.warn?.(
+            "[tickets] failed to persist ticket prompt id",
+            {
+              error,
+              guildId,
+              channelId,
+              messageId: keep.id,
+            },
+          );
+        });
+      }
+
       continue;
     }
 
-    for (const m of remaining) {
-      const hasTicketComponent = messageHasTicketSelector(m);
-      if (botId && m.author?.id !== botId && !hasTicketComponent) {
-        continue;
-      }
-
-      try {
-        await client.messages.delete(m.id, channelId);
-      } catch {
-        console.error("[tickets] failed to delete message", {
-          messageId: m.id,
-          channelId,
-        });
-      }
-    }
-
-    // Recreate ticket message
     const payload = buildTicketMessagePayload();
-    await client.messages.write(channelId, payload);
+    const created = await client.messages.write(channelId, payload);
+
+    await updateGuildPaths(guildId, {
+      "channels.ticketMessageId": created.id,
+    }).catch((error) => {
+      client.logger?.warn?.("[tickets] failed to persist ticket prompt id", {
+        error,
+        guildId,
+        channelId,
+        messageId: created.id,
+      });
+    });
   }
 }
 
@@ -210,7 +263,10 @@ export function buildTicketModal(category: TicketCategory): Modal {
           return;
         }
 
-        const ticketsEnabled = await isFeatureEnabled(guildId, Features.Tickets);
+        const ticketsEnabled = await isFeatureEnabled(
+          guildId,
+          Features.Tickets,
+        );
         if (!ticketsEnabled) {
           await ctx.write({
             content:
@@ -222,8 +278,12 @@ export function buildTicketModal(category: TicketCategory): Modal {
 
         const channels = await getGuildChannels(guildId);
         const ticketCategoryId =
-          (channels.core as Record<string, { channelId: string } | null | undefined>)?.ticketCategory
-            ?.channelId ?? null;
+          (
+            channels.core as Record<
+              string,
+              { channelId: string } | null | undefined
+            >
+          )?.ticketCategory?.channelId ?? null;
 
         if (!ticketCategoryId) {
           await ctx.write({
@@ -271,7 +331,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
           .setColor(Colors.info)
           .setTitle(`Ticket - ${category.label}`)
           .setDescription(
-            "Por favor, agrega toda la informacion relevante a tu solicitud mientras esperas..."
+            "Por favor, agrega toda la informacion relevante a tu solicitud mientras esperas...",
           )
           .setFooter({
             text: `Creado por ${ctx.user?.username || "???"}`,
@@ -284,9 +344,9 @@ export function buildTicketModal(category: TicketCategory): Modal {
 
         const row = new ActionRow<Button>().addComponents(
           new Button()
-            .setCustomId(TICKET_CLOSE_BUTTON_ID + ":" + ticketChannelId)
+            .setCustomId(`${TICKET_CLOSE_BUTTON_ID}:${ticketChannelId}`)
             .setLabel("Cerrar Ticket")
-            .setStyle(ButtonStyle.Danger) // Discord no admite botones naranja; Danger es lo más cercano.
+            .setStyle(ButtonStyle.Danger), // Discord no admite botones naranja; Danger es lo más cercano.
         );
 
         await ctx.client.messages.write(ticketChannelId, {

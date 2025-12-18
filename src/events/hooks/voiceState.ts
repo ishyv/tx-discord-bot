@@ -14,7 +14,9 @@ export type VoiceStateUpdateListener = (
   ...args: VoiceStateUpdateArgs
 ) => Promise<void> | void;
 
-const voiceStateHook = createEventHook<VoiceStateUpdateArgs>();
+const voiceStateHook = createEventHook<VoiceStateUpdateArgs>({
+  name: "voiceStateUpdate",
+});
 
 export const onVoiceStateUpdate = voiceStateHook.on;
 export const onceVoiceStateUpdate = voiceStateHook.once;

@@ -3,11 +3,15 @@
  * Purpose: centralize limit checks, channel creation, and state synchronization
  * so commands/listeners do not duplicate DB writes or race on open tickets.
  */
-import { type UsingClient } from "seyfert";
-import { ErrResult, OkResult, type Result } from "@/utils/result";
-import { addOpenTicket, listOpenTickets, removeOpenTicketByChannel } from "@/db/repositories";
-import { setPendingTickets } from "@/db/repositories/guilds";
+import type { UsingClient } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
+import {
+  addOpenTicketIfBelowLimit,
+  removeOpenTicket,
+  removeOpenTicketByChannel,
+} from "@/db/repositories";
+import { updateGuildPaths } from "@/db/repositories/guilds";
+import { ErrResult, OkResult, type Result } from "@/utils/result";
 
 export interface OpenTicketParams {
   guildId: string;
@@ -26,25 +30,45 @@ export async function openTicket(
   maxPerUser = 1,
 ): Promise<Result<OpenTicketResult>> {
   try {
-    const openTickets = await listOpenTickets(params.userId);
-    if (openTickets.isErr()) return ErrResult(openTickets.error);
-    if (openTickets.unwrap().length >= maxPerUser) {
-      return ErrResult(new Error("TICKET_LIMIT_REACHED"));
-    }
-
     const channel = await client.guilds.channels.create(params.guildId, {
       name: params.channelName,
       type: ChannelType.GuildText,
       parent_id: params.parentId,
     });
 
-    // Update state atomically-ish: guild pending + user open tickets.
-    await setPendingTickets(params.guildId, (current) => {
-      const next = new Set(current ?? []);
-      next.add(channel.id);
-      return Array.from(next);
-    });
-    await addOpenTicket(params.userId, channel.id);
+    const added = await addOpenTicketIfBelowLimit(
+      params.userId,
+      channel.id,
+      maxPerUser,
+    );
+    if (added.isErr()) {
+      await client.channels.delete(channel.id).catch(() => null);
+      return ErrResult(added.error);
+    }
+
+    if (!added.unwrap()) {
+      await client.channels.delete(channel.id).catch(() => null);
+      return ErrResult(new Error("TICKET_LIMIT_REACHED"));
+    }
+
+    try {
+      await updateGuildPaths(params.guildId, {
+        pendingTickets: {
+          $setUnion: [
+            {
+              $cond: [{ $isArray: "$pendingTickets" }, "$pendingTickets", []],
+            },
+            [channel.id],
+          ],
+        },
+      });
+    } catch (error) {
+      await removeOpenTicket(params.userId, channel.id).catch(() => null);
+      await client.channels.delete(channel.id).catch(() => null);
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
 
     return OkResult({ channelId: channel.id });
   } catch (error) {
@@ -57,7 +81,16 @@ export async function recordTicketClosure(
   channelId: string,
 ): Promise<Result<void>> {
   try {
-    await setPendingTickets(guildId, (current) => current.filter((id) => id !== channelId));
+    await updateGuildPaths(guildId, {
+      pendingTickets: {
+        $setDifference: [
+          {
+            $cond: [{ $isArray: "$pendingTickets" }, "$pendingTickets", []],
+          },
+          [channelId],
+        ],
+      },
+    });
     await removeOpenTicketByChannel(channelId);
     return OkResult(undefined);
   } catch (error) {

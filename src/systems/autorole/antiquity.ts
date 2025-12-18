@@ -7,8 +7,8 @@
  */
 import type { UsingClient } from "seyfert";
 import { AutoRoleRulesRepo } from "@/db/repositories";
+import { Features, isFeatureEnabled } from "@/modules/features";
 import { syncUserAntiquityRoles } from "./service";
-import { isFeatureEnabled, Features } from "@/modules/features";
 
 const INTERVAL = 21600000; // 6 hours
 
@@ -41,16 +41,21 @@ export async function runAntiquityChecks(
     const guildsToCheck = new Map<string, string[]>(); // guildId -> rule names
 
     if (guildId) {
-      const featureEnabled = await isFeatureEnabled(guildId, Features.Autoroles);
+      const featureEnabled = await isFeatureEnabled(
+        guildId,
+        Features.Autoroles,
+      );
       if (!featureEnabled) return;
 
       const rules = await AutoRoleRulesRepo.fetchByGuild(guildId);
       const active = rules.filter(
-        (rule) =>
-          rule.enabled && rule.trigger.type === "ANTIQUITY_THRESHOLD",
+        (rule) => rule.enabled && rule.trigger.type === "ANTIQUITY_THRESHOLD",
       );
       if (!active.length) return;
-      guildsToCheck.set(guildId, active.map((r) => r.name));
+      guildsToCheck.set(
+        guildId,
+        active.map((r) => r.name),
+      );
     } else {
       const rules = await AutoRoleRulesRepo.fetchAll();
       for (const rule of rules) {
@@ -68,18 +73,41 @@ export async function runAntiquityChecks(
         const featureEnabled = await isFeatureEnabled(gid, Features.Autoroles);
         if (!featureEnabled) continue;
 
-        const members = await client.members.list(gid);
-        for (const member of members) {
-          await syncUserAntiquityRoles(client, gid, member);
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+        let after: string | undefined;
+        let pages = 0;
+        while (pages < 100) {
+          const members = await client.members.list(
+            gid,
+            { limit: 1000, after },
+            true,
+          );
+          if (!members.length) break;
+
+          for (const member of members) {
+            await syncUserAntiquityRoles(client, gid, member);
+          }
+
+          pages++;
+          if (members.length < 1000) break;
+
+          const lastId = members[members.length - 1]?.id;
+          if (!lastId || lastId === after) break;
+          after = lastId;
+
+          await sleep(250);
         }
       } catch (error) {
-        client.logger?.error?.(`[autorole] failed to check antiquity for guild ${gid}`, {
-          error,
-        });
+        client.logger?.error?.(
+          `[autorole] failed to check antiquity for guild ${gid}`,
+          {
+            error,
+          },
+        );
       }
     }
   } catch (error) {
     client.logger?.error?.("[autorole] antiquity scheduler failed", { error });
   }
 }
-

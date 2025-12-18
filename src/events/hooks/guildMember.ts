@@ -11,7 +11,9 @@ export type GuildMemberAddListener = (
   ...args: GuildMemberAddArgs
 ) => Promise<void> | void;
 
-const memberAddHook = createEventHook<GuildMemberAddArgs>();
+const memberAddHook = createEventHook<GuildMemberAddArgs>({
+  name: "guildMemberAdd",
+});
 
 export const onGuildMemberAdd = memberAddHook.on;
 export const onceGuildMemberAdd = memberAddHook.once;
@@ -24,7 +26,9 @@ export type GuildMemberRemoveListener = (
   ...args: GuildMemberRemoveArgs
 ) => Promise<void> | void;
 
-const memberRemoveHook = createEventHook<GuildMemberRemoveArgs>();
+const memberRemoveHook = createEventHook<GuildMemberRemoveArgs>({
+  name: "guildMemberRemove",
+});
 
 export const onGuildMemberRemove = memberRemoveHook.on;
 export const onceGuildMemberRemove = memberRemoveHook.once;
@@ -37,7 +41,9 @@ export type GuildMemberUpdateListener = (
   ...args: GuildMemberUpdateArgs
 ) => Promise<void> | void;
 
-const memberUpdateHook = createEventHook<GuildMemberUpdateArgs>();
+const memberUpdateHook = createEventHook<GuildMemberUpdateArgs>({
+  name: "guildMemberUpdate",
+});
 
 export const onGuildMemberUpdate = memberUpdateHook.on;
 export const onceGuildMemberUpdate = memberUpdateHook.once;

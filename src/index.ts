@@ -5,21 +5,20 @@
  *
  * Alcance: orquesta el bootstrap y la subida de comandos; no contiene reglas de negocio ni lógica de cada feature individual.
  */
-import "@/modules/ui/seyfert-augmentations"; // ! Augmentations must be imported first to take effect
-
 import "module-alias/register";
 import "dotenv/config";
 
+import "@/modules/ui/seyfert-augmentations"; // ! Augmentations must be imported after module-alias and before Seyfert usage
+
 import type { ParseClient, ParseMiddlewares } from "seyfert";
 import { Client, extendContext } from "seyfert";
+import { getDb } from "@/db/mongo";
 import { CooldownManager } from "@/modules/cooldown";
 import { GuildLogger } from "@/utils/guildLogger";
-import { getDb } from "@/db/mongo";
 import { middlewares } from "./middlewares";
 
 import "./events/handlers"; // ! Cargar manejadores de eventos base (messageCreate, reactions, etc.) se encarga de emitir eventos a los listeners
 import "./events/listeners"; // ! Cargar listeners de eventos, se encarga de que los listeners se registren en sus respectivos eventos
-
 
 // Scopes to debug
 // import { startDebugRepl } from "./modules/debug/debugRepl";
@@ -35,11 +34,12 @@ import "./events/listeners"; // ! Cargar listeners de eventos, se encarga de que
 //   },
 // });
 
-
-
 const context = extendContext((interaction) => ({
   getGuildLogger: async (): Promise<GuildLogger> => {
-    return await new GuildLogger().init(interaction.client, interaction.guildId);
+    return await new GuildLogger().init(
+      interaction.client,
+      interaction.guildId,
+    );
   },
 }));
 
@@ -70,9 +70,9 @@ declare module "seyfert" {
     cooldown: CooldownManager;
   }
   interface Client<Ready extends boolean = boolean> {
-    cooldown: CooldownManager;
+    cooldown: Ready extends boolean ? CooldownManager : CooldownManager;
   }
-  interface ExtendContext extends ReturnType<typeof context> { }
+  interface ExtendContext extends ReturnType<typeof context> {}
   interface RegisteredMiddlewares
-    extends ParseMiddlewares<typeof middlewares> { }
+    extends ParseMiddlewares<typeof middlewares> {}
 }

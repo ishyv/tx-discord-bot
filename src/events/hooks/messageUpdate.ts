@@ -14,7 +14,9 @@ export type MessageUpdateListener = (
   ...args: MessageUpdateArgs
 ) => Promise<void> | void;
 
-const updateHook = createEventHook<MessageUpdateArgs>();
+const updateHook = createEventHook<MessageUpdateArgs>({
+  name: "messageUpdate",
+});
 
 export const onMessageUpdate = updateHook.on;
 export const onceMessageUpdate = updateHook.once;

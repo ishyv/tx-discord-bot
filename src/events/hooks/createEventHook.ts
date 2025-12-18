@@ -60,7 +60,9 @@ export interface EventHook<TArgs extends readonly unknown[]> {
  * ```ts
  * const [ onMessageCreate, offMessageCreate, emitMessageCreate ] = createEventHook<MessageCreateListenerArgs>().make();
  */
-export const createEventHook = <TArgs extends readonly unknown[]>(): EventHook<TArgs> => {
+export const createEventHook = <TArgs extends readonly unknown[]>(
+  options: { name?: string } = {},
+): EventHook<TArgs> => {
   const listeners = new Set<HookListener<TArgs>>();
 
   const off = (listener: HookListener<TArgs>): void => {
@@ -73,13 +75,12 @@ export const createEventHook = <TArgs extends readonly unknown[]>(): EventHook<T
   };
 
   const once = (listener: HookListener<TArgs>): (() => void) => {
-    let wrapped: HookListener<TArgs>;
-    wrapped = (async (
+    const wrapped: HookListener<TArgs> = async (
       ...args: TArgs
     ): Promise<void> => {
       off(wrapped);
       await listener(...args);
-    }) as HookListener<TArgs>;
+    };
 
     listeners.add(wrapped);
     return () => off(wrapped);
@@ -91,8 +92,9 @@ export const createEventHook = <TArgs extends readonly unknown[]>(): EventHook<T
         await listener(...args);
       } catch (error) {
         const name = (listener as { name?: string })?.name;
+        const prefix = options.name ? `[events:${options.name}]` : "[events]";
         console.warn(
-          `[events] Listener${name ? ` (${name})` : ""} failed:`,
+          `${prefix} Listener${name ? ` (${name})` : ""} failed:`,
           error,
         );
       }
@@ -102,7 +104,6 @@ export const createEventHook = <TArgs extends readonly unknown[]>(): EventHook<T
   const clear = (): void => {
     listeners.clear();
   };
-
 
   const make = (): EventHookTuple<TArgs> => [on, once, off, emit, clear];
 

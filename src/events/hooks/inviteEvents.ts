@@ -21,7 +21,9 @@ export type InviteCreateListener = (
   ...args: InviteCreateArgs
 ) => Promise<void> | void;
 
-const inviteCreateHook = createEventHook<InviteCreateArgs>();
+const inviteCreateHook = createEventHook<InviteCreateArgs>({
+  name: "inviteCreate",
+});
 
 export const onInviteCreate = inviteCreateHook.on;
 export const onceInviteCreate = inviteCreateHook.once;
@@ -34,7 +36,9 @@ export type InviteDeleteListener = (
   ...args: InviteDeleteArgs
 ) => Promise<void> | void;
 
-const inviteDeleteHook = createEventHook<InviteDeleteArgs>();
+const inviteDeleteHook = createEventHook<InviteDeleteArgs>({
+  name: "inviteDelete",
+});
 
 export const onInviteDelete = inviteDeleteHook.on;
 export const onceInviteDelete = inviteDeleteHook.once;

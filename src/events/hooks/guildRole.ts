@@ -14,7 +14,9 @@ export type GuildRoleCreateListener = (
   ...args: GuildRoleCreateArgs
 ) => Promise<void> | void;
 
-const roleCreateHook = createEventHook<GuildRoleCreateArgs>();
+const roleCreateHook = createEventHook<GuildRoleCreateArgs>({
+  name: "guildRoleCreate",
+});
 
 export const onGuildRoleCreate = roleCreateHook.on;
 export const onceGuildRoleCreate = roleCreateHook.once;
@@ -27,7 +29,9 @@ export type GuildRoleUpdateListener = (
   ...args: GuildRoleUpdateArgs
 ) => Promise<void> | void;
 
-const roleUpdateHook = createEventHook<GuildRoleUpdateArgs>();
+const roleUpdateHook = createEventHook<GuildRoleUpdateArgs>({
+  name: "guildRoleUpdate",
+});
 
 export const onGuildRoleUpdate = roleUpdateHook.on;
 export const onceGuildRoleUpdate = roleUpdateHook.once;
@@ -40,11 +44,12 @@ export type GuildRoleDeleteListener = (
   ...args: GuildRoleDeleteArgs
 ) => Promise<void> | void;
 
-const roleDeleteHook = createEventHook<GuildRoleDeleteArgs>();
+const roleDeleteHook = createEventHook<GuildRoleDeleteArgs>({
+  name: "guildRoleDelete",
+});
 
 export const onGuildRoleDelete = roleDeleteHook.on;
 export const onceGuildRoleDelete = roleDeleteHook.once;
 export const offGuildRoleDelete = roleDeleteHook.off;
 export const emitGuildRoleDelete = roleDeleteHook.emit;
 export const clearGuildRoleDeleteListeners = roleDeleteHook.clear;
-

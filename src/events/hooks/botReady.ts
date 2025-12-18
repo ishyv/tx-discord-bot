@@ -21,9 +21,9 @@ export type BotReadyListener = (
 
 export const [
   /**
- * Registra un listener permanente para `botReady`.
- * Devuelve una funcion que permite removerlo facilmente.
- */
+   * Registra un listener permanente para `botReady`.
+   * Devuelve una funcion que permite removerlo facilmente.
+   */
   onBotReady,
 
   /** Registra un listener de unica ejecucion para `botReady`. */
@@ -37,6 +37,4 @@ export const [
 
   /** Elimina todos los listeners actualmente registrados para `botReady`. */
   clearBotReadyListeners,
-] = createEventHook<BotReadyListenerArgs>().make();
-
-
+] = createEventHook<BotReadyListenerArgs>({ name: "botReady" }).make();

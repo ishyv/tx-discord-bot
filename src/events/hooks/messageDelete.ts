@@ -14,7 +14,9 @@ export type MessageDeleteListener = (
   ...args: MessageDeleteArgs
 ) => Promise<void> | void;
 
-const deleteHook = createEventHook<MessageDeleteArgs>();
+const deleteHook = createEventHook<MessageDeleteArgs>({
+  name: "messageDelete",
+});
 
 export const onMessageDelete = deleteHook.on;
 export const onceMessageDelete = deleteHook.once;
@@ -27,7 +29,9 @@ export type MessageDeleteBulkListener = (
   ...args: MessageDeleteBulkArgs
 ) => Promise<void> | void;
 
-const bulkHook = createEventHook<MessageDeleteBulkArgs>();
+const bulkHook = createEventHook<MessageDeleteBulkArgs>({
+  name: "messageDeleteBulk",
+});
 
 export const onMessageDeleteBulk = bulkHook.on;
 export const onceMessageDeleteBulk = bulkHook.once;

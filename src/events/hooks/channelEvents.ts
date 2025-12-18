@@ -23,14 +23,20 @@ export type ChannelUpdateListener = (
   ...args: ChannelUpdateArgs
 ) => Promise<void> | void;
 
-const createHook = createEventHook<ChannelCreateArgs>();
+const createHook = createEventHook<ChannelCreateArgs>({
+  name: "channelCreate",
+});
 export const onChannelCreate = createHook.on;
 export const emitChannelCreate = createHook.emit;
 
-const deleteHook = createEventHook<ChannelDeleteArgs>();
+const deleteHook = createEventHook<ChannelDeleteArgs>({
+  name: "channelDelete",
+});
 export const onChannelDelete = deleteHook.on;
 export const emitChannelDelete = deleteHook.emit;
 
-const updateHook = createEventHook<ChannelUpdateArgs>();
+const updateHook = createEventHook<ChannelUpdateArgs>({
+  name: "channelUpdate",
+});
 export const onChannelUpdate = updateHook.on;
 export const emitChannelUpdate = updateHook.emit;

@@ -7,8 +7,8 @@
  */
 import type { Message, UsingClient } from "seyfert";
 import { scamFilterList, spamFilterList } from "@/constants/automod";
-import { getGuildChannels } from "@/modules/guild-channels";
 import type { CoreChannelRecord } from "@/db/schemas/guild";
+import { getGuildChannels } from "@/modules/guild-channels";
 import { recognizeText } from "@/services/ocr";
 import { Cache } from "@/utils/cache";
 import { phash } from "@/utils/phash";
@@ -20,6 +20,8 @@ type AttachmentLike = {
 };
 const FIVE_MINUTES = 5 * 60 * 1000;
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+const ATTACHMENT_FETCH_TIMEOUT_MS = 15_000;
+const MAX_AUTOMOD_IMAGE_BYTES = 8 * 1024 * 1024;
 /**
  * Núcleo del AutoMod del servidor: revisa texto rápido y luego analiza adjuntos según haga falta.
  */
@@ -153,11 +155,65 @@ export class AutoModSystem {
   }
 
   private async fetchAttachmentBuffer(url: string): Promise<ArrayBuffer> {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error("No se pudo descargar la imagen");
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      ATTACHMENT_FETCH_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) {
+        throw new Error("No se pudo descargar la imagen");
+      }
+
+      const contentLength = response.headers.get("content-length");
+      const reportedSize = contentLength ? Number(contentLength) : NaN;
+      if (
+        Number.isFinite(reportedSize) &&
+        reportedSize > MAX_AUTOMOD_IMAGE_BYTES
+      ) {
+        throw new Error("Imagen demasiado grande para analizar");
+      }
+
+      const body = response.body;
+      if (!body) {
+        const buffer = await response.arrayBuffer();
+        if (buffer.byteLength > MAX_AUTOMOD_IMAGE_BYTES) {
+          throw new Error("Imagen demasiado grande para analizar");
+        }
+        return buffer;
+      }
+
+      const reader = body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+
+        total += value.byteLength;
+        if (total > MAX_AUTOMOD_IMAGE_BYTES) {
+          controller.abort();
+          throw new Error("Imagen demasiado grande para analizar");
+        }
+
+        chunks.push(value);
+      }
+
+      const merged = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) {
+        merged.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+
+      return merged.buffer;
+    } finally {
+      clearTimeout(timeout);
     }
-    return await response.arrayBuffer();
   }
   /**
    * Notifica al staff sobre una imagen sospechosa.
@@ -181,7 +237,9 @@ export class AutoModSystem {
       return;
     }
     const channels = await getGuildChannels(guildId);
-    const staffChannel = (channels.core as Record<string, CoreChannelRecord | null>).staff;
+    const staffChannel = (
+      channels.core as Record<string, CoreChannelRecord | null>
+    ).staff;
     if (!staffChannel) {
       console.error(
         "AutoModSystem: no se pudo obtener canal de staff de la guild al tratar de notificar al staff.",

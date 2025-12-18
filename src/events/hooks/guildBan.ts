@@ -11,7 +11,9 @@ export type GuildBanAddListener = (
   ...args: GuildBanAddArgs
 ) => Promise<void> | void;
 
-const guildBanAddHook = createEventHook<GuildBanAddArgs>();
+const guildBanAddHook = createEventHook<GuildBanAddArgs>({
+  name: "guildBanAdd",
+});
 
 export const onGuildBanAdd = guildBanAddHook.on;
 export const onceGuildBanAdd = guildBanAddHook.once;
@@ -24,7 +26,9 @@ export type GuildBanRemoveListener = (
   ...args: GuildBanRemoveArgs
 ) => Promise<void> | void;
 
-const guildBanRemoveHook = createEventHook<GuildBanRemoveArgs>();
+const guildBanRemoveHook = createEventHook<GuildBanRemoveArgs>({
+  name: "guildBanRemove",
+});
 
 export const onGuildBanRemove = guildBanRemoveHook.on;
 export const onceGuildBanRemove = guildBanRemoveHook.once;
