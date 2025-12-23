@@ -1,31 +1,28 @@
-# Operaciones de comunidad
+# Operaciones de Comunidad
 
-Tres flujos clave orientados a la interacción con miembros: tickets de soporte, ofertas y reportes periódicos de actividad (TOPs). Esta guía explica su intención, dependencias y puntos de extensión.
+Guía sobre los flujos de interacción con los miembros: tickets de soporte, ofertas de la comunidad y estadísticas de actividad (TOPs).
 
-## Tickets
+## Sistema de Tickets
 
-- Lógica central en `src/systems/tickets/index.ts`; se activa desde el listener `src/events/hooks/botReady.ts` a través de `ensureTicketMessage` y por el comando de configuración `src/commands/moderation/tickets/config.command.ts`. Requiere que `Features.Tickets` esté habilitada.
-- El sistema mantiene un mensaje fijo con selector de categorías en el canal `channels.core.tickets`. Si el bot no encuentra el mensaje o hay residuos, los limpia y recrea para asegurar una única puerta de entrada.
-- Al crear un ticket: valida que el usuario no tenga más de `MAX_TICKETS_PER_USER`, crea el canal en la categoría configurada (`channels.core.ticketCategory`), registra el canal en `guild.pendingTickets` y en `users.openTickets`. Los embeds iniciales incluyen la razón y un botón de cierre.
-- Racional: reducir fricción para los usuarios (categorías predefinidas) y para el staff (listado centralizado de tickets abiertos en DB), evitando que los canales de tickets queden huérfanos si se borra el mensaje original.
+- **Flujo**: Permite a los usuarios abrir canales de comunicación privada con el staff mediante un panel interactivo.
+- **Categorización**: Soporta múltiples categorías (soporte técnico, reportes, dudas) que dirigen el ticket al personal adecuado.
+- **Gestión Atómica**: El sistema asegura que cada usuario tenga un número limitado de tickets activos y que todos los canales queden registrados en la base de datos para evitar "canales huérfanos".
+- **Limpieza**: Incluye lógica para cerrar y archivar tickets de forma automática o manual, manteniendo el servidor organizado.
 
-## Ofertas (review workflow)
+## Gestión de Ofertas
 
-- Servicio de dominio en `src/modules/offers/service.ts` con tipos en `src/modules/offers/types.ts` y UI en `modules/offers/embeds.ts`. Los comandos viven en `src/commands/offers/*.ts`.
-- Flujo: el autor envía la oferta -> se crea un mensaje en el canal de revisión configurado (`channels.core.offersReview`) -> moderadores aprueban, piden cambios o rechazan. Las aprobadas se publican en `channels.core.approvedOffers`; todas las transiciones se loguean con `logModerationAction`.
-- La persistencia está en `src/db/schemas/offers.ts` y repositorio `src/db/repositories/offers.ts`, que impone unicidad de oferta activa por autor y estados permitidos por transición. El servicio usa un `Result` explícito para forzar a los comandos a manejar errores de negocio.
-- Racional: separar la UI de los estados del dominio, mantener trazabilidad (último moderador, nota de cambio/rechazo) y evitar ofertas duplicadas de un mismo usuario mientras otra está activa.
+- **Flujo de Revisión**: Las ofertas enviadas por los usuarios pasan por un proceso de curación. Los moderadores pueden aprobar, rechazar o solicitar cambios antes de que la oferta sea pública.
+- **Estado del Dominio**: Cada oferta mantiene un estado (pendiente, aprobada, rechazada) y un historial de decisiones (quién la revisó y por qué).
+- **Publicación Automática**: Una vez aprobada, el sistema se encarga de publicar la oferta en los canales correspondientes con un formato profesional y consistente.
 
-## Autoroles
+## Autoroles Automáticos
 
-- Dominio definido en `src/modules/autorole` (tipos, validadores, caché) con persistencia en `src/db/repositories/autorole.ts`. Los comandos de gestión están en `src/commands/moderation/autorole/*.ts` y dependen de `Features.Autoroles`.
-- Tipos de disparadores soportados incluyen umbrales de reputación y antigüedad, reacciones y otros eventos. El servicio `src/systems/autorole/service.ts` sincroniza roles cuando cambia la reputación o al evaluar la antigüedad de un miembro. `scheduler.ts` gestiona expiraciones de grants temporales para roles con duración.
-- Las reglas se cachean por guild para evitar lecturas constantes a DB y se guardan razones de grant/revoke (`autorole:<rule>:...`) en cada acción para auditar o revertir rápidamente.
-- Racional: automatizar asignaciones repetitivas sin depender de bots externos, permitir presets/revokes consistentes y mantener una fuente única de verdad de cuándo y por qué se asignó un rol.
+- **Disparadores**: Asignación de roles basada en eventos automáticos como la antigüedad en el servidor, el nivel de reputación o la interacción con mensajes específicos (reacciones).
+- **Temporalidad**: Soporta roles temporales que se retiran automáticamente tras un periodo definido, gestionado por un programador interno (scheduler).
+- **Auditoría**: Cada asignación o retiro de rol queda registrado con su motivo, facilitando la supervisión del equipo de staff.
 
-## TOPs (estadísticas periódicas)
+## Estadísticas y TOPs
 
-- Sistema en `src/systems/tops/index.ts` con scheduler iniciado en `src/events/listeners/tops.ts`. Se apoya en el repo `src/db/repositories/tops.ts` para leer/escribir la ventana activa y el historial de reportes.
-- Métricas recolectadas: conteo de emojis y actividad por canal a partir de `messageCreate`, y delta de reputación via `recordReputationChange` cuando otros módulos le reportan cambios. Solo procesa si hay una ventana activa con canal configurado.
-- Cada intervalo (`intervalMs` configurable) el scheduler envía un embed al canal configurado con el top de emojis, canales y reputación, luego persiste un snapshot y reinicia contadores. Usa `findDueWindows` para ejecutar solo cuando corresponde y evitar trabajo en vano.
-- Racional: ofrecer transparencia sobre actividad sin depender de comandos manuales, y mantener un historial inmutable de periodos para análisis posterior sin sobrecargar la base con contadores infinitos.
+- **Recolección de Datos**: Monitorea de forma pasiva la actividad (mensajes, emojis, reputación) para generar informes periódicos.
+- **Ventanas de Tiempo**: Los datos se agrupan en periodos configurables (ej. semanalmente). Al finalizar el periodo, se genera un resumen visual y se reinician los contadores.
+- **Transparencia**: Fomenta la participación comunitaria al destacar a los miembros y contenidos más activos de forma automatizada.

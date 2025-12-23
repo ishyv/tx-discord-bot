@@ -1,27 +1,31 @@
-# Moderación y reputación
+# Moderación y Reputación
 
-Resumen de los sistemas que protegen el servidor y registran acciones disciplinarias. Se centra en las decisiones de diseño y en dónde se encuentran las piezas clave.
+Marco de diseño para los sistemas de protección del servidor y gestión disciplinaria.
 
 ## AutoMod
 
-- Lógica central en `src/systems/automod/index.ts`, activada por el listener `src/events/listeners/autoModSystem.ts` cuando la feature `Features.Automod` está encendida.
-- Pipeline: primero aplica filtros rápidos sobre el texto (`spamFilterList` y `scamFilterList` en `src/constants/automod.ts`), luego decide si vale la pena inspeccionar adjuntos. Solo analiza imágenes y usa OCR (`src/services/ocr`) más `phash` para detectar coincidencias en caché y evitar trabajo repetido.
-- Cache efímera persistida en disco (`Cache` de `src/utils/cache.ts`) para recordar imágenes marcadas y minimizar falsos positivos recurrentes. Las alertas se envían al canal de staff configurado en `channels.core` mediante `getGuildChannels`.
-- Racional: actuar en tiempo real sin bloquear el loop principal, aprovechar OCR para estafas basadas en imágenes y mantener trazabilidad hacia el equipo de staff en lugar de borrar silenciosamente.
+- **Filosofía**: Actuar en tiempo real sobre contenido malicioso sin bloquear la ejecución principal del bot.
+- **Detección**: Utiliza un pipeline que combina filtros rápidos de texto para spam y estafas comunes, junto con análisis de imágenes mediante OCR para detectar estafas visuales.
+- **Optimización**: Emplea técnicas de hash para recordar imágenes ya procesadas y minimizar el uso de recursos costosos.
+- **Staff-Centric**: En lugar de borrar contenido silenciosamente de forma agresiva, el sistema prioriza alertar al equipo de moderación mediante canales de log dedicados, permitiendo una intervención humana informada.
 
-## Warns y reputación
+## Advertencias (Warns)
 
-- Warns se almacenan en `users.warns` (schema en `src/db/schemas/user.ts`) y se gestionan a través del repositorio `src/db/repositories/users.ts` para deduplicar IDs y normalizar el formato.
-- Comandos `/moderation warn *` (`src/commands/moderation/warn/*.ts`) generan IDs legibles con `utils/warnId.ts`, registran al moderador que aplicó la acción y envían logs mediante `logModerationAction`.
-- El flujo de reputación tiene dos frentes: comandos manuales (`src/commands/moderation/rep/*.ts`) y detección automática (`src/events/listeners/reputationDetection.ts`). Este último escucha mensajes, busca keywords configuradas en `guild.reputation.keywords` y envía solicitudes al canal `repRequests` si la feature `Features.ReputationDetection` está activa.
-- Racional: separar la captura de eventos (mensajes) de la aplicación de reputación efectiva, de modo que el staff confirme o revise solicitudes en lugar de otorgar puntos automáticamente.
+- **Gestión**: Las sanciones se registran de forma centralizada vinculadas al usuario, permitiendo un seguimiento histórico multiplataforma (si aplica).
+- **Trazabilidad**: Cada advertencia incluye metadatos sobre el moderador, el motivo y un identificador único para su gestión o apelación.
 
-## Límites y overrides de moderación
+## Sistema de Reputación
 
-- El middleware `moderationLimit` (`src/middlewares/moderationLimit.ts`) se ejecuta antes de cualquier comando y consulta el módulo `src/modules/guild-roles`. Los overrides permiten negar/permitir acciones específicas por rol; los límites ponen cuotas por ventana de tiempo.
-- El diseño obliga a que incluso usuarios con permisos de Discord respeten la política del bot y deja trazabilidad explícita cuando un comando se bloquea (embeds de rechazo explican la fuente del bloqueo).
+- **Detección Automática**: El bot puede identificar comportamientos merecedores de reputación (basado en palabras clave o ayuda detectada) y emitir solicitudes de revisión.
+- **Validación Humana**: Para evitar el abuso y el spam, las solicitudes automáticas deben ser confirmadas por el staff.
+- **Comandos Manuales**: Permite la gestión directa de puntos de reputación por parte de los usuarios y moderadores autorizados.
 
-## Logs y auditoría
+## Límites y Overrides
 
-- `src/utils/moderationLogger.ts` centraliza el formato de embeds y destinos. Se invoca desde los listeners `src/events/listeners/moderationLogs.ts`, `voiceLogs.ts`, `inviteLogs.ts` y por servicios como `offers` al tomar decisiones.
-- Los listeners de logs se enganchan a los hooks de mensajes/canales (`src/events/hooks/*`) para registrar eliminaciones, ediciones y cambios estructurales. Se eligió este enfoque para no mezclar auditoría con la lógica de cada comando y para que la configuración del canal de logs sea el único punto de personalización.
+- **Políticas de Rol**: El sistema permite definir permisos específicos por rol que sobresalen a los permisos nativos de Discord.
+- **Control de Abuso**: Implementa ventanas de tiempo y cuotas máximas de acciones para prevenir que incluso usuarios con permisos realicen acciones masivas dañinas o accidentales.
+
+## Auditoría y Logs
+
+- **Centralización**: Todas las acciones de moderación, cambios en mensajes y eventos de voz se canalizan a través de un sistema de logging unificado.
+- **Desacoplamiento**: Los logs se disparan de forma independiente a la lógica del comando, asegurando que siempre quede un registro sin importar cómo se ejecutó la acción.

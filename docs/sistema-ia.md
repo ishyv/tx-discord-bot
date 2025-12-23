@@ -1,101 +1,51 @@
 # Sistema de IA
 
-Este documento describe como funciona el sistema de IA del bot: configuracion por guild, proveedores, modelos, limites y puntos de integracion.
+Este documento describe cómo funciona el sistema de inteligencia artificial del bot: configuración, proveedores, modelos y límites.
 
 ## Objetivos
 
-- Unificar multiples proveedores (Gemini hoy, OpenAI tambien) bajo una interfaz comun.
-- Mantener configuracion por guild (provider + model) usando el sistema existente (`configStore`).
-- Evitar que listeners/comandos dependan de detalles del SDK de cada proveedor.
-- Tener trazabilidad: meta normalizada (finishReason, usage, rawText) y logs utiles.
+- **Abstracción**: Unificar múltiples proveedores (Gemini, OpenAI, etc.) bajo una interfaz común.
+- **Configuración por Servidor**: Permitir que cada guild elija su proveedor y modelo preferido.
+- **Trazabilidad**: Mantener logs útiles y metadatos normalizados de cada interacción.
 
-## Arquitectura (alto nivel)
+## Arquitectura del Servicio
 
-El "entrypoint" para consumidores es `src/ai/index.ts`.
+El núcleo de la IA reside en `src/services/ai/`.
 
-- `src/ai/index.ts`: orquestador. Lee config por guild, resuelve provider/model, mantiene memoria efimera por usuario (`userMemory`) y expone helpers de alto nivel:
-  - `processMessage(...)`: conversacion tipo "chat" con memoria por usuario.
-  - `generateForGuild(...)`: generacion por prompt/mensajes con provider/model de la guild.
-  - `listProviders()`, `listModelsForProvider()`: usados por comandos/autocomplete.
-- `src/ai/gemini.ts`: adapter Gemini (SDK `@google/genai`).
-- `src/ai/openai.ts`: adapter OpenAI (SDK `openai`).
-- `src/ai/constants.ts`: IDs de providers, modelos soportados y defaults.
-- `src/ai/types.ts`: interfaz `AIProvider` + tipos compartidos.
-- `src/ai/response.ts`: normalizacion de respuestas (texto final, rawText, finishReason, logs).
+- **Orquestador (`index.ts`)**: Es el punto de entrada principal. Resuelve la configuración del servidor, gestiona la memoria de la conversación y expone métodos de alto nivel para procesar mensajes o generar contenido.
+- **Adaptadores**: Cada proveedor tiene su propio adaptador (ej. `gemini.ts`, `openai.ts`) que implementa la interfaz común para traducir las peticiones al SDK correspondiente.
+- **Gestión de Respuestas (`response.ts`)**: Normaliza las respuestas de los distintos modelos, gestionando el truncado y los motivos de finalización.
+- **Límites y Seguimiento**: Controla la frecuencia de uso (`rateLimiter.ts`) y realiza el seguimiento de mensajes (`messageTracker.ts`) para mantener el contexto.
 
-## Configuracion por guild
+## Configuración
 
-La configuracion se guarda dentro del documento `Guild` en la ruta `ai` (via `ConfigurableModule.AI`):
+La configuración se gestiona mediante el sistema centralizado de configuración del bot:
 
-- `provider`: string (ej: `gemini`, `openai`)
-- `model`: string (ej: `gemini-2.5-flash`, `gpt-4o-mini`)
+- **Proveedor**: El motor de IA a utilizar (ej: `gemini`, `openai`).
+- **Modelo**: El modelo específico del proveedor (ej: `gemini-1.5-flash`, `gpt-4o`).
 
-Fuentes principales:
+Los comandos de configuración permiten cambiar estos valores en tiempo real, validando que el modelo sea compatible con el proveedor seleccionado.
 
-- Schema/definicion de config: `src/commands/ai/config.ts`
-- Mapeo hacia Mongo (paths): `src/configuration/provider.ts` (`ConfigurableModule.AI -> ai`)
-- Normalizacion/defaults en DB: `src/db/schemas/guild.ts` y `src/db/repositories/guilds.ts`
+## Flujo de Continuación
 
-### Comandos de configuracion
+Cuando una respuesta de la IA se trunca por límites de tokens:
 
-Los comandos viven en `src/commands/ai/*`:
+1. El sistema añade un aviso visual y un **botón de continuación**.
+2. Al presionar el botón, se envía una nueva petición que incluye el contexto previo necesario para continuar la respuesta sin duplicar información.
+3. El bot también puede continuar la conversación si un usuario responde directamente (reply) a un mensaje generado por la IA.
 
-- `/ai set-provider <provider>`: setea provider y ajusta el modelo al default de ese provider.
-- `/ai set-model <model>`: setea el modelo para el provider actual.
+## Integraciones
 
-Ambos usan `listProviders()` / `listModelsForProvider()` para choices/autocomplete.
+La IA se integra de forma transparente en varios puntos del bot:
 
-## Variables de entorno
+- **Menciones**: Respuestas naturales a menciones directas.
+- **Auto-respuesta**: Soporte automático en canales específicos (ej. foros).
+- **Comandos de diversión**: Generación de chistes, historias o contenido creativo.
 
-- `GEMINI_API_KEY`: habilita el provider Gemini.
-- `OPENAI_API_KEY`: habilita el provider OpenAI.
+## Extensibilidad
 
-Si una key no esta configurada, el provider correspondiente devuelve una respuesta fallback y emite un warning de log.
+Añadir un nuevo proveedor requiere:
 
-## Respuesta normalizada y truncado
-
-Todos los providers devuelven `AIResponse` con:
-
-- `text`: texto final (puede incluir una nota si se corto por tokens).
-- `meta.rawText`: texto "puro" del modelo (sin la nota).
-- `meta.finishReason`: reason normalizado (reusamos `FinishReason` de Google para consistencia interna).
-
-Cuando `finishReason === MAX_TOKENS`, `src/ai/response.ts` agrega una nota estandar (`TRUNCATION_NOTICE`) al `text`.
-
-### Continuacion (boton "Continuar")
-
-Los listeners agregan un boton cuando `finishReason === MAX_TOKENS`:
-
-- `src/events/listeners/aiResponse.ts` (menciones al bot)
-- `src/events/listeners/forumAutoReply.ts` (respuestas automaticas en foros)
-
-Al presionar el boton se envia un nuevo request con un prompt de continuacion y contexto suficiente para seguir sin duplicar.
-
-### Continuacion por reply (sin mencionar al bot)
-
-Ademas del boton, el bot continua la conversacion cuando un usuario responde (reply) a un mensaje del bot que fue generado por IA.
-
-- Marcado: los mensajes generados por IA incluyen el sufijo `AI_GENERATED_MESSAGE` en el contenido (ver `src/constants/ai.ts`).
-- Listener: `src/events/listeners/aiResponse.ts` detecta replies verificando si el mensaje referenciado contiene ese marcador.
-
-## Puntos de integracion en el bot
-
-- Menciones al bot: `src/events/listeners/aiResponse.ts` usa `processMessage(...)`.
-- Auto-reply en foros: `src/events/listeners/forumAutoReply.ts` usa `generateForGuild(...)`.
-- Comandos que generan texto: ej `src/commands/fun/joke.ts` usa `generateForGuild(...)`.
-
-## Agregar un nuevo provider
-
-Pasos recomendados (minimos):
-
-1) Crear un modulo `src/ai/<provider>.ts` que exporte un `AIProvider`.
-2) Registrar el provider en:
-   - `src/ai/constants.ts`: agregar el id a `PROVIDER_IDS` y lista de modelos/defaults.
-   - `src/ai/index.ts`: agregarlo al `providers` registry.
-3) Asegurar que el adapter devuelva `AIResponse` usando `buildAIResponse(...)`.
-
-## Debug / Diagnostico rapido
-
-- Ver que provider/model esta usando una guild: revisar `Guild.ai` en Mongo.
-- Revisar logs por truncado: el sistema loggea finishReason != STOP con `providerId`, `model` y `usage`.
-- Si OpenAI/Gemini devuelve fallback, chequear que la env var correspondiente este presente.
+1. Crear un nuevo adaptador que cumpla con la interfaz `AIProvider`.
+2. Registrar el nuevo proveedor y sus modelos en las constantes del servicio.
+3. El orquestador lo detectará automáticamente y estará disponible para su configuración.
