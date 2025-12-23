@@ -1,12 +1,21 @@
 /**
- * Motivación: estructurar el módulo offers (service) en piezas reutilizables y autocontenidas.
+ * Servicio de dominio: ofertas.
  *
- * Idea/concepto: agrupa helpers y orquestadores bajo un mismo dominio para evitar acoplamientos dispersos.
+ * Encaje en el sistema:
+ * - Este módulo orquesta el flujo "oferta -> revisión -> (aprobación/rechazo/cambios)".
+ * - Es la capa que conoce el orden de operaciones entre:
+ *   - Mensajes Discord (crear/editar/borrar en canales de revisión/aprobadas).
+ *   - Persistencia en Mongo (repositorio `@/db/repositories/offers`).
+ *   - Notificaciones (DM) y logs de moderación.
  *
- * Alcance: soporte de dominio; no sustituye a los comandos o servicios que consumen el módulo.
+ * Invariantes clave:
+ * - Solo puede existir 1 oferta "activa" por autor+guild (enforced por índice UNIQUE parcial).
+ * - La UI (mensajes/embeds/botones) es "best effort": fallos de UI no deben romper la operación.
+ * - Política runtime no-throw: se retorna `Result<T>` y se loguea en vez de lanzar.
  *
- * Nota: usa el repositorio nativo (`@/db/repositories/offers`) y los tipos Zod (`@/db/schemas/offers`)
- * para que los comandos no tengan que manipular directamente el driver de Mongo ni shapes duplicadas.
+ * Gotchas:
+ * - Orden: primero se crea mensaje en canal de revisión y luego se persiste.
+ *   Si la persistencia falla, se intenta limpiar el mensaje para evitar huérfanos.
  */
 import { randomBytes } from "node:crypto";
 import { type Embed, type UsingClient } from "seyfert";
@@ -69,6 +78,9 @@ async function updateReviewMessage(
 ): Promise<Result<boolean>> {
 	if (!offer.reviewChannelId || !offer.reviewMessageId) return OkResult(false);
 	try {
+		// WHY: mantenemos el mensaje de revisión como "source of truth" de moderación.
+		// RISK: si este edit falla, la oferta puede quedar bien en DB pero con UI desactualizada.
+		// ALT: reintentos / job background. Por ahora se elige best-effort para no bloquear.
 		const statusEmbed = buildStatusEmbed(offer, status, note);
 		const userEmbed = getUserEmbedFromOffer(offer);
 
@@ -96,6 +108,9 @@ async function publishOffer(
 ): Promise<Result<{ publishedMessageId: string | null; publishedChannelId: string | null }>> {
 	if (!approvedChannelId) return OkResult({ publishedChannelId: null, publishedMessageId: null });
 	try {
+		// WHY: publicar es un side effect separado de la mutación de estado.
+		// RISK: si esto falla, la oferta puede quedar "aprobada" pero no publicada.
+		// El caller decide si degradar o si propagar el error.
 		const message = await client.messages.write(approvedChannelId, {
 			content: `<@${offer.authorId}> Nueva oferta aprobada`,
 			embeds: [embed],
@@ -136,6 +151,8 @@ export async function assertNoActiveOffer(
 	guildId: string,
 	authorId: string,
 ): Promise<Result<Offer | null>> {
+	// Propósito: consulta reusable para prevenir duplicados desde comandos/handlers.
+	// Nota: el índice UNIQUE parcial es la garantía real; este método mejora UX.
 	return findActiveByAuthor(guildId, authorId);
 }
 
@@ -143,6 +160,7 @@ export async function getActiveOffer(
 	guildId: string,
 	authorId: string,
 ): Promise<Result<Offer | null>> {
+	// Propósito: helper semántico para callers que quieren "la oferta activa".
 	return findActiveByAuthor(guildId, authorId);
 }
 
@@ -158,6 +176,12 @@ export async function createOfferForReview(
 		userEmbed?: Embed;
 	},
 ): Promise<Result<Offer>> {
+	// Flujo:
+	// 1) Verificar que no exista una oferta activa (para UX; la garantía real es el índice).
+	// 2) Resolver canal de revisión (config).
+	// 3) Crear mensaje en canal de revisión.
+	// 4) Persistir oferta con `reviewMessageId`.
+	// 5) Si falla (incl. índice unique), intentar limpiar el mensaje para evitar huérfanos.
 	const existingResult = await findActiveByAuthor(params.guildId, params.authorId);
 	if (existingResult.isErr()) return ErrResult(existingResult.error);
 
@@ -211,6 +235,11 @@ export async function createOfferForReview(
   const statusEmbed = buildStatusEmbed(pendingOffer, "PENDING_REVIEW", null);
 
 	try {
+		// WHY: primero creamos el mensaje de revisión para obtener `message.id`.
+		// RISK: si el proceso muere entre mensaje y DB, puede quedar un huérfano.
+		// Mitigación: al fallar DB, se borra. Aún así pueden quedar huérfanos si Discord delete falla.
+		// ALT: persistir primero y luego crear mensaje. Se descartó porque necesitaríamos un flujo
+		// de reconciliación para mensajes fallidos (UI sin messageId) y complica moderación.
 		const message = await client.messages.write(reviewChannelId, {
 			content: `Nueva oferta enviada por <@${params.authorId}>`,
 			embeds: [statusEmbed, userEmbed],

@@ -106,11 +106,12 @@ export async function collectMemberRoleIds(
   return ids;
 }
 
-async function memberHasDiscordPermission(
+export async function memberHasDiscordPermission(
   member: InteractionGuildMember | null | undefined,
-  required: string[],
+  required: string[] | bigint | undefined | null,
 ): Promise<boolean> {
-  if (!required.length) return true;
+  if (!required) return true;
+  if (Array.isArray(required) && !required.length) return true;
   if (!member) return false;
 
   const permissions = member.permissions;

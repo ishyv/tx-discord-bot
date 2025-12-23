@@ -30,6 +30,7 @@ export default class JokeCommand extends Command {
 
     const response = await generateForGuild({
       guildId: ctx.guildId,
+      userId: ctx.author.id,
       messages,
       overrides: {
         responseModalities: [Modality.TEXT],

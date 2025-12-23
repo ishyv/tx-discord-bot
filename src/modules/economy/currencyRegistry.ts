@@ -13,7 +13,8 @@ export class CurrencyRegistry {
 
   register(currency: Currency<unknown>): void {
     if (this.currencies.has(currency.id)) {
-      throw new Error(`Currency already registered: ${currency.id}`);
+      console.warn(`Currency already registered: ${currency.id}. Ignoring duplicate registration.`);
+      return;
     }
     this.currencies.set(currency.id, currency);
   }

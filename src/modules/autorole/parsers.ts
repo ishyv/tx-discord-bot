@@ -41,14 +41,14 @@ export class TriggerParseError extends Error {
   }
 }
 
-export function parseTrigger(input: string): AutoRoleTrigger {
+export function parseTrigger(input: string): AutoRoleTrigger | null {
   if (!input || typeof input !== "string") {
-    throw new TriggerParseError("El trigger debe ser una cadena no vacia.");
+    return null;
   }
 
   const trimmed = input.trim();
   if (!trimmed) {
-    throw new TriggerParseError("El trigger no puede estar vacio.");
+    return null;
   }
 
   const [headRaw, ...rest] = trimmed.split(/\s+/);
@@ -78,40 +78,26 @@ export function parseTrigger(input: string): AutoRoleTrigger {
     return expectMessageContains(rest);
   }
 
-  throw new TriggerParseError(
-    `Trigger no soportado: "${headRaw}". Usa onMessageReactAny, onReactSpecific, onAuthorReactionThreshold, onReputationAtLeast, onAntiquityAtLeast u onMessageContains.`,
-  );
+  return null;
 }
 
-function expectMessageReactAny(args: string[]): MessageReactAnyTrigger {
-  if (args.length !== 0) {
-    throw new TriggerParseError(
-      "El trigger 'onMessageReactAny' no acepta argumentos.",
-    );
-  }
+function expectMessageReactAny(args: string[]): MessageReactAnyTrigger | null {
+  if (args.length !== 0) return null;
   return { type: "MESSAGE_REACT_ANY", args: {} };
 }
 
-function expectReactSpecific(args: string[]): ReactSpecificTrigger {
-  if (args.length !== 2) {
-    throw new TriggerParseError(
-      "El trigger 'onReactSpecific' requiere un ID de mensaje y un emoji.",
-    );
-  }
+function expectReactSpecific(args: string[]): ReactSpecificTrigger | null {
+  if (args.length !== 2) return null;
 
   const [messageIdRaw, emojiRaw] = args;
   const messageId = normalizeSnowflake(messageIdRaw);
   if (!messageId) {
-    throw new TriggerParseError(
-      "El trigger 'onReactSpecific' requiere un ID de mensaje de Discord valido.",
-    );
+    return null;
   }
 
   const emojiKey = normalizeEmojiKey(emojiRaw);
   if (!emojiKey) {
-    throw new TriggerParseError(
-      "El trigger 'onReactSpecific' requiere un emoji valido.",
-    );
+    return null;
   }
 
   return {
@@ -123,26 +109,18 @@ function expectReactSpecific(args: string[]): ReactSpecificTrigger {
   };
 }
 
-function expectReactedThreshold(args: string[]): ReactedThresholdTrigger {
-  if (args.length !== 2) {
-    throw new TriggerParseError(
-      "El trigger 'onAuthorReactionThreshold' requiere un emoji y un numero.",
-    );
-  }
+function expectReactedThreshold(args: string[]): ReactedThresholdTrigger | null {
+  if (args.length !== 2) return null;
 
   const [emojiRaw, countRaw] = args;
   const emojiKey = normalizeEmojiKey(emojiRaw);
   if (!emojiKey) {
-    throw new TriggerParseError(
-      "El trigger 'onAuthorReactionThreshold' requiere un emoji valido.",
-    );
+    return null;
   }
 
   const count = Number.parseInt(countRaw, 10);
   if (!isValidThresholdCount(count)) {
-    throw new TriggerParseError(
-      "El trigger 'onAuthorReactionThreshold' requiere un conteo entre 1 y 1000.",
-    );
+    return null;
   }
 
   return {
@@ -154,18 +132,14 @@ function expectReactedThreshold(args: string[]): ReactedThresholdTrigger {
   };
 }
 
-function expectReputationThreshold(args: string[]): ReputationThresholdTrigger {
-  if (args.length !== 1) {
-    throw new TriggerParseError(
-      "El trigger 'onReputationAtLeast' requiere un numero.",
-    );
-  }
+function expectReputationThreshold(
+  args: string[],
+): ReputationThresholdTrigger | null {
+  if (args.length !== 1) return null;
 
   const value = Number.parseInt(args[0], 10);
   if (!Number.isFinite(value) || value < 0) {
-    throw new TriggerParseError(
-      "El trigger 'onReputationAtLeast' requiere un entero mayor o igual a 0.",
-    );
+    return null;
   }
 
   return {
@@ -176,21 +150,17 @@ function expectReputationThreshold(args: string[]): ReputationThresholdTrigger {
   };
 }
 
-function expectAntiquityThreshold(args: string[]): AntiquityThresholdTrigger {
-  if (args.length === 0) {
-    throw new TriggerParseError(
-      "El trigger 'onAntiquityAtLeast' requiere una duracion (ej: 1y 6m).",
-    );
-  }
+function expectAntiquityThreshold(
+  args: string[],
+): AntiquityThresholdTrigger | null {
+  if (args.length === 0) return null;
 
   const raw = args.join(" ");
   const duration = parseDuration(raw);
 
   if (!duration || duration < 3600000) {
     // Minimum 1 hour
-    throw new TriggerParseError(
-      "El trigger 'onAntiquityAtLeast' requiere una duracion valida minima de 1 hora.",
-    );
+    return null;
   }
 
   return {
@@ -201,18 +171,12 @@ function expectAntiquityThreshold(args: string[]): AntiquityThresholdTrigger {
   };
 }
 
-function expectMessageContains(args: string[]): AutoRoleTrigger {
-  if (!args.length) {
-    throw new TriggerParseError(
-      "El trigger 'onMessageContains' requiere al menos una palabra clave.",
-    );
-  }
+function expectMessageContains(args: string[]): AutoRoleTrigger | null {
+  if (!args.length) return null;
 
   const keywords = normalizeKeywords(args);
   if (!keywords.length) {
-    throw new TriggerParseError(
-      "El trigger 'onMessageContains' requiere palabras clave no vacías.",
-    );
+    return null;
   }
 
   return {

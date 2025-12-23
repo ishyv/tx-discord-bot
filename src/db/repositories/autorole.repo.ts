@@ -96,7 +96,20 @@ export const AutoRoleRulesRepo = {
   async fetchByGuild(guildId: string): Promise<AutoRoleRuleDomain[]> {
     const col = await rulesCol();
     const rows = await col.find<AutoRoleRule>({ guildId }).toArray();
-    return rows.map((row) => toRuleDomain(AutoRoleRuleSchema.parse(row)));
+    // No usamos `.parse()` porque puede lanzar si hay documentos legacy/corruptos.
+    // En runtime preferimos:
+    // - Loguear el problema para diagnóstico.
+    // - Filtrar los docs inválidos.
+    // - Continuar con el resto (una regla mala no debería romper el sistema entero).
+    const parsed = rows
+      .map((row) => AutoRoleRuleSchema.safeParse(row))
+      .filter((res) => {
+        if (res.success) return true;
+        console.error("autorole: invalid rule document", { guildId, error: res.error });
+        return false;
+      })
+      .map((res) => (res as any).data as AutoRoleRule);
+    return parsed.map((row) => toRuleDomain(row));
   },
 
   /**
@@ -108,7 +121,15 @@ export const AutoRoleRulesRepo = {
   async fetchAll(): Promise<AutoRoleRuleDomain[]> {
     const col = await rulesCol();
     const rows = await col.find<AutoRoleRule>({}).toArray();
-    return rows.map((row) => toRuleDomain(AutoRoleRuleSchema.parse(row)));
+    const parsed = rows
+      .map((row) => AutoRoleRuleSchema.safeParse(row))
+      .filter((res) => {
+        if (res.success) return true;
+        console.error("autorole: invalid rule document", { error: res.error });
+        return false;
+      })
+      .map((res) => (res as any).data as AutoRoleRule);
+    return parsed.map((row) => toRuleDomain(row));
   },
 
   /**
@@ -117,7 +138,17 @@ export const AutoRoleRulesRepo = {
   async fetchOne(guildId: string, name: string): Promise<AutoRoleRuleDomain | null> {
     const col = await rulesCol();
     const row = await col.findOne<AutoRoleRule>({ guildId, name });
-    return row ? toRuleDomain(AutoRoleRuleSchema.parse(row)) : null;
+    if (!row) return null;
+    const parsed = AutoRoleRuleSchema.safeParse(row);
+    if (!parsed.success) {
+      console.error("autorole: invalid rule document", {
+        guildId,
+        name,
+        error: parsed.error,
+      });
+      return null;
+    }
+    return toRuleDomain(parsed.data);
   },
 
   /**
@@ -136,19 +167,45 @@ export const AutoRoleRulesRepo = {
    * La clave primaria es determinística (`_id = guildId:name`) para evitar duplicados por nombre.
    */
   async insert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRuleDomain> {
-    const doc = AutoRoleRuleSchema.parse({
+    const now = new Date();
+    const triggerParsed = AutoRoleTriggerSchema.safeParse(input.trigger);
+    const docParsed = AutoRoleRuleSchema.safeParse({
       _id: ruleKey(input.guildId, input.name),
       id: ruleKey(input.guildId, input.name),
       guildId: input.guildId,
       name: input.name,
       roleId: input.roleId,
-      trigger: AutoRoleTriggerSchema.parse(input.trigger),
+      trigger: triggerParsed.success ? triggerParsed.data : input.trigger,
       durationMs: input.durationMs ?? null,
       enabled: input.enabled ?? true,
       createdBy: input.createdBy ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     });
+    if (!docParsed.success) {
+      // Degradación deliberada: no insertamos basura en DB.
+      // Retornamos un objeto "disabled" para que el caller pueda continuar sin crash.
+      console.error("autorole: invalid rule insert payload; skipping insert", {
+        guildId: input.guildId,
+        name: input.name,
+        error: docParsed.error,
+      });
+      return {
+        guildId: input.guildId,
+        name: input.name,
+        trigger: (triggerParsed.success
+          ? triggerParsed.data
+          : ({ type: "MESSAGE_REACT_ANY", args: {} } as any)) as any,
+        roleId: input.roleId,
+        durationMs: input.durationMs ?? null,
+        enabled: false,
+        createdBy: input.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    const doc = docParsed.data;
     const col = await rulesCol();
     await col.insertOne(doc);
     return toRuleDomain(doc);
@@ -164,14 +221,26 @@ export const AutoRoleRulesRepo = {
   async upsert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRuleDomain> {
     const col = await rulesCol();
     const now = new Date();
+    const triggerParsed = AutoRoleTriggerSchema.safeParse(input.trigger);
+    if (!triggerParsed.success) {
+      // Si el trigger es inválido, no tiramos excepción: deshabilitamos la regla.
+      // Esto evita loops/crashes en el sistema de autoroles.
+      console.error("autorole: invalid trigger payload in rule upsert; disabling rule", {
+        guildId: input.guildId,
+        name: input.name,
+        error: triggerParsed.error,
+      });
+    }
     const result = await col.findOneAndUpdate(
       { guildId: input.guildId, name: input.name },
       {
         $set: {
           roleId: input.roleId,
-          trigger: AutoRoleTriggerSchema.parse(input.trigger),
+          trigger: triggerParsed.success
+            ? triggerParsed.data
+            : ({ type: "MESSAGE_REACT_ANY", args: {} } as any),
           durationMs: input.durationMs ?? null,
-          enabled: input.enabled ?? true,
+          enabled: triggerParsed.success ? (input.enabled ?? true) : false,
           createdBy: input.createdBy ?? null,
           updatedAt: now,
         },
@@ -188,8 +257,51 @@ export const AutoRoleRulesRepo = {
     const value =
       result ??
       (await col.findOne<AutoRoleRule>({ guildId: input.guildId, name: input.name }));
-    if (!value) throw new Error("FAILED_TO_UPSERT_RULE");
-    return toRuleDomain(AutoRoleRuleSchema.parse(value));
+    if (!value) {
+      console.error("autorole: FAILED_TO_UPSERT_RULE", {
+        guildId: input.guildId,
+        name: input.name,
+      });
+      const triggerParsed = AutoRoleTriggerSchema.safeParse(input.trigger);
+      return {
+        guildId: input.guildId,
+        name: input.name,
+        trigger: (triggerParsed.success
+          ? triggerParsed.data
+          : ({ type: "MESSAGE_REACT_ANY", args: {} } as any)) as any,
+        roleId: input.roleId,
+        durationMs: input.durationMs ?? null,
+        enabled: false,
+        createdBy: input.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    const parsed = AutoRoleRuleSchema.safeParse(value);
+    if (!parsed.success) {
+      console.error("autorole: failed to parse upserted rule; returning fallback", {
+        guildId: input.guildId,
+        name: input.name,
+        error: parsed.error,
+      });
+      const triggerParsed = AutoRoleTriggerSchema.safeParse(input.trigger);
+      return {
+        guildId: input.guildId,
+        name: input.name,
+        trigger: (triggerParsed.success
+          ? triggerParsed.data
+          : ({ type: "MESSAGE_REACT_ANY", args: {} } as any)) as any,
+        roleId: input.roleId,
+        durationMs: input.durationMs ?? null,
+        enabled: false,
+        createdBy: input.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    return toRuleDomain(parsed.data);
   },
 
   /**
@@ -209,7 +321,17 @@ export const AutoRoleRulesRepo = {
       { returnDocument: "after" },
     );
     const value = row ?? (await col.findOne<AutoRoleRule>({ guildId, name }));
-    return value ? toRuleDomain(AutoRoleRuleSchema.parse(value)) : null;
+    if (!value) return null;
+    const parsed = AutoRoleRuleSchema.safeParse(value);
+    if (!parsed.success) {
+      console.error("autorole: invalid rule document after updateEnabled", {
+        guildId,
+        name,
+        error: parsed.error,
+      });
+      return null;
+    }
+    return toRuleDomain(parsed.data);
   },
 
   /**
@@ -282,8 +404,49 @@ export const AutoRoleGrantsRepo = {
           input.type,
         ),
       }));
-    if (!value) throw new Error("FAILED_TO_SAVE_GRANT");
-    return toGrantDomain(AutoRoleGrantSchema.parse(value));
+    if (!value) {
+      console.error("autorole: FAILED_TO_SAVE_GRANT", {
+        guildId: input.guildId,
+        userId: input.userId,
+        roleId: input.roleId,
+        ruleName: input.ruleName,
+        type: input.type,
+      });
+      return {
+        guildId: input.guildId,
+        userId: input.userId,
+        roleId: input.roleId,
+        ruleName: input.ruleName,
+        type: input.type,
+        expiresAt: input.expiresAt ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    const parsed = AutoRoleGrantSchema.safeParse(value);
+    if (!parsed.success) {
+      console.error("autorole: failed to parse upserted grant; returning fallback", {
+        guildId: input.guildId,
+        userId: input.userId,
+        roleId: input.roleId,
+        ruleName: input.ruleName,
+        type: input.type,
+        error: parsed.error,
+      });
+      return {
+        guildId: input.guildId,
+        userId: input.userId,
+        roleId: input.roleId,
+        ruleName: input.ruleName,
+        type: input.type,
+        expiresAt: input.expiresAt ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+
+    return toGrantDomain(parsed.data);
   },
 
   /**
@@ -311,7 +474,20 @@ export const AutoRoleGrantsRepo = {
   ): Promise<AutoRoleGrantReason[]> {
     const col = await grantsCol();
     const rows = await col.find<AutoRoleGrant>({ guildId, userId, roleId }).toArray();
-    return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
+    const parsed = rows
+      .map((row) => AutoRoleGrantSchema.safeParse(row))
+      .filter((res) => {
+        if (res.success) return true;
+        console.error("autorole: invalid grant document", {
+          guildId,
+          userId,
+          roleId,
+          error: res.error,
+        });
+        return false;
+      })
+      .map((res) => (res as any).data as AutoRoleGrant);
+    return parsed.map((row) => toGrantDomain(row));
   },
 
   /**
@@ -323,7 +499,19 @@ export const AutoRoleGrantsRepo = {
   ): Promise<AutoRoleGrantReason[]> {
     const col = await grantsCol();
     const rows = await col.find<AutoRoleGrant>({ guildId, ruleName }).toArray();
-    return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
+    const parsed = rows
+      .map((row) => AutoRoleGrantSchema.safeParse(row))
+      .filter((res) => {
+        if (res.success) return true;
+        console.error("autorole: invalid grant document", {
+          guildId,
+          ruleName,
+          error: res.error,
+        });
+        return false;
+      })
+      .map((res) => (res as any).data as AutoRoleGrant);
+    return parsed.map((row) => toGrantDomain(row));
   },
 
   /**
@@ -375,7 +563,20 @@ export const AutoRoleGrantsRepo = {
       ruleName,
       type,
     });
-    return row ? toGrantDomain(AutoRoleGrantSchema.parse(row)) : null;
+    if (!row) return null;
+    const parsed = AutoRoleGrantSchema.safeParse(row);
+    if (!parsed.success) {
+      console.error("autorole: invalid grant document", {
+        guildId,
+        userId,
+        roleId,
+        ruleName,
+        type,
+        error: parsed.error,
+      });
+      return null;
+    }
+    return toGrantDomain(parsed.data);
   },
 
   /**
@@ -389,7 +590,15 @@ export const AutoRoleGrantsRepo = {
         expiresAt: { $ne: null, $lte: reference },
       })
       .toArray();
-    return rows.map((row) => toGrantDomain(AutoRoleGrantSchema.parse(row)));
+    const parsed = rows
+      .map((row) => AutoRoleGrantSchema.safeParse(row))
+      .filter((res) => {
+        if (res.success) return true;
+        console.error("autorole: invalid grant document", { error: res.error });
+        return false;
+      })
+      .map((res) => (res as any).data as AutoRoleGrant);
+    return parsed.map((row) => toGrantDomain(row));
   },
 };
 
@@ -421,7 +630,19 @@ export const AutoRoleTalliesRepo = {
   ): Promise<ReactionTallySnapshot[]> {
     const col = await talliesCol();
     const rows = await col.find<AutoRoleTally>({ guildId, messageId }).toArray();
-    return rows.map((row) => toTallySnapshot(AutoRoleTallySchema.parse(row)));
+    const parsed = rows
+      .map((row) => AutoRoleTallySchema.safeParse(row))
+      .filter((res) => {
+        if (res.success) return true;
+        console.error("autorole: invalid tally document", {
+          guildId,
+          messageId,
+          error: res.error,
+        });
+        return false;
+      })
+      .map((res) => (res as any).data as AutoRoleTally);
+    return parsed.map((row) => toTallySnapshot(row));
   },
 
   /**
@@ -456,8 +677,32 @@ export const AutoRoleTalliesRepo = {
       (await col.findOne<AutoRoleTally>({
         _id: tallyKey(key.guildId, key.messageId, key.emojiKey),
       }));
-    if (!row) throw new Error("FAILED_TO_INCREMENT_TALLY");
-    return toTallySnapshot(AutoRoleTallySchema.parse(row));
+    if (!row) {
+      console.error("autorole: FAILED_TO_INCREMENT_TALLY", { key, authorId });
+      return {
+        key,
+        authorId: authorId ?? "",
+        count: 0,
+        updatedAt: now,
+      };
+    }
+
+    const parsed = AutoRoleTallySchema.safeParse(row);
+    if (!parsed.success) {
+      console.error("autorole: failed to parse incremented tally; returning fallback", {
+        key,
+        authorId,
+        error: parsed.error,
+      });
+      return {
+        key,
+        authorId: authorId ?? "",
+        count: 0,
+        updatedAt: now,
+      };
+    }
+
+    return toTallySnapshot(parsed.data);
   },
 
   /**
@@ -484,12 +729,25 @@ export const AutoRoleTalliesRepo = {
       await col.deleteOne({ _id: doc._id });
     }
 
-    return toTallySnapshot(
-      AutoRoleTallySchema.parse({
-        ...doc,
-        count: Math.max(doc.count ?? 0, 0),
-      }),
-    );
+    const normalized = {
+      ...doc,
+      count: Math.max(doc.count ?? 0, 0),
+    };
+    const parsed = AutoRoleTallySchema.safeParse(normalized);
+    if (!parsed.success) {
+      console.error("autorole: invalid tally document after decrement", {
+        key,
+        error: parsed.error,
+      });
+      return {
+        key,
+        authorId: (doc as any)?.authorId ?? "",
+        count: Math.max((doc as any)?.count ?? 0, 0),
+        updatedAt: (doc as any)?.updatedAt ?? now,
+      };
+    }
+
+    return toTallySnapshot(parsed.data);
   },
 
   /**
@@ -502,7 +760,13 @@ export const AutoRoleTalliesRepo = {
       messageId: key.messageId,
       emojiKey: key.emojiKey,
     });
-    return row ? toTallySnapshot(AutoRoleTallySchema.parse(row)) : null;
+    if (!row) return null;
+    const parsed = AutoRoleTallySchema.safeParse(row);
+    if (!parsed.success) {
+      console.error("autorole: invalid tally document", { key, error: parsed.error });
+      return null;
+    }
+    return toTallySnapshot(parsed.data);
   },
 
   /**

@@ -127,6 +127,7 @@ export class AutoModSystem {
       return false;
     }
     const imageBuffer = await this.fetchAttachmentBuffer(attachment.url);
+    if (!imageBuffer) return false;
     const imageHash = await phash(imageBuffer, { failOnError: false });
     const cacheKey = `image:${imageHash}`;
     const cachedResult = await this.tempStorage.get(cacheKey);
@@ -154,7 +155,7 @@ export class AutoModSystem {
     return scamFilterList.find((filter: RegExp) => filter.test(normalizedText));
   }
 
-  private async fetchAttachmentBuffer(url: string): Promise<ArrayBuffer> {
+  private async fetchAttachmentBuffer(url: string): Promise<ArrayBuffer | null> {
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(),
@@ -164,7 +165,11 @@ export class AutoModSystem {
     try {
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) {
-        throw new Error("No se pudo descargar la imagen");
+        console.warn("AutoModSystem: no se pudo descargar la imagen", {
+          url,
+          status: response.status,
+        });
+        return null;
       }
 
       const contentLength = response.headers.get("content-length");
@@ -173,14 +178,22 @@ export class AutoModSystem {
         Number.isFinite(reportedSize) &&
         reportedSize > MAX_AUTOMOD_IMAGE_BYTES
       ) {
-        throw new Error("Imagen demasiado grande para analizar");
+        console.warn("AutoModSystem: imagen demasiado grande para analizar", {
+          url,
+          reportedSize,
+        });
+        return null;
       }
 
       const body = response.body;
       if (!body) {
         const buffer = await response.arrayBuffer();
         if (buffer.byteLength > MAX_AUTOMOD_IMAGE_BYTES) {
-          throw new Error("Imagen demasiado grande para analizar");
+          console.warn("AutoModSystem: imagen demasiado grande para analizar", {
+            url,
+            byteLength: buffer.byteLength,
+          });
+          return null;
         }
         return buffer;
       }
@@ -197,7 +210,11 @@ export class AutoModSystem {
         total += value.byteLength;
         if (total > MAX_AUTOMOD_IMAGE_BYTES) {
           controller.abort();
-          throw new Error("Imagen demasiado grande para analizar");
+          console.warn("AutoModSystem: imagen demasiado grande para analizar", {
+            url,
+            total,
+          });
+          return null;
         }
 
         chunks.push(value);
@@ -211,6 +228,9 @@ export class AutoModSystem {
       }
 
       return merged.buffer;
+    } catch (error) {
+      console.warn("AutoModSystem: fallo descargando imagen", { url, error });
+      return null;
     } finally {
       clearTimeout(timeout);
     }

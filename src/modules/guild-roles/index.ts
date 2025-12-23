@@ -88,7 +88,10 @@ export interface RoleSnapshot {
 
 function normaliseAction(action: string): string {
   const trimmed = action.trim().toLowerCase();
-  if (!trimmed) throw new Error("Debe proporcionar una clave de accion.");
+  if (!trimmed) {
+    console.warn("[roles] Missing action key; using 'unknown_action'.");
+    return "unknown_action";
+  }
   return trimmed.replace(/[\s-]+/g, "_");
 }
 

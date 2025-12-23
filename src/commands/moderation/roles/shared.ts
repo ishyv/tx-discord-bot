@@ -158,7 +158,10 @@ export function parseLimitWindowInput(
 
 export function limitWindowToSeconds(window: LimitWindow): number {
   const match = window.match(LIMIT_WINDOW_PATTERN);
-  if (!match) throw new Error(`Ventana invalida: ${window}`);
+  if (!match) {
+    console.warn(`[roles] Ventana invalida: ${window}. Returning 0 seconds.`);
+    return 0;
+  }
 
   const value = Number.parseInt(match[1], 10);
   const unit = match[2];

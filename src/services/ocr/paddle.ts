@@ -22,8 +22,10 @@ const RECOGNITION_MODEL_FILE =
 const DICTIONARY_FILE =
   process.env.OCR_DICTIONARY ?? "ppocrv5_dict.txt";
 
-let ocrServicePromise: Promise<PaddleOcrServiceClass> | undefined;
+let ocrServicePromise: Promise<PaddleOcrServiceClass | null> | undefined;
 let ocrQueue: Promise<void> = Promise.resolve();
+
+let ocrUnavailable = false;
 
 async function preprocessImage(buffer: ArrayBuffer): Promise<ImageInput> {
   const source = Buffer.from(buffer);
@@ -49,7 +51,7 @@ function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
   ) as ArrayBuffer;
 }
 
-async function createOcrService(): Promise<PaddleOcrServiceClass> {
+async function createOcrService(): Promise<PaddleOcrServiceClass | null> {
   try {
     const baseDir = OCR_ASSETS_DIR;
     const [detectionModel, recognitionModel, dictionaryRaw] = await Promise.all([
@@ -64,9 +66,10 @@ async function createOcrService(): Promise<PaddleOcrServiceClass> {
       (globalThis as any)?.paddleocr?.PaddleOcrService;
 
     if (!PaddleOcrService) {
-      throw new Error(
+      console.error(
         "OCR: PaddleOcrService no está disponible tras importar el módulo.",
       );
+      return null;
     }
 
     const dictionary = dictionaryRaw
@@ -93,16 +96,25 @@ async function createOcrService(): Promise<PaddleOcrServiceClass> {
     });
   } catch (error) {
     console.error("OCR: no se pudo inicializar PaddleOCR", error);
-    throw error;
+    return null;
   }
 }
 
-function getOcrService(): Promise<PaddleOcrServiceClass> {
+function getOcrService(): Promise<PaddleOcrServiceClass | null> {
+  if (ocrUnavailable) return Promise.resolve(null);
   if (!ocrServicePromise) {
     ocrServicePromise = createOcrService();
   }
-
-  return ocrServicePromise;
+  return (ocrServicePromise as unknown as Promise<PaddleOcrServiceClass | null>).then(
+    (service) => {
+      if (!service) ocrUnavailable = true;
+      return service;
+    },
+    () => {
+      ocrUnavailable = true;
+      return null;
+    },
+  );
 }
 
 async function enqueueOcrTask<T>(
@@ -110,7 +122,7 @@ async function enqueueOcrTask<T>(
 ): Promise<T> {
   const task = ocrQueue
     .then(() => getOcrService())
-    .then((service) => run(service));
+    .then((service) => (service ? run(service) : (undefined as unknown as T)));
 
   ocrQueue = task.then(
     () => undefined,
@@ -121,7 +133,13 @@ async function enqueueOcrTask<T>(
 }
 
 export async function recognizeText(buffer: ArrayBuffer): Promise<string> {
-  const image = await preprocessImage(buffer);
-  const results = await enqueueOcrTask((service) => service.recognize(image));
-  return results.map((item) => item.text).join(" ");
+  try {
+    const image = await preprocessImage(buffer);
+    const results = await enqueueOcrTask((service) => service.recognize(image));
+    if (!Array.isArray(results)) return "";
+    return results.map((item) => (item as any)?.text ?? "").join(" ");
+  } catch (error) {
+    console.error("OCR: recognizeText failed", error);
+    return "";
+  }
 }

@@ -160,6 +160,7 @@ onMessageCreate(async (message, client) => {
     const aiMessages: AIMessage[] = [{ role: "user", content: prompt }];
     const response = await generateForGuild({
       guildId: message.guildId,
+      userId: message.author?.id,
       messages: aiMessages,
     });
     const reply = sanitizeReply(response.text ?? "");
@@ -180,13 +181,13 @@ onMessageCreate(async (message, client) => {
     const components =
       response.meta?.finishReason === FinishReason.MAX_TOKENS && authorId && hasRawText
         ? [
-            buildContinueRow({
-              authorId,
-              guildId: message.guildId,
-              threadId,
-              messages: continuationMessages,
-            }),
-          ]
+          buildContinueRow({
+            authorId,
+            guildId: message.guildId,
+            threadId,
+            messages: continuationMessages,
+          }),
+        ]
         : undefined;
 
     let sent = false;
@@ -465,6 +466,7 @@ async function handleForumContinuation(
 
   const response = await generateForGuild({
     guildId: options.guildId,
+    userId: options.authorId,
     messages: options.messages,
   });
   const reply = sanitizeReply(response.text ?? "");
@@ -483,13 +485,13 @@ async function handleForumContinuation(
   const components =
     response.meta?.finishReason === FinishReason.MAX_TOKENS && hasRawText
       ? [
-          buildContinueRow({
-            authorId: options.authorId,
-            guildId: options.guildId,
-            threadId: options.threadId,
-            messages: nextMessages,
-          }),
-        ]
+        buildContinueRow({
+          authorId: options.authorId,
+          guildId: options.guildId,
+          threadId: options.threadId,
+          messages: nextMessages,
+        }),
+      ]
       : undefined;
 
   const channelId = ctx.channelId ?? options.threadId;

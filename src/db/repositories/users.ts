@@ -25,13 +25,30 @@ import { ErrResult, OkResult, type Result } from "@/utils/result";
 
 const usersCollection = async () => (await getDb()).collection<User>("users");
 
-// Base para nuevos usuarios; se parsea para que los defaults del schema sean la fuente de verdad.
-const defaultUser = (id: UserId, now: Date = new Date()): User =>
-  UserSchema.parse({
+// Base para nuevos usuarios.
+//
+// @remarks
+// Históricamente se usaba `UserSchema.parse(...)` para que los defaults del schema fueran la
+// fuente de verdad.
+//
+// Sin embargo, `.parse()` puede lanzar (por ejemplo, si el schema evoluciona con un refinement
+// inesperado). Dado que este repo se usa en hot-paths, aplicamos la política no-throw:
+// - `safeParse` + log.
+// - Fallback mínimo (timestamps + _id) en caso extremo.
+const defaultUser = (id: UserId, now: Date = new Date()): User => {
+  const base = {
     _id: id,
     createdAt: now,
     updatedAt: now,
+  };
+  const parsed = UserSchema.safeParse(base);
+  if (parsed.success) return parsed.data;
+  console.error("users: failed to build default user; using raw fallback", {
+    id,
+    error: parsed.error,
   });
+  return base as unknown as User;
+};
 
 // Normaliza errores desconocidos a instancias de Error para Result helpers.
 const mapError = (error: unknown): Error =>
@@ -47,7 +64,15 @@ const withDb = async <T>(op: () => Promise<T>): Promise<Result<T>> => {
 };
 
 // Todo lo que sale del repo se valida por Zod (no exponemos “docs crudos” del driver).
-const parseUser = (doc: unknown): User => UserSchema.parse(doc);
+const parseUser = (doc: unknown): User => {
+  const parsed = UserSchema.safeParse(doc);
+  if (parsed.success) return parsed.data;
+  // Documento corrupto/legacy: degradamos a defaults en vez de romper el proceso.
+  // Esto mantiene invariantes del resto del bot (que asume shapes estables).
+  const id = typeof (doc as any)?._id === "string" ? ((doc as any)._id as UserId) : ("unknown" as UserId);
+  console.error("users: invalid user document; using defaults", { id, error: parsed.error });
+  return defaultUser(id);
+};
 
 const loadUser = async (id: UserId): Promise<User | null> => {
   const col = await usersCollection();
@@ -66,8 +91,19 @@ const ensureUserDocument = async (
     { $setOnInsert: defaultUser(id, now) },
     { upsert: true, returnDocument: "after" },
   );
-  if (!res) throw new Error("No se pudo asegurar el usuario.");
-  return parseUser(res);
+  if (!res) {
+    console.error("No se pudo asegurar el usuario.", { id });
+    return defaultUser(id, now);
+  }
+  try {
+    return parseUser(res);
+  } catch (error) {
+    console.error("users: failed to parse ensured user; using defaults", {
+      id,
+      error,
+    });
+    return defaultUser(id, now);
+  }
 };
 
 const updateUserDocument = async (
@@ -97,8 +133,19 @@ const updateUserDocument = async (
     upsert: true,
     returnDocument: "after",
   });
-  if (!res) throw new Error("No se pudo actualizar el usuario.");
-  return parseUser(res);
+  if (!res) {
+    console.error("No se pudo actualizar el usuario.", { id });
+    return defaultUser(id, now);
+  }
+  try {
+    return parseUser(res);
+  } catch (error) {
+    console.error("users: failed to parse updated user; using defaults", {
+      id,
+      error,
+    });
+    return defaultUser(id, now);
+  }
 };
 
 /* ------------------------------------------------------------------------- */
@@ -122,45 +169,8 @@ export async function saveUser(
   patch: Partial<User>,
 ): Promise<Result<User>> {
   return withDb(async () => {
-    const set: Partial<User> = {};
-
-    if (patch.rep !== undefined) {
-      const parsed = UserSchema.shape.rep.safeParse(patch.rep);
-      if (!parsed.success) throw parsed.error;
-      set.rep = parsed.data;
-    }
-
-    if (patch.warns !== undefined) {
-      const parsed = WarnSchema.array().safeParse(patch.warns);
-      if (!parsed.success) throw parsed.error;
-      set.warns = parsed.data;
-    }
-
-    if (patch.openTickets !== undefined) {
-      const parsed = UserSchema.shape.openTickets.safeParse(patch.openTickets);
-      if (!parsed.success) throw parsed.error;
-      set.openTickets = parsed.data;
-    }
-
-    if (patch.currency !== undefined) {
-      const parsed = UserSchema.shape.currency.safeParse(patch.currency);
-      if (!parsed.success) throw parsed.error;
-      set.currency = parsed.data;
-    }
-
-    if (patch.inventory !== undefined) {
-      const parsed = UserSchema.shape.inventory.safeParse(patch.inventory);
-      if (!parsed.success) throw parsed.error;
-      set.inventory = parsed.data;
-    }
-
-    if (patch.createdAt !== undefined) {
-      const parsed = UserSchema.shape.createdAt.safeParse(patch.createdAt);
-      if (!parsed.success) throw parsed.error;
-      set.createdAt = parsed.data;
-    }
-
-    return updateUserDocument(id, { $set: set });
+    const validated = UserSchema.partial().parse(patch);
+    return updateUserDocument(id, { $set: validated });
   });
 }
 
@@ -404,10 +414,10 @@ export async function addOpenTicketIfBelowLimit(
   maxPerUser: number,
 ): Promise<Result<boolean>> {
   return withDb(async () => {
-    if (!channelId) throw new Error("CHANNEL_ID_REQUIRED");
+    if (!channelId) return false;
 
     const max = Number.isFinite(maxPerUser) ? Math.trunc(maxPerUser) : 0;
-    if (max <= 0) throw new Error("INVALID_MAX_TICKETS");
+    if (max <= 0) return false;
 
     await ensureUserDocument(id);
 

@@ -22,12 +22,13 @@ import { type Message, userMemory } from "@/utils/userMemory";
 import { DEFAULT_GEMINI_MODEL, DEFAULT_PROVIDER_ID } from "./constants";
 import type { AIProvider, AIRequestOptions, AIResponse } from "./types";
 import type { AIProviderId } from "./constants";
-import { geminiProvider, callGeminiAI } from "./gemini";
+import { geminiProvider } from "./gemini";
 import { openaiProvider } from "./openai";
+import { aiRateLimiter } from "./rateLimiter";
 
 export * from "./constants";
 export * from "./types";
-export { callGeminiAI };
+export { aiRateLimiter };
 
 interface ProcessMessageOptions {
   userId: string;
@@ -67,6 +68,7 @@ export const processMessage = async ({
 
     const aiResponse = await generateForGuild({
       guildId,
+      userId,
       messages,
     });
 
@@ -125,6 +127,7 @@ export function isModelAvailableForProvider(providerId: string, model: string): 
  */
 export async function generateForGuild(options: {
   guildId?: string | null;
+  userId?: string | null;
   messages: Message[];
   overrides?: AIRequestOptions;
 }): Promise<AIResponse> {
@@ -132,6 +135,25 @@ export async function generateForGuild(options: {
     options.guildId,
     options.overrides?.model,
   );
+
+  // Rate limit check
+  if (options.guildId && options.userId) {
+    const config = await configStore.get(options.guildId, ConfigurableModule.AI);
+    if (config.rateLimitEnabled) {
+      const outcome = await aiRateLimiter.consume(
+        options.guildId,
+        options.userId,
+        config.rateLimitMax,
+        config.rateLimitWindow,
+      );
+
+      if (!outcome.allowed) {
+        return {
+          text: `Has alcanzado el limite de **${config.rateLimitMax}** solicitudes por **${config.rateLimitWindow}** segundos en este servidor. Intenta de nuevo en **${Math.ceil((outcome.resetAt - Date.now()) / 1000)}** segundos.`,
+        };
+      }
+    }
+  }
 
   const response = await resolved.provider.generate(options.messages, {
     ...options.overrides,

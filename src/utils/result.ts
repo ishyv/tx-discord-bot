@@ -1,6 +1,28 @@
 /**
- * Representa el resultado de una operación que puede ser exitosa (Ok) o fallida (Err).
- * Inspirado en el tipo Result de Rust.
+ * Resultado tipado para operaciones que pueden fallar.
+ *
+ * Encaje en el sistema:
+ * - Este tipo se usa en repositorios/servicios/handlers para modelar errores sin usar `throw`.
+ * - Permite distinguir entre "no hay dato" (`Ok(null)`) y "falló la operación" (`Err(error)`).
+ *
+ * Invariantes y contracto:
+ * - **Runtime no-throw**: en paths de runtime (handlers/comandos/servicios) el repo busca no
+ *   derribar el proceso por un fallo puntual.
+ * - `Err.unwrap()` **no lanza** (ver docstring en el método). Loguea y devuelve `undefined`.
+ * - Los callers deben **chequear** `isErr()`/`isOk()` antes de usar `unwrap()`, salvo que
+ *   `undefined` sea un valor aceptable.
+ *
+ * Gotchas:
+ * - Si llamas `unwrap()` sobre `Err` y luego accedes propiedades (`unwrap().foo`), vas a obtener
+ *   `TypeError`. Es deliberado: el contrato exige guardas.
+ *
+ * Ejemplo (patrón recomendado):
+ * ```ts
+ * const res = await repoCall();
+ * if (res.isErr()) return ErrResult(res.error);
+ * const value = res.unwrap();
+ * // ... usar value
+ * ```
  */
 export type Result<T, E = Error> = Ok<T, E> | Err<T, E>;
 
@@ -20,6 +42,9 @@ export class Ok<T, E> {
 
     /**
      * Retorna el valor contenido.
+     *
+     * @remarks
+     * En `Ok`, `unwrap()` es total (no falla).
      */
     unwrap(): T {
         return this.value;
@@ -76,8 +101,24 @@ export class Err<T, E> {
         return true;
     }
 
+    /**
+     * Obtiene el valor del `Result`.
+     *
+     * @remarks
+     * Este proyecto evita `throw` en paths de runtime (handlers, comandos, servicios) para que
+     * un fallo puntual no derribe el proceso.
+     *
+     * Por eso, a diferencia de Rust u otras implementaciones, **`Err.unwrap()` NO lanza**.
+     * En su lugar:
+     * - Loguea un warning (para que el error sea visible en logs).
+     * - Retorna `undefined` como fallback.
+     *
+     * Implicación importante: `unwrap()` solo debe usarse cuando el caller ya validó
+     * `isOk()` / `isErr()` (o cuando `undefined` sea un valor aceptable).
+     */
     unwrap(): T {
-        throw this.error;
+        console.warn("Result.unwrap called on Err; returning undefined fallback.", this.error);
+        return undefined as unknown as T;
     }
 
     unwrapOr(defaultValue: T): T {

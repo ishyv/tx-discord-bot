@@ -60,18 +60,24 @@ const sanitizeGuildDoc = (doc: unknown): Record<string, unknown> => {
   return copy;
 };
 
-const defaultGuild = (id: GuildId): Guild =>
-  parseGuild({
-    _id: id,
-    features: DEFAULT_GUILD_FEATURES,
-    roles: {},
-    pendingTickets: [],
-    forumAutoReply: { forumIds: [] },
-    ai: { provider: "gemini", model: "gemini-2.5-flash" },
-    reputation: { keywords: [] },
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+// Defaults base para una guild.
+//
+// @remarks
+// Se construye como "doc crudo" (Record) para reutilizar `parseGuild` como punto único de
+// validación/normalización (incluye defaults/coerciones del schema + normalizadores).
+const buildDefaultGuildDoc = (id: GuildId): Record<string, unknown> => ({
+  _id: id,
+  features: DEFAULT_GUILD_FEATURES,
+  roles: {},
+  pendingTickets: [],
+  forumAutoReply: { forumIds: [] },
+  ai: { provider: "gemini", model: "gemini-2.5-flash" },
+  reputation: { keywords: [] },
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
+const defaultGuild = (id: GuildId): Guild => parseGuild(buildDefaultGuildDoc(id));
 
 const mergeFeatures = (features: GuildFeaturesRecord | null | undefined): GuildFeaturesRecord => ({
   ...DEFAULT_GUILD_FEATURES,
@@ -135,8 +141,35 @@ const normalizeGuild = (doc: Guild): Guild => ({
 });
 
 // Punto único: parsea + normaliza cualquier payload de guild.
-const parseGuild = (doc: unknown): Guild =>
-  normalizeGuild(GuildSchema.parse(sanitizeGuildDoc(doc)));
+const parseGuild = (doc: unknown): Guild => {
+  // `sanitizeGuildDoc` hace coerciones mínimas para tolerar documentos legacy (secciones nulas
+  // o faltantes) antes de pasar por Zod.
+  const sanitized = sanitizeGuildDoc(doc);
+  const parsed = GuildSchema.safeParse(sanitized);
+  if (parsed.success) {
+    return normalizeGuild(parsed.data);
+  }
+
+  // Política no-throw en runtime: un doc corrupto no debe tumbar el bot.
+  // Logueamos el error y retornamos defaults.
+  const fallbackId =
+    typeof (sanitized as any)?._id === "string"
+      ? ((sanitized as any)._id as GuildId)
+      : ("unknown" as GuildId);
+  console.error("[guilds] Failed to parse guild document; using defaults.", {
+    guildId: (sanitized as any)?._id,
+    error: parsed.error,
+  });
+
+  // Segundo intento: defaults completos (garantiza shapes estables para callers).
+  const fallback = GuildSchema.safeParse(sanitizeGuildDoc(buildDefaultGuildDoc(fallbackId)));
+  if (fallback.success) {
+    return normalizeGuild(fallback.data);
+  }
+
+  // Last resort: return a normalized best-effort object without throwing.
+  return normalizeGuild(sanitizeGuildDoc(buildDefaultGuildDoc(fallbackId)) as unknown as Guild);
+};
 
 const loadGuild = async (id: GuildId): Promise<Guild | null> => {
   const col = await guildsCollection();
@@ -217,6 +250,10 @@ export async function updateGuildPaths(
   const pipeline = [
     {
       $set: {
+        // Reparación defensiva de secciones anidadas:
+        // - Algunos documentos legacy guardaban `null` en vez de `{}`.
+        // - Mongo no permite `$set` sobre rutas hijas si el parent no es un objeto.
+        // Este paso garantiza que `channels/features/...` sean objetos antes de aplicar `paths`.
         createdAt: { $ifNull: ["$createdAt", now] },
         channels: {
           $cond: [

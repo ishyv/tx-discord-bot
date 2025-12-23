@@ -58,6 +58,9 @@ async function ensureOffersIndexes(): Promise<void> {
   const col = (await getDb()).collection<Offer>("offers");
 
   try {
+    // Índices son un detalle de infraestructura: no deben tumbar el bot en runtime.
+    // Si algo falla acá, preferimos degradar (log) y permitir que el resto del sistema
+    // siga funcionando (aunque se pierda la garantía de unicidad hasta que se arregle).
     const existing = await col.indexes();
     const alreadyOk = existing.some((idx) => {
       return (
@@ -73,11 +76,12 @@ async function ensureOffersIndexes(): Promise<void> {
       sameIndexKey(idx?.key as any, ACTIVE_OFFER_INDEX_KEY),
     );
     if (conflicting) {
-      throw new Error(
+      console.error(
         `[offers] Índice conflictivo detectado: '${conflicting.name}'. ` +
           "Se requiere un índice UNIQUE con partialFilterExpression por estado para garantizar 1 oferta activa por autor. " +
           `Solución: eliminar el índice '${conflicting.name}' y reiniciar el bot para que se regenere.`,
       );
+      return;
     }
 
     await col.createIndex(ACTIVE_OFFER_INDEX_KEY, {
@@ -120,12 +124,15 @@ async function ensureOffersIndexes(): Promise<void> {
       console.error("[offers] Failed to scan duplicate active offers:", scanError);
     }
 
-    throw new Error(`OFFERS_INDEX_SETUP_FAILED: ${message}`);
+    console.error(`OFFERS_INDEX_SETUP_FAILED: ${message}`);
+    return;
   }
 }
 
 const offersCollection = async () => {
   if (!offersIndexesEnsured) {
+    // Lazy init: se asegura al primer acceso a la colección para evitar trabajo extra
+    // en arranque si el módulo de ofertas no se usa.
     offersIndexesEnsured = ensureOffersIndexes();
   }
 
@@ -149,7 +156,46 @@ const withDb = async <T>(op: () => Promise<T>): Promise<Result<T>> => {
 };
 
 // Todo documento que sale del repo se valida por Zod.
-const parseOffer = (doc: unknown): Offer => OfferSchema.parse(doc);
+const parseOffer = (doc: unknown): Offer => {
+  const parsed = OfferSchema.safeParse(doc);
+  if (parsed.success) return parsed.data;
+  console.error("[offers] invalid offer document; using safe fallback", parsed.error);
+
+  // Este fallback es deliberadamente conservador:
+  // - Evita que un documento corrupto/legacy provoque un crash en runtime.
+  // - Mantiene un shape mínimo para que los callers puedan mostrar/editar/retirar sin
+  //   reventar al acceder propiedades.
+  // - NO intenta "arreglar" ni persistir el documento: solo permite degradar.
+
+  const fallbackId =
+    typeof (doc as any)?._id === "string"
+      ? ((doc as any)._id as OfferId)
+      : typeof (doc as any)?.id === "string"
+        ? ((doc as any).id as OfferId)
+        : ("unknown" as OfferId);
+  const guildId =
+    typeof (doc as any)?.guildId === "string"
+      ? ((doc as any).guildId as GuildId)
+      : ("unknown" as GuildId);
+  const authorId =
+    typeof (doc as any)?.authorId === "string"
+      ? ((doc as any).authorId as UserId)
+      : ("unknown" as UserId);
+
+  const now = new Date();
+  return {
+    _id: fallbackId,
+    guildId,
+    authorId,
+    status: "PENDING_REVIEW" as OfferStatus,
+    details: ((doc as any)?.details ?? {}) as OfferDetails,
+    embed: (doc as any)?.embed ?? null,
+    reviewMessageId: (doc as any)?.reviewMessageId ?? null,
+    reviewChannelId: (doc as any)?.reviewChannelId ?? null,
+    createdAt: (doc as any)?.createdAt instanceof Date ? (doc as any).createdAt : now,
+    updatedAt: (doc as any)?.updatedAt instanceof Date ? (doc as any).updatedAt : now,
+  } as Offer;
+};
 
 /**
  * Datos necesarios para crear una oferta.
@@ -264,8 +310,14 @@ export async function listByStatus(
 ): Promise<Result<Offer[]>> {
   return withDb(async () => {
     const col = await offersCollection();
-    statuses.forEach((s) => OfferStatusSchema.parse(s));
-    const docs = await col.find({ guildId, status: { $in: statuses } }).toArray();
+    const safeStatuses = statuses
+      .map((s) => OfferStatusSchema.safeParse(s))
+      .filter((r) => r.success)
+      .map((r) => (r as any).data as OfferStatus);
+    if (!safeStatuses.length) return [];
+    // Importante: consultamos con `safeStatuses` para evitar queries inválidas y para que
+    // el comportamiento coincida con la intención (validar inputs antes de tocar la DB).
+    const docs = await col.find({ guildId, status: { $in: safeStatuses } }).toArray();
     return docs.map(parseOffer);
   });
 }

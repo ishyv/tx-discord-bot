@@ -81,7 +81,8 @@ export function createStateProxy<T extends Record<string, unknown>>(
         },
         set(target, prop, value) {
             if (prop === "$") {
-                throw new Error("No se puede sobrescribir el registro de señales.");
+                console.warn("createStateProxy: attempted to overwrite '$'; ignoring.");
+                return true;
             }
             if (isSignalKey(signals, prop)) {
                 const key = prop as keyof T;

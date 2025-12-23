@@ -106,16 +106,25 @@ export function hasItem(
  */
 export async function saveInventory(userID: string, inv: UserInventory): Promise<void> {
   const userResult = await ensureUser(userID);
-  if (userResult.isErr()) throw userResult.error;
-  await saveUser(userID, { inventory: inv });
+  if (userResult.isErr()) {
+    console.warn("saveInventory: failed to ensure user; ignoring save.", userResult.error);
+    return;
+  }
+  const saved = await saveUser(userID, { inventory: inv });
+  if (saved.isErr()) {
+    console.warn("saveInventory: failed to save user inventory.", saved.error);
+  }
 }
 
 /** Loads the user inventory from the database.
  */
 export async function loadInventory(userID: string): Promise<UserInventory> {
   const userResult = await ensureUser(userID);
-  if (userResult.isErr()) throw userResult.error;
+  if (userResult.isErr()) {
+    console.warn("loadInventory: failed to ensure user; returning empty inventory.", userResult.error);
+    return createEmptyInventory();
+  }
   const user = userResult.unwrap();
-  return normalizeInventory(user.inventory);
+  return normalizeInventory(user?.inventory);
 }
 

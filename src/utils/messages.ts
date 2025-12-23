@@ -26,29 +26,40 @@ export async function sendPaginatedMessages(
     const message = pageSuffix ? `${base}${pageSuffix}` : base;
     if (!message) continue;
 
-    if (isReplyable(target) && reply) {
-      const payload: Record<string, unknown> = {
-        content: message,
-        allowed_mentions: { parse: [] },
-      };
-      if (components?.length && index === lastIndex) {
-        payload.components = components as unknown[];
-      }
-      await client.messages.write(target?.channelId ?? "", {
-        ...payload,
-        ...(reply
-          ? {
-              message_reference: {
-                message_id: target.id,
-                guild_id: target.guildId,
-                channel_id: target.channelId,
-              },
-            }
-          : {}),
-      });
-    } else {
-      throw new Error("Objetivo no soportado para enviar mensajes paginados.");
+    const channelId = target?.channelId ?? "";
+    if (!channelId) {
+      console.warn(
+        "sendPaginatedMessages: missing channelId; cannot send paginated message.",
+      );
+      return;
     }
+
+    if (reply && !isReplyable(target)) {
+      console.warn(
+        "sendPaginatedMessages: target is not replyable; cannot send as reply.",
+      );
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      content: message,
+      allowed_mentions: { parse: [] },
+    };
+    if (components?.length && index === lastIndex) {
+      payload.components = components as unknown[];
+    }
+    await client.messages.write(channelId, {
+      ...payload,
+      ...(reply
+        ? {
+            message_reference: {
+              message_id: target.id,
+              guild_id: target.guildId,
+              channel_id: target.channelId,
+            },
+          }
+        : {}),
+    });
   }
 }
 

@@ -24,8 +24,100 @@ const windowsCol = async () => (await getDb()).collection<TopWindow>("top_window
 const reportsCol = async () => (await getDb()).collection<TopReport>("top_reports");
 
 // Valida cada lectura/escritura con Zod para mantener defaults y tipos.
-const parseWindow = (doc: unknown): TopWindow => TopWindowSchema.parse(doc);
-const parseReport = (doc: unknown): TopReport => TopReportSchema.parse(doc);
+//
+// Nota importante (política de runtime): este repo evita `throw`.
+// Mongo puede contener documentos legacy/corruptos y Zod `.parse()` puede lanzar.
+// Por eso se usa `safeParse` + fallbacks, y se loguea el problema en vez de tumbar el bot.
+
+/**
+ * Construye un documento fallback "válido" para `TopWindow`.
+ *
+ * @remarks
+ * Este fallback no se persiste automáticamente: su propósito es permitir que el resto
+ * del bot continúe operando si un documento en DB está corrupto.
+ */
+const buildFallbackWindowDoc = (doc: any, now: Date = new Date()) => {
+  const guildId =
+    (typeof doc?.guildId === "string" && doc.guildId) ||
+    (typeof doc?._id === "string" && doc._id) ||
+    "unknown";
+
+  return {
+    _id: guildId,
+    guildId,
+    channelId: null,
+    intervalMs: TOP_DEFAULTS.intervalMs,
+    topSize: TOP_DEFAULTS.topSize,
+    windowStartedAt: now,
+    lastReportAt: null,
+    emojiCounts: {},
+    channelCounts: {},
+    reputationDeltas: {},
+    createdAt: now,
+    updatedAt: now,
+  };
+};
+
+/**
+ * Construye un documento fallback "válido" para `TopReport`.
+ *
+ * @remarks
+ * Los reportes son históricos: si uno está corrupto, preferimos degradar el listado
+ * antes que romper comandos/handlers que muestran historial.
+ */
+const buildFallbackReportDoc = (doc: any, now: Date = new Date()) => {
+  const guildId =
+    (typeof doc?.guildId === "string" && doc.guildId) ||
+    (typeof doc?._id === "string" && doc._id) ||
+    "unknown";
+
+  return {
+    guildId,
+    periodStart: doc?.periodStart instanceof Date ? doc.periodStart : new Date(0),
+    periodEnd: doc?.periodEnd instanceof Date ? doc.periodEnd : new Date(0),
+    intervalMs:
+      typeof doc?.intervalMs === "number" && Number.isFinite(doc.intervalMs)
+        ? Math.max(1, Math.trunc(doc.intervalMs))
+        : TOP_DEFAULTS.intervalMs,
+    emojiCounts: {},
+    channelCounts: {},
+    reputationDeltas: {},
+    metadata: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+};
+
+/**
+ * Normaliza un documento de ventana.
+ *
+ * @remarks
+ * - Si el doc es válido, retorna el tipado de Zod.
+ * - Si es inválido, loguea y retorna defaults.
+ */
+const parseWindow = (doc: unknown): TopWindow => {
+  const parsed = TopWindowSchema.safeParse(doc);
+  if (parsed.success) return parsed.data;
+  console.error("TOPs: failed to parse TopWindow; using fallback", parsed.error);
+  const fallback = buildFallbackWindowDoc(doc);
+  const fallbackParsed = TopWindowSchema.safeParse(fallback);
+  return fallbackParsed.success ? fallbackParsed.data : (fallback as unknown as TopWindow);
+};
+
+/**
+ * Normaliza un documento de reporte.
+ *
+ * @remarks
+ * Igual que `parseWindow`, se diseñó para no tirar exceptions en runtime.
+ */
+const parseReport = (doc: unknown): TopReport => {
+  const parsed = TopReportSchema.safeParse(doc);
+  if (parsed.success) return parsed.data;
+  console.error("TOPs: failed to parse TopReport; using fallback", parsed.error);
+  const fallback = buildFallbackReportDoc(doc);
+  const fallbackParsed = TopReportSchema.safeParse(fallback);
+  return fallbackParsed.success ? fallbackParsed.data : (fallback as unknown as TopReport);
+};
 
 const defaultWindow = (guildId: GuildId, now = new Date()): TopWindow =>
   parseWindow({
@@ -60,8 +152,16 @@ export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
     { returnDocument: "after", upsert: true },
   );
   const doc = res ?? (await col.findOne<TopWindow>({ _id: guildId }));
-  if (!doc) throw new Error(`No se pudo inicializar la ventana de TOPs para ${guildId}`);
-  return parseWindow(doc);
+  if (!doc) {
+    console.error(`No se pudo inicializar la ventana de TOPs para ${guildId}`);
+    return defaultWindow(guildId, now);
+  }
+  try {
+    return parseWindow(doc);
+  } catch (error) {
+    console.error("TOPs: failed to parse window; using defaults", { guildId, error });
+    return defaultWindow(guildId, now);
+  }
 }
 
 /**
@@ -126,9 +226,18 @@ export async function updateTopConfig(
   );
   const mapped = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
   if (!mapped) {
-    throw new Error(`No se pudo actualizar la configuración de TOPs para ${guildId}`);
+    console.error(`No se pudo actualizar la configuración de TOPs para ${guildId}`);
+    return getTopWindow(guildId);
   }
-  return parseWindow(mapped);
+  try {
+    return parseWindow(mapped);
+  } catch (error) {
+    console.error("TOPs: failed to parse updated window; returning current", {
+      guildId,
+      error,
+    });
+    return getTopWindow(guildId);
+  }
 }
 
 /**
@@ -155,8 +264,19 @@ export async function resetTopWindow(
     { returnDocument: "after", upsert: true },
   );
   const value = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
-  if (!value) throw new Error(`No se pudo reiniciar la ventana de TOPs para ${guildId}`);
-  return parseWindow(value);
+  if (!value) {
+    console.error(`No se pudo reiniciar la ventana de TOPs para ${guildId}`);
+    return defaultWindow(guildId, startedAt);
+  }
+  try {
+    return parseWindow(value);
+  } catch (error) {
+    console.error("TOPs: failed to parse reset window; using defaults", {
+      guildId,
+      error,
+    });
+    return defaultWindow(guildId, startedAt);
+  }
 }
 
 /**
@@ -245,7 +365,18 @@ export async function findDueWindows(
     })
     .toArray();
 
-  return docs.map(parseWindow);
+  // Importante: filtramos docs inválidos.
+  // Razón: una sola ventana corrupta no debería romper el loop de reporte.
+  const parsed = docs
+    .map((doc) => TopWindowSchema.safeParse(doc))
+    .filter((res) => {
+      if (res.success) return true;
+      console.error("TOPs: invalid top window document", res.error);
+      return false;
+    })
+    .map((res) => (res as any).data as TopWindow);
+
+  return parsed;
 }
 
 /**
@@ -264,7 +395,7 @@ export async function persistTopReport(
   },
 ): Promise<TopReport> {
   const col = await reportsCol();
-  const created = parseReport({
+  const createdRaw = {
     guildId: payload.guildId,
     periodStart: payload.periodStart,
     periodEnd: payload.periodEnd,
@@ -275,9 +406,21 @@ export async function persistTopReport(
     metadata: payload.metadata ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
+  };
+  const createdParsed = TopReportSchema.safeParse(createdRaw);
+  if (!createdParsed.success) {
+    console.error("TOPs: invalid report payload; using best-effort fallback", {
+      guildId: payload.guildId,
+      error: createdParsed.error,
+    });
+  }
+
+  const created = createdParsed.success
+    ? createdParsed.data
+    : (createdRaw as unknown as TopReport);
+
   const result = await col.insertOne(created);
-  const persisted = { ...created, _id: result.insertedId ?? created._id };
+  const persisted = { ...created, _id: result.insertedId ?? (created as any)._id };
   return parseReport(persisted);
 }
 
@@ -304,7 +447,16 @@ export async function rotateWindowAfterReport(
     { returnDocument: "after" },
   );
   const value = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
-  return value ? parseWindow(value) : null;
+  if (!value) return null;
+  const parsed = TopWindowSchema.safeParse(value);
+  if (!parsed.success) {
+    console.error("TOPs: invalid top window document after rotation", {
+      guildId,
+      error: parsed.error,
+    });
+    return null;
+  }
+  return parsed.data;
 }
 
 /**
@@ -320,7 +472,18 @@ export async function listReports(
     .sort({ createdAt: -1 })
     .limit(limit)
     .toArray();
-  return docs.map(parseReport);
+
+  // Igual que en ventanas: si hay un reporte histórico corrupto, lo omitimos.
+  const parsed = docs
+    .map((doc) => TopReportSchema.safeParse(doc))
+    .filter((res) => {
+      if (res.success) return true;
+      console.error("TOPs: invalid top report document", res.error);
+      return false;
+    })
+    .map((res) => (res as any).data as TopReport);
+
+  return parsed;
 }
 
 export type { TopWindow, TopReport };

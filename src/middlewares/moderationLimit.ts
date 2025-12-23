@@ -14,7 +14,10 @@ import {
   type RoleLimitBlock,
   type ResolveRoleActionPermissionResult,
 } from "@/modules/guild-roles";
-import { collectMemberRoleIds } from "@/utils/commandGuards";
+import {
+  collectMemberRoleIds,
+  memberHasDiscordPermission,
+} from "@/utils/commandGuards";
 
 function formatSeconds(seconds: number): string {
   const total = Math.max(0, Math.ceil(seconds));
@@ -90,11 +93,16 @@ export const moderationLimit = createMiddleware<void>(async (middle) => {
     return middle.next();
   }
 
+  const hasDiscordPermission = await memberHasDiscordPermission(
+    context.member ?? null,
+    context.command.defaultMemberPermissions,
+  );
+
   const overrideDecision = await resolveRoleActionPermission({
     guildId,
     actionKey,
     memberRoleIds: [...roleIds],
-    hasDiscordPermission: true,
+    hasDiscordPermission,
   });
 
   if (!overrideDecision.allowed) {

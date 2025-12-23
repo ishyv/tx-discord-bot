@@ -1,10 +1,23 @@
 /**
- * Motivación: declarar y habilitar características opcionales del bot en un catálogo central.
+ * Feature flags service.
  *
- * Idea/concepto: lista features consumibles por otros módulos para condicionar comportamientos.
+ * Role in system:
+ * - Central API to read/write feature toggles for a guild.
+ * - Used by middlewares and listeners to gate behavior.
  *
- * Alcance: definición estática; no ejecuta lógica de cada feature.
+ * Dependencies:
+ * - `configStore` for persistence and caching.
+ * - `DEFAULT_GUILD_FEATURES` as baseline behavior.
+ *
+ * Invariants:
+ * - Stored config is partial; missing keys fall back to defaults (usually true).
+ * - Public API never throws; it returns safe defaults.
+ *
+ * Gotchas:
+ * - All toggles are persisted under the `features` config key.
+ * - Defaults are applied here, not in the config schema.
  */
+
 import { MessageFlags } from "seyfert/lib/types";
 
 import {
@@ -13,94 +26,84 @@ import {
   type GuildFeaturesRecord,
 } from "@/db/schemas/guild";
 
-import { updateGuildPaths } from "@/db/repositories/guilds";
-
-const CACHE_TTL_MS = 30_000;
-const featureCache = new Map<
-  string,
-  { features: GuildFeaturesRecord; expiresAt: number }
->();
-
-function cacheKey(guildId: string) {
-  return guildId;
-}
-
-function setCache(guildId: string, features: GuildFeaturesRecord) {
-  featureCache.set(cacheKey(guildId), {
-    features,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
-}
-
-function getCached(guildId: string): GuildFeaturesRecord | null {
-  const entry = featureCache.get(cacheKey(guildId));
-  if (!entry) return null;
-  if (entry.expiresAt < Date.now()) {
-    featureCache.delete(cacheKey(guildId));
-    return null;
-  }
-  return entry.features;
-}
+import { configStore, ConfigurableModule } from "@/configuration";
 
 export { Features };
 export { BindDisabled } from "./decorator";
 
 export const GUILD_FEATURES: readonly Features[] = Object.values(Features);
 
+/**
+ * Read the full feature set for a guild.
+ *
+ * @returns Features with defaults applied.
+ * @sideEffects Reads config via ConfigStore (cached).
+ * @errors None thrown; defaults are returned if anything fails.
+ */
 export async function getFeatureFlags(
   guildId: string,
 ): Promise<GuildFeaturesRecord> {
-  const cached = getCached(guildId);
-  if (cached) return cached;
-
-  const fetched = await import("@/db/repositories/with_guild").then(m => m.getGuild(guildId));
-  const features = { ...DEFAULT_GUILD_FEATURES, ...(fetched?.features ?? {}) };
-
-  setCache(guildId, features);
-  return features;
+  const stored = await configStore.get(guildId, ConfigurableModule.Features);
+  // WHY: defaults live here so new feature flags default to "enabled" unless set.
+  return { ...DEFAULT_GUILD_FEATURES, ...(stored ?? {}) };
 }
 
-
+/**
+ * Check if a specific feature is enabled for the guild.
+ *
+ * @returns `true` if enabled or missing (defaults to enabled).
+ * @sideEffects Reads config via ConfigStore (cached).
+ * @errors None thrown.
+ */
 export async function isFeatureEnabled(
   guildId: string,
   feature: Features,
 ): Promise<boolean> {
   const features = await getFeatureFlags(guildId);
   const value = features[feature];
-  return value === undefined || value === null ? DEFAULT_GUILD_FEATURES[feature] : Boolean(value);
+  return value === undefined || value === null
+    ? DEFAULT_GUILD_FEATURES[feature]
+    : Boolean(value);
 }
 
+/**
+ * Enable/disable a single feature flag.
+ *
+ * @param feature Feature enum value.
+ * @param enabled Desired state.
+ * @returns Updated feature set with defaults applied.
+ * @sideEffects Writes config (Mongo) and updates cache.
+ * @errors None thrown; failures log and return best-effort data.
+ */
 export async function setFeatureFlag(
   guildId: string,
   feature: Features,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  await updateGuildPaths(guildId, { [`features.${feature}`]: enabled });
-  const current = getCached(guildId) ?? (await getFeatureFlags(guildId));
-  const next = { ...current, [feature]: enabled };
-  setCache(guildId, next);
-  return next;
+  await configStore.set(guildId, ConfigurableModule.Features, {
+    [feature]: enabled,
+  } as Partial<GuildFeaturesRecord>);
+  return getFeatureFlags(guildId);
 }
 
+/**
+ * Enable/disable all known feature flags.
+ *
+ * @returns Updated feature set with defaults applied.
+ * @sideEffects Writes config (Mongo) and updates cache.
+ * @errors None thrown; failures log and return best-effort data.
+ */
 export async function setAllFeatureFlags(
   guildId: string,
   enabled: boolean,
 ): Promise<GuildFeaturesRecord> {
-  const updates: Record<string, unknown> = {};
+  const updates: Partial<GuildFeaturesRecord> = {};
   for (const key of GUILD_FEATURES) {
-    updates[`features.${key}`] = enabled;
+    updates[key] = enabled;
   }
 
-  await updateGuildPaths(guildId, updates);
-
-  const current = getCached(guildId) ?? (await getFeatureFlags(guildId));
-  const next: GuildFeaturesRecord = { ...current };
-  for (const key of GUILD_FEATURES) {
-    next[key] = enabled;
-  }
-
-  setCache(guildId, next);
-  return next;
+  await configStore.set(guildId, ConfigurableModule.Features, updates);
+  return getFeatureFlags(guildId);
 }
 
 type WritableContext = {
@@ -109,10 +112,12 @@ type WritableContext = {
 };
 
 /**
- * Ensures a guild feature is enabled for the current context. When disabled,
- * sends an ephemeral notice and returns false so callers can bail out early.
- * 
+ * Guard helper for components/handlers that are not covered by middleware.
+ *
  * @deprecated Use @BindDisabled decorator instead for commands.
+ * @returns `true` when enabled; `false` after sending an ephemeral notice.
+ * @sideEffects Sends an ephemeral message when disabled.
+ * @errors None thrown.
  */
 export async function assertFeatureEnabled(
   ctx: WritableContext,
@@ -128,7 +133,7 @@ export async function assertFeatureEnabled(
   await ctx.write({
     content:
       message ??
-      "Esta característica está deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.",
+      "Esta caracteristica esta deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.",
     flags: MessageFlags.Ephemeral,
   });
   return false;

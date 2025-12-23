@@ -91,12 +91,10 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-    let trigger: AutoRoleTrigger;
-    try {
-      trigger = parseTrigger(ctx.options.trigger);
-    } catch (error) {
+    const trigger = parseTrigger(ctx.options.trigger);
+    if (!trigger) {
       await ctx.write({
-        content: `Trigger invalido: ${(error as Error).message}`,
+        content: "Trigger invalido. Verifica el formato y vuelve a intentar.",
       });
       return;
     }
