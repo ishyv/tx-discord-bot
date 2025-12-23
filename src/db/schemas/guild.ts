@@ -2,6 +2,7 @@
  * Zod schema for guild documents.
  * Purpose: single definition of guild shape/defaults to validate repo reads/writes.
  */
+import { DEFAULT_GEMINI_MODEL, DEFAULT_PROVIDER_ID } from "@/services/ai";
 import { z } from "zod";
 
 export enum Features {
@@ -81,12 +82,26 @@ export const GuildFeaturesSchema = z
   .default(() => DEFAULT_GUILD_FEATURES);
 export const GuildRolesSchema = z.record(z.string(), z.any()).default(() => ({}));
 
+export const ForumAutoReplySchema = z.object({
+  forumIds: z.array(z.string()).default(() => []),
+});
+
+export const AiConfigSchema = z.object({
+  provider: z.string().default(DEFAULT_PROVIDER_ID),
+  model: z.string().default(DEFAULT_GEMINI_MODEL),
+});
+
 export const GuildSchema = z.object({
   _id: z.string(),
   roles: GuildRolesSchema,
   channels: GuildChannelsSchema,
   pendingTickets: z.array(z.string()).default(() => []),
   features: GuildFeaturesSchema,
+  forumAutoReply: ForumAutoReplySchema.default(() => ({ forumIds: [] })),
+  ai: AiConfigSchema.default(() => ({
+    provider: "gemini",
+    model: "gemini-2.5-flash",
+  })),
   reputation: z
     .object({
       keywords: z.array(z.string()).default(() => []),
@@ -101,3 +116,5 @@ export type GuildChannelsRecord = z.infer<typeof GuildChannelsSchema>;
 export type GuildFeaturesRecord = z.infer<typeof GuildFeaturesSchema>;
 export type CoreChannelRecord = z.infer<typeof CoreChannelSchema>;
 export type ManagedChannelRecord = z.infer<typeof ManagedChannelSchema>;
+export type ForumAutoReplyRecord = z.infer<typeof ForumAutoReplySchema>;
+export type AiConfigRecord = z.infer<typeof AiConfigSchema>;

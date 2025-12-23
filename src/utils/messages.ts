@@ -14,17 +14,28 @@ export async function sendPaginatedMessages(
   target: Message,
   content: string,
   reply: boolean = false,
+  components?: unknown[],
+  pageSuffix?: string,
 ): Promise<void> {
-  const pages = paginateText(content);
+  const safeLimit = getPageLimitWithSuffix(pageSuffix);
+  const pages = paginateText(content, safeLimit);
+  const lastIndex = pages.length - 1;
 
-  for (const page of pages) {
-    const message = page.trim();
+  for (const [index, page] of pages.entries()) {
+    const base = page.trim();
+    const message = pageSuffix ? `${base}${pageSuffix}` : base;
     if (!message) continue;
 
     if (isReplyable(target) && reply) {
-      await client.messages.write(target?.channelId ?? "", {
+      const payload: Record<string, unknown> = {
         content: message,
         allowed_mentions: { parse: [] },
+      };
+      if (components?.length && index === lastIndex) {
+        payload.components = components as unknown[];
+      }
+      await client.messages.write(target?.channelId ?? "", {
+        ...payload,
         ...(reply
           ? {
               message_reference: {
@@ -38,6 +49,40 @@ export async function sendPaginatedMessages(
     } else {
       throw new Error("Objetivo no soportado para enviar mensajes paginados.");
     }
+  }
+}
+
+export async function sendPaginatedByReference(
+  client: UsingClient,
+  reference: { channelId: string; messageId: string; guildId?: string | null },
+  content: string,
+  components?: unknown[],
+  pageSuffix?: string,
+): Promise<void> {
+  const safeLimit = getPageLimitWithSuffix(pageSuffix);
+  const pages = paginateText(content, safeLimit);
+  const lastIndex = pages.length - 1;
+
+  for (const [index, page] of pages.entries()) {
+    const base = page.trim();
+    const message = pageSuffix ? `${base}${pageSuffix}` : base;
+    if (!message) continue;
+
+    const payload: Record<string, unknown> = {
+      content: message,
+      allowed_mentions: { parse: [] },
+      message_reference: {
+        message_id: reference.messageId,
+        channel_id: reference.channelId,
+        guild_id: reference.guildId ?? undefined,
+      },
+    };
+
+    if (components?.length && index === lastIndex) {
+      payload.components = components as unknown[];
+    }
+
+    await client.messages.write(reference.channelId, payload);
   }
 }
 
@@ -77,4 +122,11 @@ function isReplyable(
     "reply" in target &&
     typeof target.reply === "function"
   );
+}
+
+function getPageLimitWithSuffix(pageSuffix?: string): number {
+  if (!pageSuffix) return DEFAULT_PAGE_LIMIT;
+
+  const safeLimit = DEFAULT_PAGE_LIMIT - pageSuffix.length;
+  return safeLimit > 0 ? safeLimit : DEFAULT_PAGE_LIMIT;
 }

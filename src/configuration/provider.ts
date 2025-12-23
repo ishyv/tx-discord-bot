@@ -15,8 +15,10 @@ export interface ConfigProvider {
  * Mapping of logical configuration keys (ConfigurableModule) to MongoDB document paths.
  */
 const CONFIG_PATHS: Record<string, string> = {
+    [ConfigurableModule.AI]: "ai",
     [ConfigurableModule.Reputation]: "reputation",
     [ConfigurableModule.Tops]: "features.tops",
+    [ConfigurableModule.ForumAutoReply]: "forumAutoReply",
     [ConfigurableModule.ChannelsCore]: "channels.core",
     [ConfigurableModule.ChannelsManaged]: "channels.managed",
     [ConfigurableModule.Tickets]: "channels.core",

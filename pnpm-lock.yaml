@@ -26,6 +26,9 @@ importers:
       onnxruntime-node:
         specifier: 1.22.0-rev
         version: 1.22.0-rev
+      openai:
+        specifier: ^6.15.0
+        version: 6.15.0(ws@8.18.3)(zod@4.1.13)
       paddleocr:
         specifier: ^1.0.6
         version: 1.0.6
@@ -796,6 +799,18 @@ packages:
   onnxruntime-node@1.22.0-rev:
     resolution: {integrity: sha512-9vh50/mnwauFUex0NYyyLf9pmRp8q6DVMG8K+xtoXv68SSB9bESa1bEbWLqfUncgB3XucQaOV+wfMPcqANMYhQ==}
     os: [win32, darwin, linux]
+
+  openai@6.15.0:
+    resolution: {integrity: sha512-F1Lvs5BoVvmZtzkUEVyh8mDQPPFolq4F+xdsx/DO8Hee8YF3IGAlZqUIsF+DVGhqf4aU0a3bTghsxB6OIsRy1g==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
@@ -1709,6 +1724,11 @@ snapshots:
       adm-zip: 0.5.16
       global-agent: 3.0.0
       onnxruntime-common: 1.22.0
+
+  openai@6.15.0(ws@8.18.3)(zod@4.1.13):
+    optionalDependencies:
+      ws: 8.18.3
+      zod: 4.1.13
 
   package-json-from-dist@1.0.1: {}
 

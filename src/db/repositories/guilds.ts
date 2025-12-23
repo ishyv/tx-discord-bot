@@ -20,6 +20,8 @@ import {
   type GuildRolesRecord,
   type ManagedChannelRecord,
   type CoreChannelRecord,
+  type ForumAutoReplyRecord,
+  type AiConfigRecord,
   Features,
   DEFAULT_GUILD_FEATURES,
 } from "@/db/schemas/guild";
@@ -48,6 +50,12 @@ const sanitizeGuildDoc = (doc: unknown): Record<string, unknown> => {
   if (copy.reputation === undefined || copy.reputation === null) {
     copy.reputation = {};
   }
+  if (copy.forumAutoReply === undefined || copy.forumAutoReply === null) {
+    copy.forumAutoReply = {};
+  }
+  if (copy.ai === undefined || copy.ai === null) {
+    copy.ai = {};
+  }
 
   return copy;
 };
@@ -58,6 +66,8 @@ const defaultGuild = (id: GuildId): Guild =>
     features: DEFAULT_GUILD_FEATURES,
     roles: {},
     pendingTickets: [],
+    forumAutoReply: { forumIds: [] },
+    ai: { provider: "gemini", model: "gemini-2.5-flash" },
     reputation: { keywords: [] },
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -96,12 +106,31 @@ const normalizeChannels = (channels: Partial<GuildChannelsRecord>): GuildChannel
   } as GuildChannelsRecord;
 };
 
+const normalizeForumAutoReply = (
+  value: ForumAutoReplyRecord | null | undefined,
+): ForumAutoReplyRecord => ({
+  forumIds: normalizeStringArray(value?.forumIds ?? []),
+});
+
+const normalizeAiConfig = (
+  value: AiConfigRecord | null | undefined,
+): AiConfigRecord => ({
+  provider: typeof value?.provider === "string" && value.provider
+    ? value.provider
+    : "gemini",
+  model: typeof value?.model === "string" && value.model
+    ? value.model
+    : "gemini-2.5-flash",
+});
+
 const normalizeGuild = (doc: Guild): Guild => ({
   ...doc,
   roles: (doc.roles as GuildRolesRecord) ?? {},
   channels: normalizeChannels(doc.channels as Partial<GuildChannelsRecord>),
   features: mergeFeatures(doc.features as GuildFeaturesRecord),
   pendingTickets: normalizeStringArray(doc.pendingTickets),
+  forumAutoReply: normalizeForumAutoReply((doc as any).forumAutoReply),
+  ai: normalizeAiConfig((doc as any).ai),
   reputation: doc.reputation ?? { keywords: [] },
 });
 
@@ -207,6 +236,20 @@ export async function updateGuildPaths(
           $cond: [
             { $eq: [{ $type: "$reputation" }, "object"] },
             "$reputation",
+            {},
+          ],
+        },
+        forumAutoReply: {
+          $cond: [
+            { $eq: [{ $type: "$forumAutoReply" }, "object"] },
+            "$forumAutoReply",
+            {},
+          ],
+        },
+        ai: {
+          $cond: [
+            { $eq: [{ $type: "$ai" }, "object"] },
+            "$ai",
             {},
           ],
         },

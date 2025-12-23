@@ -35,6 +35,7 @@ Puede leer toda la guía de contribución [aquí](./contributing.md). Debe segui
 ## 📚 Documentación técnica
 
 - Capa de base de datos (schemas, repositorios, flujo de conexión): [docs/database.md](./docs/database.md).
+- Sistema de IA (providers, configuración por guild, truncado/continuación): [docs/sistema-ia.md](./docs/sistema-ia.md).
 
 ---
 

@@ -7,7 +7,8 @@
  */
 import type { CommandContext } from "seyfert";
 import { Command, Declare } from "seyfert";
-import { callGeminiAI } from "@/services/ai";
+import { generateForGuild } from "@/services/ai";
+import { markAIMessage } from "@/services/ai/messageTracker";
 import type { Message } from "@/utils/userMemory";
 import { Modality } from "@google/genai";
 
@@ -27,15 +28,16 @@ export default class JokeCommand extends Command {
       },
     ];
 
-    const response = await callGeminiAI(messages, {
-      model: "gemini-2.5-flash-lite",
-      config: {
+    const response = await generateForGuild({
+      guildId: ctx.guildId,
+      messages,
+      overrides: {
         responseModalities: [Modality.TEXT],
         temperature: 0.9,
         topP: 0.95,
       },
     });
 
-    await ctx.editOrReply({ content: response.text });
+    await ctx.editOrReply({ content: markAIMessage(response.text) });
   }
 }

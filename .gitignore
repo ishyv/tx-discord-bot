@@ -149,4 +149,6 @@ drizzle
 # nix
 .direnv
 cache_automod.json
+cache_forum_autoreply.json
+cache_ai_messages.json
 eng.traineddata

@@ -63,3 +63,9 @@ Reglas:
 
 Actúa como un asistente confiable, paciente y accesible, enfocado en que los miembros de PyE aprendan conceptos de programación de manera rápida y sencilla.
 `;
+
+export const CONTINUE_PROMPT =
+  "Continua desde donde lo dejaste. No repitas lo ya dicho. Responde en el mismo idioma.";
+
+// Usada para marcar el mensaje como contenido generado por IA.
+export const AI_GENERATED_MESSAGE = "AI=generated";

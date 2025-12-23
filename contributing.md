@@ -56,7 +56,8 @@ CLIENT_ID=DISCORD_CLIENT_ID
 Si querés habilitar las características de IA, agregá además:
 
 ```env
-GOOGLE_GENAI_API_KEY=API_KEY
+GEMINI_API_KEY=API_KEY
+OPENAI_API_KEY=API_KEY
 ```
 
 ---
