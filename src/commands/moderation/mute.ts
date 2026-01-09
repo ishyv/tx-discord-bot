@@ -18,6 +18,7 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { isValid, parse } from "@/utils/ms";
+import { registerCase } from "@/db/repositories/users";
 
 const options = {
   user: createUserOption({
@@ -101,6 +102,8 @@ export default class MuteCommand extends Command {
     await ctx.write({
       embeds: [successEmbed],
     });
+
+    await registerCase(user.id, ctx.guildId!, "TIMEOUT", reason);
 
     await GuildLogger.banSanctionLog({
       title: "Usuario silenciado",

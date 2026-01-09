@@ -16,6 +16,7 @@ import {
   Options,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { registerCase } from "@/db/repositories/users";
 
 const options = {
   user: createUserOption({
@@ -82,6 +83,8 @@ export default class BanCommand extends Command {
     await ctx.write({
       embeds: [successEmbed],
     });
+
+    await registerCase(user.id, ctx.guildId!, "BAN", reason);
 
     await GuildLogger.banSanctionLog({
       title: "Usuario baneado",

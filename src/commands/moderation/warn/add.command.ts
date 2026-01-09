@@ -17,7 +17,7 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import type { Warn } from "@/db/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
-import { addWarn, listWarns } from "@/db/repositories";
+import { addWarn, listWarns, registerCase } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
@@ -92,6 +92,8 @@ export default class AddWarnCommand extends SubCommand {
 		});
 
 		await ctx.write({ embeds: [successEmbed] });
+
+		await registerCase(user.id, guildId, "WARN", finalReason);
 
 		await logModerationAction(ctx.client, guildId, {
 			title: "Warn aplicado",

@@ -9,10 +9,13 @@ Marco de diseño para los sistemas de protección del servidor y gestión discip
 - **Optimización**: Emplea técnicas de hash para recordar imágenes ya procesadas y minimizar el uso de recursos costosos.
 - **Staff-Centric**: En lugar de borrar contenido silenciosamente de forma agresiva, el sistema prioriza alertar al equipo de moderación mediante canales de log dedicados, permitiendo una intervención humana informada.
 
-## Advertencias (Warns)
-
-- **Gestión**: Las sanciones se registran de forma centralizada vinculadas al usuario, permitiendo un seguimiento histórico multiplataforma (si aplica).
 - **Trazabilidad**: Cada advertencia incluye metadatos sobre el moderador, el motivo y un identificador único para su gestión o apelación.
+
+## Historial de Sanciones (Casos)
+
+- **Propósito**: Proporcionar un registro unificado y persistente de todas las acciones disciplinarias (Bans, Kicks, Mutes, Warns) por servidor.
+- **Acceso**: Consultable mediante el comando `/cases`, permitiendo al staff revisar antecedentes de forma rápida.
+- **Detalle Técnico**: Para profundizar en su arquitectura y funcionamiento, ver [Historial de Sanciones](./historial-sanciones.md).
 
 ## Sistema de Reputación
 

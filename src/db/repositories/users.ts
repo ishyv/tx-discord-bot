@@ -19,11 +19,52 @@ import {
   UserSchema,
   type Warn,
   WarnSchema,
+  type SanctionType,
 } from "@/db/schemas/user";
 import type { UserId, WarnId } from "@/db/types";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 
 const usersCollection = async () => (await getDb()).collection<User>("users");
+
+/**
+ * Registra un caso de sanción en el historial del usuario para un guild específico.
+ *
+ * @param userId ID del usuario sancionado.
+ * @param guildId ID del servidor donde ocurrió la sanción.
+ * @param type Tipo de sanción (BAN, KICK, TIMEOUT, WARN).
+ * @param description Razón o descripción de la sanción.
+ */
+export async function registerCase(
+  userId: string,
+  guildId: string,
+  type: SanctionType,
+  description: string,
+): Promise<Result<void>> {
+  return withDb(async () => {
+    // Aseguramos que existe el usuario para evitar errores en $push a path inexistente si fuera el caso,
+    // o para crear el documento base.
+    await ensureUserDocument(userId);
+
+    const col = await usersCollection();
+    // Usamos notación de punto para acceder/crear el array del guild específico.
+    // MongoDB creará el objeto y el array si no existen gracias a que UserSchema define sanction_history como default {}.
+    const fieldPath = `sanction_history.${guildId}`;
+
+    await col.updateOne(
+      { _id: userId },
+      {
+        $push: {
+          [fieldPath]: {
+            type,
+            description,
+            date: new Date().toISOString(),
+          },
+        },
+        $set: { updatedAt: new Date() },
+      } as any, // Cast necesario porque TS a veces se queja con claves dinámicas anidadas en UpdateFilter
+    );
+  });
+}
 
 // Base para nuevos usuarios.
 //
