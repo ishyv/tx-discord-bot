@@ -1,5 +1,6 @@
 import { Command, Declare, Options, Embed, createUserOption, type GuildCommandContext } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
 import { findUser } from "@/db/repositories/users";
 import { SanctionType } from "@/db/schemas/user";
 
@@ -32,6 +33,7 @@ export default class CasesCommand extends Command {
 
         if (userResult.isErr()) {
             return ctx.write({
+                flags: MessageFlags.Ephemeral,
                 content: "❌ Hubo un error al buscar el historial del usuario.",
             });
         }
@@ -39,6 +41,7 @@ export default class CasesCommand extends Command {
         const userData = userResult.unwrap();
         if (!userData) {
             return ctx.write({
+                flags: MessageFlags.Ephemeral,
                 content: "❌ No se encontraron registros de este usuario en la base de datos.",
             });
         }
@@ -48,6 +51,7 @@ export default class CasesCommand extends Command {
 
         if (history.length === 0) {
             return ctx.write({
+                flags: MessageFlags.Ephemeral,
                 content: `📁 El usuario **${targetName}** no tiene casos registrados en este servidor.`,
             });
         }
@@ -73,6 +77,7 @@ export default class CasesCommand extends Command {
         });
 
         await ctx.write({
+            flags: MessageFlags.Ephemeral,
             embeds: [embed],
         });
     }

@@ -37,7 +37,7 @@
               # node
               node2nix
               nodejs
-              nodePackages.pnpm
+              bun
               # hooks
               lefthook
               # lint & format

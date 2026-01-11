@@ -12,12 +12,12 @@ config:
 
 tasks:
   install:
-    cmd: ["pnpm install", "pnpm approve-builds"]
+    cmd: ["bun install"]
     desc: Install dependencies
     concurrent: false
 
   start:
-    cmd: ["rm -rf commands.json dist", "pnpm start"]
+    cmd: ["rm -rf commands.json dist", "bun run start"]
     desc: Start the bot
     # deps: [db]
     watch: ["src/**"]

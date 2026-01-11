@@ -100,6 +100,7 @@ export default class MuteCommand extends Command {
     });
 
     await ctx.write({
+      flags: MessageFlags.Ephemeral,
       embeds: [successEmbed],
     });
 

@@ -16,10 +16,10 @@ Antes de comenzar, asegurate de leer y seguir todas las instrucciones de este do
    cd pyebot
    ```
 
-3. **Instala dependencias** con [pnpm](https://pnpm.io). Si no lo tenés, primero instalalo.
+3. **Instala dependencias** con [Bun](https://bun.sh). Si no lo tenés, primero instalalo.
 
    ```bash
-   pnpm install
+   bun install
    ```
 
 4. **Configura [Lefthook](https://github.com/evilmartians/lefthook)**
@@ -67,13 +67,13 @@ OPENAI_API_KEY=API_KEY
 Para compilar y ejecutar el bot en modo normal:
 
 ```bash
-pnpm start
+bun run start
 ```
 
 Para levantarlo en modo desarrollo (recompilación automática):
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 ---
@@ -107,8 +107,8 @@ DB_URI="mongodb://localhost:27017/pyebot"
 2. Asegurate de que tu código pase todas las validaciones antes de abrir la PR:
 
    ```bash
-   pnpm lint
-   pnpm fmt:check
+   bun run lint
+   bun run fmt:check
    ```
 
    Aunque estas se verifican gracias a **Lefthook**, por lo que normalmente no es necesario ejecutar los comandos.

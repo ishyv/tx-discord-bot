@@ -70,43 +70,43 @@ export const ManagedChannelSchema = z.object({
 });
 
 export const GuildChannelsSchema = z.object({
-  core: z.record(z.string(), CoreChannelSchema.nullable()).default(() => defaultCoreChannels()),
-  managed: z.record(z.string(), ManagedChannelSchema).default(() => ({})),
-  ticketMessageId: z.string().nullable().default(null),
-  ticketHelperRoles: z.array(z.string()).default(() => []),
-  ticketCategoryId: z.string().nullable().default(null),
+  core: z.record(z.string(), CoreChannelSchema.nullable()).catch(() => defaultCoreChannels()),
+  managed: z.record(z.string(), ManagedChannelSchema).catch(() => ({})),
+  ticketMessageId: z.string().nullable().catch(null),
+  ticketHelperRoles: z.array(z.string()).catch(() => []),
+  ticketCategoryId: z.string().nullable().catch(null),
 });
 
 export const GuildFeaturesSchema = z
   .record(z.string(), z.boolean())
-  .default(() => DEFAULT_GUILD_FEATURES);
-export const GuildRolesSchema = z.record(z.string(), z.any()).default(() => ({}));
+  .catch(() => DEFAULT_GUILD_FEATURES);
+export const GuildRolesSchema = z.record(z.string(), z.any()).catch(() => ({}));
 
 export const ForumAutoReplySchema = z.object({
-  forumIds: z.array(z.string()).default(() => []),
+  forumIds: z.array(z.string()).catch(() => []),
 });
 
 export const AiConfigSchema = z.object({
-  provider: z.string().default(DEFAULT_PROVIDER_ID),
-  model: z.string().default(DEFAULT_GEMINI_MODEL),
+  provider: z.string().catch(DEFAULT_PROVIDER_ID),
+  model: z.string().catch(DEFAULT_GEMINI_MODEL),
 });
 
 export const GuildSchema = z.object({
   _id: z.string(),
   roles: GuildRolesSchema,
   channels: GuildChannelsSchema,
-  pendingTickets: z.array(z.string()).default(() => []),
+  pendingTickets: z.array(z.string()).catch(() => []),
   features: GuildFeaturesSchema,
-  forumAutoReply: ForumAutoReplySchema.default(() => ({ forumIds: [] })),
-  ai: AiConfigSchema.default(() => ({
+  forumAutoReply: ForumAutoReplySchema.catch(() => ({ forumIds: [] })),
+  ai: AiConfigSchema.catch(() => ({
     provider: "gemini",
     model: "gemini-2.5-flash",
   })),
   reputation: z
     .object({
-      keywords: z.array(z.string()).default(() => []),
+      keywords: z.array(z.string()).catch(() => []),
     })
-    .default(() => ({ keywords: [] })),
+    .catch(() => ({ keywords: [] })),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -118,3 +118,4 @@ export type CoreChannelRecord = z.infer<typeof CoreChannelSchema>;
 export type ManagedChannelRecord = z.infer<typeof ManagedChannelSchema>;
 export type ForumAutoReplyRecord = z.infer<typeof ForumAutoReplySchema>;
 export type AiConfigRecord = z.infer<typeof AiConfigSchema>;
+

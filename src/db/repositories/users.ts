@@ -13,6 +13,10 @@
  */
 
 import type { Filter, UpdateFilter } from "mongodb";
+import {
+  buildSafeUpsertUpdate,
+  unwrapFindOneAndUpdateResult,
+} from "@/db/helpers";
 import { getDb } from "@/db/mongo";
 import {
   type User,
@@ -91,6 +95,11 @@ const defaultUser = (id: UserId, now: Date = new Date()): User => {
   return base as unknown as User;
 };
 
+const buildUserInsertDefaults = (id: UserId, now: Date): Record<string, unknown> => ({
+  _id: id,
+  createdAt: now,
+});
+
 // Normaliza errores desconocidos a instancias de Error para Result helpers.
 const mapError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
@@ -100,6 +109,7 @@ const withDb = async <T>(op: () => Promise<T>): Promise<Result<T>> => {
   try {
     return OkResult(await op());
   } catch (error) {
+    console.error("users: database operation failed", { error });
     return ErrResult(mapError(error));
   }
 };
@@ -127,17 +137,25 @@ const ensureUserDocument = async (
   now: Date = new Date(),
 ): Promise<User> => {
   const col = await usersCollection();
+  const insertDefaults = buildUserInsertDefaults(id, now);
+  const update = buildSafeUpsertUpdate<User>(
+    { $setOnInsert: insertDefaults },
+    insertDefaults,
+    now,
+    { setUpdatedAt: false },
+  );
   const res = await col.findOneAndUpdate(
     { _id: id },
-    { $setOnInsert: defaultUser(id, now) },
+    update,
     { upsert: true, returnDocument: "after" },
   );
-  if (!res) {
+  const doc = unwrapFindOneAndUpdateResult<User>(res);
+  if (!doc) {
     console.error("No se pudo asegurar el usuario.", { id });
     return defaultUser(id, now);
   }
   try {
-    return parseUser(res);
+    return parseUser(doc);
   } catch (error) {
     console.error("users: failed to parse ensured user; using defaults", {
       id,
@@ -147,39 +165,28 @@ const ensureUserDocument = async (
   }
 };
 
-const updateUserDocument = async (
+async function updateUserDocument(
   id: UserId,
   update: UpdateFilter<User>,
   now: Date = new Date(),
-): Promise<User> => {
+): Promise<User> {
   const col = await usersCollection();
-
-  const existingSet = (update.$set as Partial<User> | undefined) ?? {};
-  const existingSetOnInsert =
-    (update.$setOnInsert as Partial<User> | undefined) ?? {};
-
-  const nextUpdate: UpdateFilter<User> = {
-    ...update,
-    $setOnInsert: {
-      ...defaultUser(id, now),
-      ...existingSetOnInsert,
-    },
-    $set: {
-      ...existingSet,
-      updatedAt: now,
-    },
-  };
+  const insertDefaults = buildUserInsertDefaults(id, now);
+  const nextUpdate = buildSafeUpsertUpdate<User>(update, insertDefaults, now);
 
   const res = await col.findOneAndUpdate({ _id: id }, nextUpdate, {
     upsert: true,
     returnDocument: "after",
   });
-  if (!res) {
+
+  const doc = unwrapFindOneAndUpdateResult<User>(res);
+  if (!doc) {
     console.error("No se pudo actualizar el usuario.", { id });
     return defaultUser(id, now);
   }
+
   try {
-    return parseUser(res);
+    return parseUser(doc);
   } catch (error) {
     console.error("users: failed to parse updated user; using defaults", {
       id,
@@ -187,7 +194,7 @@ const updateUserDocument = async (
     });
     return defaultUser(id, now);
   }
-};
+}
 
 /* ------------------------------------------------------------------------- */
 /* Core CRUD                                                                 */
@@ -292,8 +299,9 @@ export async function updateUserReputation(
         { returnDocument: "after" },
       );
 
-      if (res) {
-        const parsed = parseUser(res);
+      const doc = unwrapFindOneAndUpdateResult<User>(res);
+      if (doc) {
+        const parsed = parseUser(doc);
         return clampRep(parsed.rep ?? 0);
       }
 
@@ -482,7 +490,7 @@ export async function addOpenTicketIfBelowLimit(
       { returnDocument: "after" },
     );
 
-    return Boolean(res);
+    return Boolean(unwrapFindOneAndUpdateResult<User>(res));
   });
 }
 
@@ -531,7 +539,8 @@ export async function replaceInventoryIfMatch(
       { $set: { inventory: next, updatedAt: now } },
       { returnDocument: "after" },
     );
-    return res ? parseUser(res) : null;
+    const doc = unwrapFindOneAndUpdateResult<User>(res);
+    return doc ? parseUser(doc) : null;
   });
 }
 
@@ -554,7 +563,8 @@ export async function replaceCurrencyIfMatch(
       { $set: { currency: next, updatedAt: now } },
       { returnDocument: "after" },
     );
-    return res ? parseUser(res) : null;
+    const doc = unwrapFindOneAndUpdateResult<User>(res);
+    return doc ? parseUser(doc) : null;
   });
 }
 

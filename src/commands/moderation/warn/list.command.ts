@@ -8,6 +8,7 @@
 import type { Guild, GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
 import type { Warn } from "@/db/schemas/user";
 import { getMemberName } from "@/utils/guild";
 import { listWarns } from "@/db/repositories";
@@ -31,7 +32,10 @@ export default class ListWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
     if (!guildId) {
-      await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "Este comando solo funciona dentro de un servidor.",
+      });
       return;
     }
 
@@ -40,13 +44,19 @@ export default class ListWarnCommand extends SubCommand {
     const guild = await ctx.guild();
     const warnsResult = await listWarns(user.id);
     if (warnsResult.isErr()) {
-      await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "No se pudieron leer los warns del usuario.",
+      });
       return;
     }
     const warns = warnsResult.unwrap();
 
     if (warns.length === 0) {
-      await ctx.write({ content: "El usuario no tiene warns para ver." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "El usuario no tiene warns para ver.",
+      });
       return;
     }
 
@@ -58,7 +68,10 @@ export default class ListWarnCommand extends SubCommand {
       color: EmbedColors.Blue,
     });
 
-    await ctx.write({ embeds: [embed] });
+    await ctx.write({
+      flags: MessageFlags.Ephemeral,
+      embeds: [embed],
+    });
   }
 
   private async formatWarns(

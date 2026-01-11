@@ -3,7 +3,7 @@ pre-commit:
   jobs:
     - name: lint staged
       run: >
-        [ -n "$SKIP_LINT_STAGED" ] && echo "Skipping hook in favor of env variable..." || pnpm exec lint-staged
+        [ -n "$SKIP_LINT_STAGED" ] && echo "Skipping hook in favor of env variable..." || bunx lint-staged
 
 skip_output:
   - meta

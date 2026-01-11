@@ -20,6 +20,7 @@ import { generateWarnId } from "@/utils/warnId";
 import { addWarn, listWarns, registerCase } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
+import { MessageFlags } from "seyfert/lib/types";
 
 const options = {
 	user: createUserOption({
@@ -43,14 +44,14 @@ export default class AddWarnCommand extends SubCommand {
 	async run(ctx: GuildCommandContext<typeof options>) {
 		const guildId = ctx.guildId;
 		if (!guildId) {
-			await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
+			await ctx.editOrReply({ content: "Este comando solo funciona dentro de un servidor.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
 		const { user, reason } = ctx.options;
 		const warnsResult = await listWarns(user.id);
 		if (warnsResult.isErr()) {
-			await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+			await ctx.editOrReply({ content: "No se pudieron leer los warns del usuario.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 		const existingWarns = warnsResult.unwrap();
@@ -72,7 +73,7 @@ export default class AddWarnCommand extends SubCommand {
 
 		const addResult = await addWarn(user.id, warn);
 		if (addResult.isErr()) {
-			await ctx.write({ content: "No se pudo registrar el warn." });
+			await ctx.editOrReply({ content: "No se pudo registrar el warn.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -91,7 +92,7 @@ export default class AddWarnCommand extends SubCommand {
 			},
 		});
 
-		await ctx.write({ embeds: [successEmbed] });
+		await ctx.editOrReply({ embeds: [successEmbed], flags: MessageFlags.Ephemeral });
 
 		await registerCase(user.id, guildId, "WARN", finalReason);
 

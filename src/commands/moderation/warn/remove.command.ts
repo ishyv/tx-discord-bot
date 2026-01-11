@@ -15,6 +15,7 @@ import {
   SubCommand,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
 import { isValidWarnId } from "@/utils/warnId";
 import { listWarns, removeWarn } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";
@@ -42,7 +43,10 @@ export default class RemoveWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
     if (!guildId) {
-      await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "Este comando solo funciona dentro de un servidor.",
+      });
       return;
     }
 
@@ -51,6 +55,7 @@ export default class RemoveWarnCommand extends SubCommand {
 
     if (!isValidWarnId(warnId)) {
       await ctx.write({
+        flags: MessageFlags.Ephemeral,
         content:
           "El ID del warn no es valido. Debe tener 5 caracteres alfanumericos sin confusiones (ej. pyebt).",
       });
@@ -59,19 +64,26 @@ export default class RemoveWarnCommand extends SubCommand {
 
     const warnsResult = await listWarns(user.id);
     if (warnsResult.isErr()) {
-      await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "No se pudieron leer los warns del usuario.",
+      });
       return;
     }
     const warns = warnsResult.unwrap();
 
     if (warns.length === 0) {
-      await ctx.write({ content: "El usuario no tiene warns para remover." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "El usuario no tiene warns para remover.",
+      });
       return;
     }
 
     const exists = warns.some((warn) => warn.warn_id === warnId);
     if (!exists) {
       await ctx.write({
+        flags: MessageFlags.Ephemeral,
         content: `No se encontro un warn con el ID ${warnId.toUpperCase()}.`,
       });
       return;
@@ -80,7 +92,10 @@ export default class RemoveWarnCommand extends SubCommand {
     const removeResult = await removeWarn(user.id, warnId);
     if (removeResult.isErr()) {
       const message = removeResult.error?.message ?? "Error desconocido";
-      await ctx.write({ content: `Error al remover el warn: ${message}` });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: `Error al remover el warn: ${message}`,
+      });
       return;
     }
 
@@ -94,7 +109,10 @@ export default class RemoveWarnCommand extends SubCommand {
       },
     });
 
-    await ctx.write({ embeds: [successEmbed] });
+    await ctx.write({
+      flags: MessageFlags.Ephemeral,
+      embeds: [successEmbed],
+    });
 
     await logModerationAction(ctx.client, guildId, {
       title: "Warn eliminado",

@@ -7,13 +7,13 @@ import { z } from "zod";
 export const OfferDetailsSchema = z.object({
   title: z.string(),
   description: z.string(),
-  requirements: z.string().nullable().default(null),
-  workMode: z.string().nullable().default(null),
-  duration: z.string().nullable().default(null),
-  salary: z.string().nullable().default(null),
-  contact: z.string().nullable().default(null),
-  labels: z.array(z.string()).default([]),
-  location: z.string().nullable().default(null),
+  requirements: z.string().nullable().catch(null),
+  workMode: z.string().nullable().catch(null),
+  duration: z.string().nullable().catch(null),
+  salary: z.string().nullable().catch(null),
+  contact: z.string().nullable().catch(null),
+  labels: z.array(z.string()).catch([]),
+  location: z.string().nullable().catch(null),
 });
 
 export const OfferStatusSchema = z.enum([
@@ -31,13 +31,13 @@ const OfferBaseSchema = z.object({
   status: OfferStatusSchema,
   details: OfferDetailsSchema,
   embed: z.unknown(),
-  reviewMessageId: z.string().nullable().default(null),
-  reviewChannelId: z.string().nullable().default(null),
-  publishedMessageId: z.string().nullable().default(null),
-  publishedChannelId: z.string().nullable().default(null),
-  rejectionReason: z.string().nullable().default(null),
-  changesNote: z.string().nullable().default(null),
-  lastModeratorId: z.string().nullable().default(null),
+  reviewMessageId: z.string().nullable().catch(null),
+  reviewChannelId: z.string().nullable().catch(null),
+  publishedMessageId: z.string().nullable().catch(null),
+  publishedChannelId: z.string().nullable().catch(null),
+  rejectionReason: z.string().nullable().catch(null),
+  changesNote: z.string().nullable().catch(null),
+  lastModeratorId: z.string().nullable().catch(null),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -50,3 +50,4 @@ export const OfferSchema = OfferBaseSchema.transform((data) => ({
 export type Offer = z.infer<typeof OfferBaseSchema> & { id: string };
 export type OfferStatus = z.infer<typeof OfferStatusSchema>;
 export type OfferDetails = z.infer<typeof OfferDetailsSchema>;
+

@@ -12,6 +12,10 @@
  */
 import { getDb } from "@/db/mongo";
 import {
+  buildSafeUpsertUpdate,
+  unwrapFindOneAndUpdateResult,
+} from "@/db/helpers";
+import {
   AutoRoleRuleSchema,
   AutoRoleGrantSchema,
   AutoRoleTallySchema,
@@ -231,8 +235,14 @@ export const AutoRoleRulesRepo = {
         error: triggerParsed.error,
       });
     }
-    const result = await col.findOneAndUpdate(
-      { guildId: input.guildId, name: input.name },
+    const insertDefaults = {
+      _id: ruleKey(input.guildId, input.name),
+      id: ruleKey(input.guildId, input.name),
+      guildId: input.guildId,
+      name: input.name,
+      createdAt: now,
+    };
+    const update = buildSafeUpsertUpdate<AutoRoleRule>(
       {
         $set: {
           roleId: input.roleId,
@@ -244,18 +254,18 @@ export const AutoRoleRulesRepo = {
           createdBy: input.createdBy ?? null,
           updatedAt: now,
         },
-        $setOnInsert: {
-          _id: ruleKey(input.guildId, input.name),
-          id: ruleKey(input.guildId, input.name),
-          guildId: input.guildId,
-          name: input.name,
-          createdAt: now,
-        },
+        $setOnInsert: insertDefaults,
       },
+      insertDefaults,
+      now,
+    );
+    const result = await col.findOneAndUpdate(
+      { guildId: input.guildId, name: input.name },
+      update,
       { returnDocument: "after", upsert: true },
     );
     const value =
-      result ??
+      unwrapFindOneAndUpdateResult<AutoRoleRule>(result) ??
       (await col.findOne<AutoRoleRule>({ guildId: input.guildId, name: input.name }));
     if (!value) {
       console.error("autorole: FAILED_TO_UPSERT_RULE", {
@@ -320,7 +330,9 @@ export const AutoRoleRulesRepo = {
       { $set: { enabled, updatedAt: new Date() } },
       { returnDocument: "after" },
     );
-    const value = row ?? (await col.findOne<AutoRoleRule>({ guildId, name }));
+    const value =
+      unwrapFindOneAndUpdateResult<AutoRoleRule>(row) ??
+      (await col.findOne<AutoRoleRule>({ guildId, name }));
     if (!value) return null;
     const parsed = AutoRoleRuleSchema.safeParse(value);
     if (!parsed.success) {
@@ -369,16 +381,17 @@ export const AutoRoleGrantsRepo = {
   async upsert(input: GrantByRuleInput): Promise<AutoRoleGrantReason> {
     const col = await grantsCol();
     const now = new Date();
-    const res = await col.findOneAndUpdate(
-      {
-        _id: grantKey(
-          input.guildId,
-          input.userId,
-          input.roleId,
-          input.ruleName,
-          input.type,
-        ),
-      },
+    const insertDefaults = {
+      _id: grantKey(
+        input.guildId,
+        input.userId,
+        input.roleId,
+        input.ruleName,
+        input.type,
+      ),
+      createdAt: now,
+    };
+    const update = buildSafeUpsertUpdate<AutoRoleGrant>(
       {
         $set: {
           guildId: input.guildId,
@@ -389,12 +402,26 @@ export const AutoRoleGrantsRepo = {
           expiresAt: input.expiresAt ?? null,
           updatedAt: now,
         },
-        $setOnInsert: { createdAt: now },
+        $setOnInsert: insertDefaults,
       },
+      insertDefaults,
+      now,
+    );
+    const res = await col.findOneAndUpdate(
+      {
+        _id: grantKey(
+          input.guildId,
+          input.userId,
+          input.roleId,
+          input.ruleName,
+          input.type,
+        ),
+      },
+      update,
       { returnDocument: "after", upsert: true },
     );
     const value =
-      res ??
+      unwrapFindOneAndUpdateResult<AutoRoleGrant>(res) ??
       (await col.findOne<AutoRoleGrant>({
         _id: grantKey(
           input.guildId,
@@ -657,23 +684,29 @@ export const AutoRoleTalliesRepo = {
   ): Promise<ReactionTallySnapshot> {
     const col = await talliesCol();
     const now = new Date();
-    const res = await col.findOneAndUpdate(
-      { _id: tallyKey(key.guildId, key.messageId, key.emojiKey) },
+    const insertDefaults = {
+      _id: tallyKey(key.guildId, key.messageId, key.emojiKey),
+      guildId: key.guildId,
+      messageId: key.messageId,
+      emojiKey: key.emojiKey,
+      createdAt: now,
+    };
+    const update = buildSafeUpsertUpdate<AutoRoleTally>(
       {
-        $setOnInsert: {
-          guildId: key.guildId,
-          messageId: key.messageId,
-          emojiKey: key.emojiKey,
-          count: 0,
-          createdAt: now,
-        },
+        $setOnInsert: insertDefaults,
         $set: { authorId, updatedAt: now },
         $inc: { count: 1 },
       },
+      insertDefaults,
+      now,
+    );
+    const res = await col.findOneAndUpdate(
+      { _id: tallyKey(key.guildId, key.messageId, key.emojiKey) },
+      update,
       { upsert: true, returnDocument: "after" },
     );
     const row =
-      res ??
+      unwrapFindOneAndUpdateResult<AutoRoleTally>(res) ??
       (await col.findOne<AutoRoleTally>({
         _id: tallyKey(key.guildId, key.messageId, key.emojiKey),
       }));
@@ -719,7 +752,7 @@ export const AutoRoleTalliesRepo = {
       { returnDocument: "after" },
     );
     const doc =
-      res ??
+      unwrapFindOneAndUpdateResult<AutoRoleTally>(res) ??
       (await col.findOne<AutoRoleTally>({
         _id: tallyKey(key.guildId, key.messageId, key.emojiKey),
       }));

@@ -16,6 +16,7 @@ import {
   Options,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
 import {
   RESTRICTED_FORUMS_ROLE_ID,
   RESTRICTED_JOBS_ROLE_ID,
@@ -67,6 +68,7 @@ export default class RestrictCommand extends Command {
 
     if (ctx.author.id === user.id)
       return ctx.write({
+        flags: MessageFlags.Ephemeral,
         content: "❌ No podés restringirte a vos mismo.",
       });
 
@@ -75,12 +77,14 @@ export default class RestrictCommand extends Command {
 
     if (!targetMember)
       return ctx.write({
+        flags: MessageFlags.Ephemeral,
         content:
           "❌ No se pudo encontrar al miembro a restringir en el servidor.",
       });
 
     if (!(await targetMember.moderatable()))
       return ctx.write({
+        flags: MessageFlags.Ephemeral,
         content:
           "❌ No podés restringir a un usuario con un rol igual o superior al tuyo.",
       });
@@ -120,6 +124,7 @@ export default class RestrictCommand extends Command {
     });
 
     await ctx.write({
+      flags: MessageFlags.Ephemeral,
       embeds: [successEmbed],
     });
 

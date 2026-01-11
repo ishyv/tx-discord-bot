@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const TriggerReactAny = z.object({
   type: z.literal("MESSAGE_REACT_ANY"),
-  args: z.object({}).default({}),
+  args: z.object({}).catch({}),
 });
 
 const TriggerReactSpecific = z.object({
@@ -62,9 +62,9 @@ export const AutoRoleRuleSchema = z.object({
   name: z.string(),
   roleId: z.string(),
   trigger: AutoRoleTriggerSchema,
-  durationMs: z.number().int().nullable().default(null),
-  enabled: z.boolean().default(true),
-  createdBy: z.string().nullable().default(null),
+  durationMs: z.number().int().nullable().catch(null),
+  enabled: z.boolean().catch(true),
+  createdBy: z.string().nullable().catch(null),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -76,7 +76,7 @@ export const AutoRoleGrantSchema = z.object({
   roleId: z.string(),
   ruleName: z.string(),
   type: z.enum(["LIVE", "TIMED"]),
-  expiresAt: z.date().nullable().default(null),
+  expiresAt: z.date().nullable().catch(null),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -86,9 +86,9 @@ export const AutoRoleTallySchema = z.object({
   guildId: z.string(),
   messageId: z.string(),
   emojiKey: z.string(),
-  authorId: z.string().default(""),
-  count: z.number().int().nonnegative().default(0),
-  createdAt: z.date().optional().default(() => new Date()),
+  authorId: z.string().catch(""),
+  count: z.number().int().nonnegative().catch(0),
+  createdAt: z.date().optional().catch(() => new Date()),
   updatedAt: z.date().optional(),
 });
 
@@ -96,3 +96,4 @@ export type AutoRoleTrigger = z.infer<typeof AutoRoleTriggerSchema>;
 export type AutoRoleRule = z.infer<typeof AutoRoleRuleSchema>;
 export type AutoRoleGrant = z.infer<typeof AutoRoleGrantSchema>;
 export type AutoRoleTally = z.infer<typeof AutoRoleTallySchema>;
+

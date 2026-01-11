@@ -114,16 +114,18 @@ export async function memberHasDiscordPermission(
   if (Array.isArray(required) && !required.length) return true;
   if (!member) return false;
 
+  const requiredBits = Array.isArray(required) ? required : [required];
+
   const permissions = member.permissions;
   if (permissions && typeof permissions.has === "function") {
-    return permissions.has(required as any);
+    return permissions.has(requiredBits as any);
   }
 
   if (typeof member.fetchPermissions === "function") {
     try {
       const fetched = await member.fetchPermissions();
       if (fetched && typeof fetched.has === "function") {
-        return fetched.has(required as any);
+        return fetched.has(requiredBits as any);
       }
     } catch (error) {
       console.warn(

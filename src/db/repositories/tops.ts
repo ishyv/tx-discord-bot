@@ -9,6 +9,7 @@
  * - Validar lecturas/escrituras con Zod.
  * - Mantener defaults y shapes estables para los consumers.
  */
+import { ObjectId } from "mongodb";
 import { getDb } from "@/db/mongo";
 import {
   TopWindowSchema,
@@ -17,11 +18,29 @@ import {
   type TopReport,
   TOP_DEFAULTS,
 } from "@/db/schemas/tops";
-import { deepClone } from "@/db/helpers";
+import {
+  buildSafeUpsertUpdate,
+  deepClone,
+  unwrapFindOneAndUpdateResult,
+} from "@/db/helpers";
 import type { ChannelId, GuildId } from "@/db/types";
 
 const windowsCol = async () => (await getDb()).collection<TopWindow>("top_windows");
 const reportsCol = async () => (await getDb()).collection<TopReport>("top_reports");
+
+// We always store string _id values in MongoDB for consistency with the rest of the codebase.
+// Mongo would generate ObjectId by default, which breaks our TopReport schema and types.
+const buildTopReportId = (): string => new ObjectId().toHexString();
+
+const normalizeReportDoc = (doc: unknown): unknown => {
+  if (!doc || typeof doc !== "object") return doc;
+  const current = doc as { _id?: unknown };
+  if (current._id === undefined || typeof current._id === "string") return doc;
+  // Legacy compatibility: older reports stored ObjectId. We coerce to string for read-only
+  // parsing; migrate the collection to store strings long-term.
+  // See tmp/db-migrations/top-reports-string-id.js.
+  return { ...(doc as Record<string, unknown>), _id: String(current._id) };
+};
 
 // Valida cada lectura/escritura con Zod para mantener defaults y tipos.
 //
@@ -71,7 +90,15 @@ const buildFallbackReportDoc = (doc: any, now: Date = new Date()) => {
     (typeof doc?._id === "string" && doc._id) ||
     "unknown";
 
+  const fallbackId =
+    typeof doc?._id === "string"
+      ? doc._id
+      : doc?._id != null
+        ? String(doc._id)
+        : buildTopReportId();
+
   return {
+    _id: fallbackId,
     guildId,
     periodStart: doc?.periodStart instanceof Date ? doc.periodStart : new Date(0),
     periodEnd: doc?.periodEnd instanceof Date ? doc.periodEnd : new Date(0),
@@ -111,10 +138,11 @@ const parseWindow = (doc: unknown): TopWindow => {
  * Igual que `parseWindow`, se diseñó para no tirar exceptions en runtime.
  */
 const parseReport = (doc: unknown): TopReport => {
-  const parsed = TopReportSchema.safeParse(doc);
+  const normalized = normalizeReportDoc(doc);
+  const parsed = TopReportSchema.safeParse(normalized);
   if (parsed.success) return parsed.data;
   console.error("TOPs: failed to parse TopReport; using fallback", parsed.error);
-  const fallback = buildFallbackReportDoc(doc);
+  const fallback = buildFallbackReportDoc(normalized);
   const fallbackParsed = TopReportSchema.safeParse(fallback);
   return fallbackParsed.success ? fallbackParsed.data : (fallback as unknown as TopReport);
 };
@@ -135,6 +163,20 @@ const defaultWindow = (guildId: GuildId, now = new Date()): TopWindow =>
     updatedAt: now,
   });
 
+const buildWindowInsertDefaults = (
+  guildId: GuildId,
+  now: Date = new Date(),
+): Record<string, unknown> => ({
+  _id: guildId,
+  guildId,
+  channelId: null,
+  intervalMs: TOP_DEFAULTS.intervalMs,
+  topSize: TOP_DEFAULTS.topSize,
+  windowStartedAt: now,
+  lastReportAt: null,
+  createdAt: now,
+});
+
 /**
  * Asegura que exista una ventana de TOPs para el guild indicado.
  *
@@ -144,14 +186,21 @@ const defaultWindow = (guildId: GuildId, now = new Date()): TopWindow =>
 export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
   const col = await windowsCol();
   const now = new Date();
+  const insertDefaults = buildWindowInsertDefaults(guildId, now);
+  const update = buildSafeUpsertUpdate<TopWindow>(
+    { $setOnInsert: insertDefaults },
+    insertDefaults,
+    now,
+    { setUpdatedAt: false },
+  );
   const res = await col.findOneAndUpdate(
     { _id: guildId },
-    {
-      $setOnInsert: defaultWindow(guildId, now),
-    },
+    update,
     { returnDocument: "after", upsert: true },
   );
-  const doc = res ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  const doc =
+    unwrapFindOneAndUpdateResult<TopWindow>(res) ??
+    (await col.findOne<TopWindow>({ _id: guildId }));
   if (!doc) {
     console.error(`No se pudo inicializar la ventana de TOPs para ${guildId}`);
     return defaultWindow(guildId, now);
@@ -185,6 +234,7 @@ export async function updateTopConfig(
   guildId: GuildId,
   patch: Partial<Pick<TopWindow, "channelId" | "intervalMs" | "topSize">>,
 ): Promise<TopWindow> {
+  const now = new Date();
   const safeInterval =
     typeof patch.intervalMs === "number" && Number.isFinite(patch.intervalMs)
       ? Math.max(1, Math.trunc(patch.intervalMs))
@@ -197,7 +247,7 @@ export async function updateTopConfig(
 
   const set: Record<string, unknown> = {
     guildId,
-    updatedAt: new Date(),
+    updatedAt: now,
   };
   if (patch.channelId !== undefined) {
     set.channelId =
@@ -216,15 +266,23 @@ export async function updateTopConfig(
   }
 
   const col = await windowsCol();
-  const doc = await col.findOneAndUpdate(
-    { _id: guildId },
+  const insertDefaults = buildWindowInsertDefaults(guildId, now);
+  const update = buildSafeUpsertUpdate<TopWindow>(
     {
       $set: set,
-      $setOnInsert: defaultWindow(guildId),
+      $setOnInsert: insertDefaults,
     },
+    insertDefaults,
+    now,
+  );
+  const doc = await col.findOneAndUpdate(
+    { _id: guildId },
+    update,
     { returnDocument: "after", upsert: true },
   );
-  const mapped = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  const mapped =
+    unwrapFindOneAndUpdateResult<TopWindow>(doc) ??
+    (await col.findOne<TopWindow>({ _id: guildId }));
   if (!mapped) {
     console.error(`No se pudo actualizar la configuración de TOPs para ${guildId}`);
     return getTopWindow(guildId);
@@ -248,8 +306,9 @@ export async function resetTopWindow(
   startedAt: Date = new Date(),
 ): Promise<TopWindow> {
   const col = await windowsCol();
-  const doc = await col.findOneAndUpdate(
-    { _id: guildId },
+  const now = new Date();
+  const insertDefaults = buildWindowInsertDefaults(guildId, startedAt);
+  const update = buildSafeUpsertUpdate<TopWindow>(
     {
       $set: {
         windowStartedAt: startedAt,
@@ -257,13 +316,21 @@ export async function resetTopWindow(
         emojiCounts: {},
         channelCounts: {},
         reputationDeltas: {},
-        updatedAt: new Date(),
+        updatedAt: now,
       },
-      $setOnInsert: defaultWindow(guildId, startedAt),
+      $setOnInsert: insertDefaults,
     },
+    insertDefaults,
+    now,
+  );
+  const doc = await col.findOneAndUpdate(
+    { _id: guildId },
+    update,
     { returnDocument: "after", upsert: true },
   );
-  const value = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  const value =
+    unwrapFindOneAndUpdateResult<TopWindow>(doc) ??
+    (await col.findOne<TopWindow>({ _id: guildId }));
   if (!value) {
     console.error(`No se pudo reiniciar la ventana de TOPs para ${guildId}`);
     return defaultWindow(guildId, startedAt);
@@ -395,7 +462,11 @@ export async function persistTopReport(
   },
 ): Promise<TopReport> {
   const col = await reportsCol();
+  // IMPORTANT: force a string _id to keep ids consistent across the codebase.
+  // If omitted, MongoDB would generate an ObjectId and break schema validation on read.
+  const reportId = buildTopReportId();
   const createdRaw = {
+    _id: reportId,
     guildId: payload.guildId,
     periodStart: payload.periodStart,
     periodEnd: payload.periodEnd,
@@ -446,7 +517,9 @@ export async function rotateWindowAfterReport(
     },
     { returnDocument: "after" },
   );
-  const value = doc ?? (await col.findOne<TopWindow>({ _id: guildId }));
+  const value =
+    unwrapFindOneAndUpdateResult<TopWindow>(doc) ??
+    (await col.findOne<TopWindow>({ _id: guildId }));
   if (!value) return null;
   const parsed = TopWindowSchema.safeParse(value);
   if (!parsed.success) {
@@ -475,7 +548,7 @@ export async function listReports(
 
   // Igual que en ventanas: si hay un reporte histórico corrupto, lo omitimos.
   const parsed = docs
-    .map((doc) => TopReportSchema.safeParse(doc))
+    .map((doc) => TopReportSchema.safeParse(normalizeReportDoc(doc)))
     .filter((res) => {
       if (res.success) return true;
       console.error("TOPs: invalid top report document", res.error);

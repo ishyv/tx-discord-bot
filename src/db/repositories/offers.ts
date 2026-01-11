@@ -18,6 +18,7 @@ import {
   type OfferStatus,
 } from "@/db/schemas/offers";
 import type { GuildId, OfferId, UserId } from "@/db/types";
+import { unwrapFindOneAndUpdateResult } from "@/db/helpers";
 import { type Result, OkResult, ErrResult } from "@/utils/result";
 
 const ACTIVE_OFFER_STATUSES: OfferStatus[] = [
@@ -295,7 +296,8 @@ export async function updateOffer(
       { $set: { ...patch, updatedAt: now } },
       { returnDocument: "after" },
     );
-    return updated ? parseOffer(updated) : null;
+    const doc = unwrapFindOneAndUpdateResult<Offer>(updated);
+    return doc ? parseOffer(doc) : null;
   });
 }
 

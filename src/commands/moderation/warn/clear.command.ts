@@ -9,6 +9,7 @@ import { clearWarns, listWarns } from "@/db/repositories";
 import type { GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
@@ -30,7 +31,10 @@ export default class ClearWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
     if (!guildId) {
-      await ctx.write({ content: "Este comando solo funciona dentro de un servidor." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "Este comando solo funciona dentro de un servidor.",
+      });
       return;
     }
 
@@ -38,12 +42,16 @@ export default class ClearWarnCommand extends SubCommand {
 
     const warnsResult = await listWarns(user.id);
     if (warnsResult.isErr()) {
-      await ctx.write({ content: "No se pudieron leer los warns del usuario." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "No se pudieron leer los warns del usuario.",
+      });
       return;
     }
     const warns = warnsResult.unwrap();
     if (warns.length === 0) {
       await ctx.write({
+        flags: MessageFlags.Ephemeral,
         content: "No hay warns registrados para este usuario.",
       });
       return;
@@ -51,7 +59,10 @@ export default class ClearWarnCommand extends SubCommand {
 
     const cleared = await clearWarns(user.id);
     if (cleared.isErr()) {
-      await ctx.write({ content: "No se pudo limpiar los warns del usuario." });
+      await ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "No se pudo limpiar los warns del usuario.",
+      });
       return;
     }
 
@@ -65,7 +76,10 @@ export default class ClearWarnCommand extends SubCommand {
       },
     });
 
-    await ctx.write({ embeds: [embed] });
+    await ctx.write({
+      flags: MessageFlags.Ephemeral,
+      embeds: [embed],
+    });
 
     await logModerationAction(ctx.client, guildId, {
       title: "Warns eliminados",

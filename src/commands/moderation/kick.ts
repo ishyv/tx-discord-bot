@@ -16,6 +16,7 @@ import {
   Options,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
 import { registerCase } from "@/db/repositories/users";
 
 const options = {
@@ -45,6 +46,7 @@ export default class KickCommand extends Command {
 
     if (ctx.author.id === user.id)
       return ctx.write({
+        flags: MessageFlags.Ephemeral,
         content: "❌ No podés expulsarte a vos mismo.",
       });
 
@@ -53,12 +55,14 @@ export default class KickCommand extends Command {
 
     if (!targetMember)
       return ctx.write({
+        flags: MessageFlags.Ephemeral,
         content:
           "❌ No se pudo encontrar al miembro a expulsar en el servidor.",
       });
 
     if (!(await targetMember.moderatable()))
       return ctx.write({
+        flags: MessageFlags.Ephemeral,
         content:
           "❌ No podés expulsar a un usuario con un rol igual o superior al tuyo.",
       });
@@ -82,6 +86,7 @@ export default class KickCommand extends Command {
     });
 
     await ctx.write({
+      flags: MessageFlags.Ephemeral,
       embeds: [successEmbed],
     });
 
