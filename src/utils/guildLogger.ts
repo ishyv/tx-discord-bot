@@ -9,7 +9,9 @@ import { Embed, type UsingClient } from "seyfert";
 import type { ColorResolvable } from "seyfert/lib/common";
 import type { APIEmbedField } from "seyfert/lib/types";
 import { CHANNELS_ID } from "@/constants/guild";
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
+import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
 
 type EmbedOptions = {
   title?: string;
@@ -20,6 +22,11 @@ type EmbedOptions = {
   thumbnail?: string;
   image?: string;
   url?: string;
+};
+
+type ResolvedChannel = {
+  channelId: string | null;
+  source: "core" | "fallback" | "none";
 };
 
 export class GuildLogger {
@@ -48,8 +55,12 @@ export class GuildLogger {
     return embed;
   }
 
-  private async resolveChannel(key: keyof typeof CHANNELS_ID): Promise<string | null> {
-    if (!this.guildId) return CHANNELS_ID[key] ?? null;
+  private async resolveChannel(
+    key: keyof typeof CHANNELS_ID,
+  ): Promise<ResolvedChannel> {
+    if (!this.guildId) {
+      return { channelId: CHANNELS_ID[key] ?? null, source: "fallback" };
+    }
 
     try {
       const channels = await getGuildChannels(this.guildId);
@@ -60,14 +71,38 @@ export class GuildLogger {
       // The schema has specific keys like 'messageLogs', 'voiceLogs', etc.
       // CHANNELS_ID has 'messageLogs', 'voiceLogs', etc.
 
-      // @ts-ignore -- dynamic access
-      const core = channels.core?.[key]?.channelId;
-      if (core) return core;
+      const core = channels.core as
+        | Record<string, { channelId?: string } | null | undefined>
+        | undefined;
+      const coreChannelId = core?.[key]?.channelId ?? null;
+      if (coreChannelId) {
+        const fetched = await fetchStoredChannel(
+          this.client,
+          coreChannelId,
+          () =>
+            updateGuildPaths(this.guildId!, {
+              [`channels.core.${key}`]: null,
+            }),
+        );
 
-      return CHANNELS_ID[key] ?? null;
+        if (fetched.channel && fetched.channelId) {
+          if (!fetched.channel.isTextGuild()) {
+            return { channelId: null, source: "none" };
+          }
+          return { channelId: fetched.channelId, source: "core" };
+        }
+
+        if (fetched.missing) {
+          return { channelId: CHANNELS_ID[key] ?? null, source: "fallback" };
+        }
+
+        return { channelId: null, source: "none" };
+      }
+
+      return { channelId: CHANNELS_ID[key] ?? null, source: "fallback" };
     } catch (error) {
       console.warn(`[GuildLogger] Failed to resolve channel for ${key}`, error);
-      return CHANNELS_ID[key] ?? null;
+      return { channelId: CHANNELS_ID[key] ?? null, source: "fallback" };
     }
   }
 
@@ -75,11 +110,25 @@ export class GuildLogger {
     key: keyof typeof CHANNELS_ID,
     options: EmbedOptions,
   ): Promise<void> {
-    const channelId = await this.resolveChannel(key);
-    if (!channelId) return;
+    const resolved = await this.resolveChannel(key);
+    if (!resolved.channelId) return;
 
     const embed = this.buildEmbed(options);
-    await this.client.messages.write(channelId, { embeds: [embed] });
+    try {
+      await this.client.messages.write(resolved.channelId, { embeds: [embed] });
+    } catch (error) {
+      if (resolved.source === "core" && this.guildId && isUnknownChannelError(error)) {
+        await updateGuildPaths(this.guildId, {
+          [`channels.core.${key}`]: null,
+        });
+      }
+      this.client.logger?.warn?.("[GuildLogger] Failed to send log", {
+        error,
+        guildId: this.guildId,
+        channel: String(key),
+        channelId: resolved.channelId,
+      });
+    }
   }
 
   async messageLog(options: EmbedOptions) {

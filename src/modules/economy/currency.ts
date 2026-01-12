@@ -1,7 +1,13 @@
 export type CurrencyId = string;
 
-// Currency inventory shape mirrors `User["currency"]` from the DB schema (Record<string, unknown>).
-export type CurrencyInventory = Record<CurrencyId, unknown>;
+export interface CurrencyValueMap {}
+
+export type CurrencyValue<Id extends CurrencyId> =
+  Id extends keyof CurrencyValueMap ? CurrencyValueMap[Id] : unknown;
+
+// Currency inventory shape mirrors `User["currency"]` from the DB schema (Record<string, unknown>),
+// but provides typed values for known currency IDs via module augmentation.
+export type CurrencyInventory = Partial<CurrencyValueMap> & Record<CurrencyId, unknown>;
 
 export interface Currency<TValue> {
   /** Unique id for registry and DB keys. */

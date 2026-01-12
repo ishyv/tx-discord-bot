@@ -13,15 +13,13 @@
 
 import type { AutocompleteInteraction, GuildCommandContext } from "seyfert";
 
-import { AutoRoleRulesRepo } from "@/db/repositories";
-import type {
-  AutoRoleRule,
-  AutoRoleTrigger,
-} from "@/modules/autorole/types";
 import {
+  AutoRoleRulesStore,
+  type AutoRoleRule,
+  type AutoRoleTrigger,
   isValidRuleSlug,
   normalizeRuleSlug,
-} from "@/modules/autorole/validation";
+} from "@/modules/autorole";
 import { GUILD_ONLY_MESSAGE, requireGuildPermission } from "@/utils/commandGuards";
 
 export interface AutoroleCommandContext {
@@ -142,7 +140,9 @@ export async function respondRuleAutocomplete(
   }
 
   const input = interaction.getInput()?.toLowerCase() ?? "";
-  const names = await AutoRoleRulesRepo.listNames(guildId);
+  const res = await AutoRoleRulesStore.find({ guildId });
+  const names = res.isOk() ? res.unwrap().map(r => r.name) : [];
+
   const filtered = input
     ? names.filter((name) => name.toLowerCase().includes(input))
     : names;

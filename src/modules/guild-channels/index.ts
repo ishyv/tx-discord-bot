@@ -6,8 +6,7 @@
  * Alcance: utilidades para canales; no configura permisos detallados ni políticas de moderación.
  */
 // Uses the Mongo-backed repository layer at "@/db/repositories"
-import { updateGuildPaths } from "@/db/repositories/guilds";
-import { getGuild } from "@/db/repositories/with_guild";
+import { GuildStore, updateGuildPaths } from "@/db/repositories/guilds";
 import type {
 	CoreChannelRecord,
 	GuildChannelsRecord,
@@ -56,7 +55,8 @@ export const getCoreChannelId = (
 
 /** Get the full channels JSON for a guild. */
 export async function getGuildChannels(guildId: string): Promise<GuildChannelsRecord> {
-	const guild = await getGuild(guildId);
+	const res = await GuildStore.get(guildId);
+	const guild = res.unwrap();
 	return guild?.channels ?? emptyChannels();
 }
 
@@ -65,7 +65,8 @@ export async function getCoreChannel(
 	guildId: string,
 	name: CoreChannelName,
 ): Promise<CoreChannelRecord | null> {
-	const guild = await getGuild(guildId);
+	const res = await GuildStore.get(guildId);
+	const guild = res.unwrap();
 	return getCoreChannelRecord(guild?.channels, name);
 }
 
@@ -104,7 +105,8 @@ export async function removeManagedChannel(
 	guildId: string,
 	identifier: string,
 ): Promise<boolean> {
-	const guild = await getGuild(guildId);
+	const res = await GuildStore.get(guildId);
+	const guild = res.unwrap();
 	const managed = (guild?.channels?.managed ?? {}) as Record<
 		string,
 		ManagedChannelRecord | undefined

@@ -17,7 +17,8 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import type { Warn } from "@/db/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
-import { addWarn, listWarns, registerCase } from "@/db/repositories";
+import { addWarn, listWarns } from "@/db/repositories";
+import { registerCase } from "@/modules/moderation/service";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { MessageFlags } from "seyfert/lib/types";

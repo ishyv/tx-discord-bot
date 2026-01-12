@@ -10,6 +10,12 @@ export type CoinValue = {
   use_total_on_subtract: boolean;  
 };
 
+declare module "@/modules/economy/currency" {
+  interface CurrencyValueMap {
+    coins: CoinValue;
+  }
+}
+
 @Register()
 export class Coins implements Currency<CoinValue> {
   readonly id = "coins";

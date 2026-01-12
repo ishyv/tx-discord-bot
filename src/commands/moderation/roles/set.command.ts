@@ -16,7 +16,9 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/db/repositories";
+import { GuildStore } from "@/db/repositories/guilds";
+import { GuildRolesRepo } from "@/db/repositories/guild-roles";
+
 import { requireGuildContext } from "./shared";
 
 const options = {
@@ -53,17 +55,18 @@ export default class RoleSetCommand extends SubCommand {
       return;
     }
 
-    await repo.ensureGuild(context.guildId);
+    await GuildStore.ensure(context.guildId);
 
     // Actualiza (o crea) el registro del rol administrado
-    await repo.updateRole(context.guildId, key, {
+    await GuildRolesRepo.update(context.guildId, key, {
       label: key,
       discordRoleId: roleId,
       updatedBy: ctx.author.id,
     });
 
     // Read back the role to show current state
-    const role = await repo.getRole(context.guildId, key);
+    const rolesRes = await GuildRolesRepo.read(context.guildId);
+    const role = rolesRes.isOk() ? (rolesRes.unwrap() as any)[key] : null;
 
     const embed = new Embed({
       title: "Rol administrado registrado",

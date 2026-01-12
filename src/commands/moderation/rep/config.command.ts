@@ -1,39 +1,44 @@
 import {
+    createBooleanOption,
     createStringOption,
     Declare,
     GuildCommandContext,
     Options,
     SubCommand,
+    Middlewares,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { requireRepContext } from "./shared";
-
-import { createBooleanOption } from "seyfert";
-import { setFeatureFlag, Features } from "@/modules/features";
+import { setFeatureFlag } from "@/modules/features";
+import { Guard } from "@/middlewares/guards/decorator";
+import { Features } from "@/modules/features";
 
 const options = {
     palabras: createStringOption({
-        description: "Lista de palabras clave separadas por coma",
+        description: "Lista de palabras separadas por comas",
         required: true,
     }),
 };
 
 @Declare({
     name: "keywords",
-    description: "Configurar palabras clave para deteccion automatica de reputacion",
-    defaultMemberPermissions: ["ManageGuild"]
+    description: "Configurar palabras clave de reputacion",
 })
 @Options(options)
+@Guard({
+    guildOnly: true,
+    feature: Features.Reputation,
+    permissions: ["ManageGuild"],
+})
+@Middlewares(["guard"])
 export default class RepConfigKeywordsCommand extends SubCommand {
     async run(ctx: GuildCommandContext<typeof options>) {
-        const context = await requireRepContext(ctx);
-        if (!context) return;
+        const guildId = ctx.guildId;
 
         const { palabras } = ctx.options;
         const keywords = palabras.split(",").map((w) => w.trim()).filter(Boolean);
 
         const { configStore, ConfigurableModule } = await import("@/configuration");
-        await configStore.set(context.guildId, ConfigurableModule.Reputation, { keywords });
+        await configStore.set(guildId, ConfigurableModule.Reputation, { keywords });
 
         await ctx.write({
             content: `Se han actualizado las palabras clave de reputacion: ${keywords.map(k => `\`${k}\``).join(", ")}`,
@@ -41,8 +46,6 @@ export default class RepConfigKeywordsCommand extends SubCommand {
         });
     }
 }
-
-
 
 const detectionOptions = {
     enabled: createBooleanOption({
@@ -53,16 +56,21 @@ const detectionOptions = {
 
 @Declare({
     name: "detection",
-    description: "Habilitar o deshabilitar la deteccion automatica de reputacion",
+    description: "Configurar deteccion automatica de reputacion",
 })
 @Options(detectionOptions)
+@Guard({
+    guildOnly: true,
+    feature: Features.Reputation,
+    permissions: ["ManageGuild"],
+})
+@Middlewares(["guard"])
 export class RepConfigDetectionCommand extends SubCommand {
     async run(ctx: GuildCommandContext<typeof detectionOptions>) {
-        const context = await requireRepContext(ctx);
-        if (!context) return;
+        const guildId = ctx.guildId;
 
         const { enabled } = ctx.options;
-        await setFeatureFlag(context.guildId, Features.ReputationDetection, enabled);
+        await setFeatureFlag(guildId, Features.ReputationDetection, enabled);
 
         await ctx.write({
             content: `La deteccion automatica de reputacion ha sido **${enabled ? "habilitada" : "deshabilitada"}**.`,

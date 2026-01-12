@@ -6,14 +6,14 @@
  * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
  */
 import type { GuildCommandContext } from "seyfert";
-import { Declare, Embed, SubCommand } from "seyfert";
+import { Declare, Embed, SubCommand, Middlewares } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import {
   CORE_CHANNEL_DEFINITIONS,
   getGuildChannels,
   removeInvalidChannels,
 } from "@/modules/guild-channels";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 
 function formatChannelMention(channelId: string): string {
   return channelId ? `<#${channelId}>` : "Sin canal";
@@ -26,13 +26,16 @@ function formatChannelMention(channelId: string): string {
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class ChannelListCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     // Remueve los canales invalidos antes de proceder.
-    await removeInvalidChannels(guildId, ctx.client);    
+    await removeInvalidChannels(guildId, ctx.client);
 
     const guild_channels_record = await getGuildChannels(guildId);
 

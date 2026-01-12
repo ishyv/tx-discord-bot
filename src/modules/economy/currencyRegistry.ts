@@ -1,7 +1,10 @@
 import { Currency, CurrencyId } from "./currency";
 
 type CurrencyCtor = new () => Currency<unknown>;
-
+/**
+ * In-memory registry for currency singletons used by the economy module.
+ * Holds one instance per CurrencyId for fast lookup and decorator-based auto-registration.
+ */
 export class CurrencyRegistry {
   private readonly currencies = new Map<CurrencyId, Currency<unknown>>();
 

@@ -10,6 +10,9 @@ import {
 import { MessageFlags } from "seyfert/lib/types";
 import { currencyTransaction, currencyRegistry } from "@/modules/economy/transactions";
 import { GuildLogger } from "@/utils/guildLogger";
+import { adjustUserReputation } from "@/db/repositories";
+import { AutoroleService } from "@/modules/autorole";
+import { recordReputationChange } from "@/systems/tops";
 
 
 const choices = currencyRegistry.list().map((currencyId) => {
@@ -31,6 +34,10 @@ const options = {
     description: "Usuario que recibira la moneda",
     required: true,
   }),
+  reason: createStringOption({
+    description: "Razon del ajuste",
+    required: false,
+  }),
 };
 
 function buildRewardValue(currencyId: string, amount: number) {
@@ -48,13 +55,54 @@ function buildRewardValue(currencyId: string, amount: number) {
 @Options(options)
 export default class GiveCurrencyCommand extends Command {
   async run(ctx: CommandContext<typeof options>) {
-    const { currency, amount, target } = ctx.options;
+    const { currency, amount, target, reason } = ctx.options;
 
     const currencyObj = currencyRegistry.get(currency);
     if (!currencyObj) {
       await ctx.write({
         content: "La moneda especificada no existe.",
         flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (currency === "rep") {
+      const totalResult = await adjustUserReputation(target.id, amount);
+      if (totalResult.isErr()) {
+        await ctx.write({
+          content: "No se pudo actualizar la reputacion.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const newBalance = totalResult.unwrap();
+      if (ctx.guildId) {
+        await recordReputationChange(ctx.client, ctx.guildId, target.id, amount);
+        await AutoroleService.syncUserReputationRoles(
+          ctx.client,
+          ctx.guildId,
+          target.id,
+          newBalance,
+        );
+      }
+
+      await ctx.write({
+        content: `Se han anadido **${currencyObj.display(amount as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
+      });
+
+      const logger = new GuildLogger();
+      await logger.init(ctx.client, ctx.guildId);
+      await logger.generalLog({
+        title: "Moneda entregada",
+        description: `El staff ${ctx.author.toString()} ha entregado moneda a ${target.toString()}.`,
+        fields: [
+          { name: "Moneda", value: currency, inline: true },
+          { name: "Cantidad", value: `${amount}`, inline: true },
+          { name: "Nuevo Saldo", value: currencyObj.display(newBalance as any), inline: true },
+          { name: "Razon", value: reason ?? "No especificada", inline: false },
+        ],
+        color: "Green",
       });
       return;
     }
@@ -92,6 +140,7 @@ export default class GiveCurrencyCommand extends Command {
         { name: "Moneda", value: currency, inline: true },
         { name: "Cantidad", value: `${amount}`, inline: true },
         { name: "Nuevo Saldo", value: currencyObj.display(newBalance as any), inline: true },
+        { name: "Razón", value: reason ?? "No especificada", inline: false },
       ],
       color: "Green",
     });

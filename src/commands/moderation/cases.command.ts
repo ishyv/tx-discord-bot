@@ -1,7 +1,7 @@
 import { Command, Declare, Options, Embed, createUserOption, type GuildCommandContext } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
-import { findUser } from "@/db/repositories/users";
+import { UserStore } from "@/db/repositories/users";
 import { SanctionType } from "@/db/schemas/user";
 
 const options = {
@@ -29,7 +29,7 @@ export default class CasesCommand extends Command {
             ? (await userOption.avatarURL())
             : ctx.author.avatarURL();
 
-        const userResult = await findUser(targetId);
+        const userResult = await UserStore.get(targetId);
 
         if (userResult.isErr()) {
             return ctx.write({

@@ -5,10 +5,10 @@
  * 
  * Alcance: maneja la interfaz de configuración del usuario; delega la validación de consumo al servicio de rate limit.
  */
-import { Declare, Options, SubCommand, createBooleanOption, createIntegerOption } from "seyfert";
+import { Options, SubCommand, createBooleanOption, createIntegerOption, Middlewares } from "seyfert";
 import type { GuildCommandContext } from "seyfert";
 import { configStore, ConfigurableModule } from "@/configuration";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
     enabled: createBooleanOption({
@@ -27,15 +27,14 @@ const options = {
     }),
 };
 
-@Declare({
-    name: "ratelimit",
-    description: "Configurar el rate limit de IA (aplica a usuarios por guild)",
-})
 @Options(options)
+@Guard({
+    guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class AiRateLimitCommand extends SubCommand {
     async run(ctx: GuildCommandContext<typeof options>) {
-        const guildId = await requireGuildId(ctx);
-        if (!guildId) return;
+        const guildId = ctx.guildId;
 
         const { enabled, max, window } = ctx.options;
 

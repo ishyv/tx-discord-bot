@@ -6,11 +6,11 @@
  * Alcance: maneja la invocación y respuesta del comando; no modifica la configuración.
  */
 import type { GuildCommandContext } from "seyfert";
-import { Declare, Embed, SubCommand } from "seyfert";
+import { Declare, Embed, SubCommand, Middlewares } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
 import { configStore, ConfigurableModule } from "@/configuration";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 
 @Declare({
   name: "list",
@@ -18,10 +18,13 @@ import { requireGuildId } from "@/utils/commandGuards";
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class ForumsListCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     const { forumIds } = await configStore.get(
       guildId,

@@ -18,12 +18,13 @@ import {
 import { ButtonStyle } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 
-import { AutoRoleRulesRepo } from "@/db/repositories";
 import {
+  AutoRoleRulesStore,
+  autoroleKeys,
   clearDeleteSession,
   getDeleteSession,
   storeDeleteSession,
-} from "@/systems/autorole/deleteSessions";
+} from "@/modules/autorole";
 
 import {
   formatRuleMode,
@@ -53,7 +54,9 @@ export default class AutoroleDeleteCommand extends SubCommand {
     if (!context) return;
 
     const slug = ctx.options.name.trim().toLowerCase();
-    const rule = await AutoRoleRulesRepo.fetchOne(context.guildId, slug);
+    const id = autoroleKeys.rule(context.guildId, slug);
+    const res = await AutoRoleRulesStore.get(id);
+    const rule = res.isOk() ? res.unwrap() : null;
     if (!rule) {
       await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
       return;

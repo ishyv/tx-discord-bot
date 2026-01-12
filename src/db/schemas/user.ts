@@ -3,6 +3,8 @@
  * Purpose: single source of truth for user shape, defaults, and runtime validation for repo reads/writes.
  */
 import { z } from "zod";
+import type { CurrencyInventory } from "@/modules/economy/currency";
+import type { ItemInventory } from "@/modules/inventory/inventory";
 
 export const WarnSchema = z.object({
   reason: z.string().catch(""),
@@ -23,14 +25,17 @@ export type SanctionHistoryEntry = z.infer<typeof SanctionHistoryEntrySchema>;
 
 export const UserSchema = z.object({
   _id: z.string(),
-  rep: z.number().int().nonnegative().catch(0),
+  // Legacy reputation field (moved to currency.rep).
+  rep: z.number().int().nonnegative().catch(0).optional(),
   warns: z.array(WarnSchema).catch(() => []),
   sanction_history: z.record(z.string(), z.array(SanctionHistoryEntrySchema)).catch(() => ({})),
   openTickets: z.array(z.string()).catch(() => []),
-  currency: z.record(z.string(), z.unknown()).catch(() => ({})),
-  inventory: z.record(z.string(), z.unknown()).catch(() => ({})),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
+  currency: z
+    .record(z.string(), z.unknown())
+    .catch(() => ({})) as z.ZodType<CurrencyInventory>,
+  inventory: z
+    .record(z.string(), z.unknown())
+    .catch(() => ({})) as z.ZodType<ItemInventory>,
 });
 
 export type Warn = z.infer<typeof WarnSchema>;

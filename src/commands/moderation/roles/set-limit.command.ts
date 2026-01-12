@@ -16,7 +16,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/db/repositories";
+import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import {
   buildLimitRecord,
   formatLimitRecord,
@@ -91,7 +91,8 @@ export default class RoleSetLimitCommand extends SubCommand {
     }
 
     // Ensure role exists
-    const roleRec = await repo.getRole(context.guildId, key);
+    const rolesRes = await GuildRolesRepo.read(context.guildId);
+    const roleRec = rolesRes.isOk() ? (rolesRes.unwrap() as any)[key] : null;
     if (!roleRec) {
       const embed = new Embed({
         title: "Rol no encontrado",
@@ -106,9 +107,10 @@ export default class RoleSetLimitCommand extends SubCommand {
     const uses = Math.max(0, Math.floor(ctx.options.uses));
     const limitRecord = buildLimitRecord(uses, parsedWindow.window);
 
-    await repo.setRoleLimit(context.guildId, key, action.key, limitRecord);
+    await GuildRolesRepo.setLimit(context.guildId, key, action.key, limitRecord).then(r => r.unwrap());
 
-    const updated = await repo.getRole(context.guildId, key);
+    const updatedRes = await GuildRolesRepo.read(context.guildId);
+    const updated = updatedRes.isOk() ? (updatedRes.unwrap() as any)[key] : null;
     const configuredLimits = Object.keys((updated?.limits ?? {}) as Record<string, unknown>).length;
 
     const embed = new Embed({

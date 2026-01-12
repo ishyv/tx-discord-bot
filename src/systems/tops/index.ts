@@ -17,9 +17,11 @@ import {
   getTopWindow,
   persistTopReport,
   rotateWindowAfterReport,
+  updateTopConfig,
   type TopWindow,
 } from "@/db/repositories";
 import { format as formatMs } from "@/utils/ms";
+import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
 
 const SWEEP_INTERVAL_MS = 60_000;
 const inFlight = new Set<string>();
@@ -161,7 +163,7 @@ const isActive = (
   window: TopWindow | null,
 ): window is TopWindow => {
   if (!window) return false;
-  return Boolean(window.channelId && window.intervalMs > 0);
+  return Boolean(window.intervalMs > 0 && window.channelId != null);
 };
 
 async function sendReport(
@@ -169,20 +171,29 @@ async function sendReport(
   window: TopWindow,
   now: Date,
 ): Promise<boolean> {
-  if (!window.channelId) return false;
+  const resolved = await fetchStoredChannel(client, window.channelId, async () => {
+    await updateTopConfig(window.guildId, { channelId: null });
+  });
+  if (!resolved.channelId || !resolved.channel) return false;
+  if (!resolved.channel.isTextGuild()) {
+    return false;
+  }
   const topSize = Number.isFinite(window.topSize)
     ? Math.max(1, window.topSize)
     : 10;
 
   const embed = buildReportEmbed(window, now, topSize);
   try {
-    await client.messages.write(window.channelId, {
+    await client.messages.write(resolved.channelId, {
       embeds: [embed],
       content:
         "Resumen de actividad del periodo actual. Los contadores se reinician en este momento.",
     });
     return true;
   } catch (error) {
+    if (isUnknownChannelError(error)) {
+      await updateTopConfig(window.guildId, { channelId: null });
+    }
     client.logger?.error?.("[tops] no se pudo enviar el reporte", {
       error,
       guildId: window.guildId,

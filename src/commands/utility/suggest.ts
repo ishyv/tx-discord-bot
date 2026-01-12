@@ -5,7 +5,7 @@
  *
  * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
  */
-import type { CommandContext, GuildCommandContext } from "seyfert";
+import type { CommandContext, GuildCommandContext, UsingClient } from "seyfert";
 import {
   Command,
   createStringOption,
@@ -18,8 +18,10 @@ import { MessageFlags } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { CHANNELS_ID } from "@/constants/guild";
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { BindDisabled, Features } from "@/modules/features";
+import { fetchStoredChannel } from "@/utils/channelGuard";
 
 const options = {
   suggest: createStringOption({
@@ -65,7 +67,7 @@ export default class SuggestCommand extends Command {
       return;
     }
 
-    const suggestChannelId = await resolveSuggestChannel(guildId);
+    const suggestChannelId = await resolveSuggestChannel(ctx.client, guildId);
     if (!suggestChannelId) {
       await ctx.write({
         content:
@@ -125,11 +127,48 @@ export default class SuggestCommand extends Command {
   }
 }
 
-async function resolveSuggestChannel(guildId: string): Promise<string | null> {
+async function resolveSuggestChannel(
+  client: UsingClient,
+  guildId: string,
+): Promise<string | null> {
   const channels = await getGuildChannels(guildId);
   const core = channels.core as Record<string, { channelId: string } | null | undefined>;
   const managed = channels.managed as Record<string, { channelId: string } | null | undefined>;
-  return core?.suggestions?.channelId ?? managed?.suggestions?.channelId ?? CHANNELS_ID.suggestions ?? null;
+  const coreChannelId = core?.suggestions?.channelId ?? null;
+  if (coreChannelId) {
+    const fetched = await fetchStoredChannel(client, coreChannelId, () =>
+      updateGuildPaths(guildId, {
+        "channels.core.suggestions": null,
+      }),
+    );
+    if (fetched.channel && fetched.channelId) {
+      if (!fetched.channel.isTextGuild()) {
+        return null;
+      }
+      return fetched.channelId;
+    }
+    if (!fetched.missing) {
+      return null;
+    }
+  }
+
+  const managedChannelId = managed?.suggestions?.channelId ?? null;
+  if (managedChannelId) {
+    const fetched = await fetchStoredChannel(client, managedChannelId, () =>
+      updateGuildPaths(guildId, {}, { unset: ["channels.managed.suggestions"] }),
+    );
+    if (fetched.channel && fetched.channelId) {
+      if (!fetched.channel.isTextGuild()) {
+        return null;
+      }
+      return fetched.channelId;
+    }
+    if (!fetched.missing) {
+      return null;
+    }
+  }
+
+  return CHANNELS_ID.suggestions ?? null;
 }
 
 

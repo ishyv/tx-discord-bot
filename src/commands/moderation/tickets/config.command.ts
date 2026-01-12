@@ -12,11 +12,12 @@ import {
   type GuildCommandContext,
   Options,
   SubCommand,
+  Middlewares,
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
 
-import { ensureGuild } from "@/db/repositories/with_guild";
-import { requireGuildId } from "@/utils/commandGuards";
+import { GuildStore } from "@/db/repositories/guilds";
+import { Guard } from "@/middlewares/guards/decorator";
 import { ensureTicketMessage } from "@/systems/tickets";
 
 const options = {
@@ -46,19 +47,21 @@ const options = {
   name: "config",
   description: "Configurar el sistema de tickets",
   defaultMemberPermissions: ["ManageChannels"],
-  // intents contexts are handled by Seyfert logic usually, but here we can specify:
-  // contexts: ["Guild"], // if supported by version
+  contexts: ["Guild"],
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class ConfigTicketsCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const { channel: tickets, category: ticketCategory, logchannel: ticketLogs } = ctx.options;
 
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     // Ensure guild row exists
-    await ensureGuild(guildId);
+    await GuildStore.ensure(guildId);
 
     const { configStore, ConfigurableModule } = await import("@/configuration");
 

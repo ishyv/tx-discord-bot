@@ -20,7 +20,8 @@ import {
 import { Button, UI } from "@/modules/ui";
 import { ButtonStyle, MessageFlags, TextInputStyle } from "seyfert/lib/types";
 
-import * as repo from "@/db/repositories";
+import { GuildStore } from "@/db/repositories/guilds";
+import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import { DEFAULT_MODERATION_ACTIONS } from "@/modules/guild-roles"; // constants only
 import type { RoleCommandOverride, RoleLimitRecord, LimitWindow } from "@/db/schemas/guild";
 
@@ -109,18 +110,17 @@ function findRolesByDiscordIds(roleIds: readonly string[], roles: DashboardRole[
 
 // Build dashboard roles straight from repo.readRoles()
 async function fetchDashboardRoles(guildId: string): Promise<DashboardRole[]> {
-    const rolesObj = (await repo.readRoles(guildId)) as Record<string, any>;
+    const res = await GuildRolesRepo.read(guildId);
+    if (res.isErr()) return [];
+    const rolesObj = res.unwrap();
     const entries = Object.entries(rolesObj ?? {});
     return entries.map(([key, rec]) => {
-        const overridesRaw = (rec?.overrides ?? rec?.reach ?? {}) as Record<string, RoleCommandOverride>;
-        const limitsRaw = (rec?.limits ?? {}) as Record<string, RoleLimitRecord>;
         const reach: Record<string, RoleCommandOverride> = {};
-        for (const [k, v] of Object.entries(overridesRaw)) reach[normKey(k)] = v;
+        for (const [k, v] of Object.entries(rec.reach ?? {})) reach[normKey(k)] = v;
         const limits: Record<string, RoleLimitRecord> = {};
-        for (const [k, v] of Object.entries(limitsRaw)) limits[normKey(k)] = v as RoleLimitRecord;
-        const discordRoleId =
-            rec?.discordRoleId ?? rec?.discord_role_id ?? rec?.discordId ?? rec?.id ?? null;
-        const label: string = rec?.label ?? key;
+        for (const [k, v] of Object.entries(rec.limits ?? {})) limits[normKey(k)] = v as RoleLimitRecord;
+        const discordRoleId = rec.discordRoleId ?? null;
+        const label: string = rec.label ?? key;
         return { key, label, discordRoleId, reach, limits };
     });
 }
@@ -137,7 +137,7 @@ export default class RolesDashboardCommand extends SubCommand {
             return;
         }
 
-        await repo.ensureGuild(guildId);
+        await GuildStore.ensure(guildId);
 
         const actions = DEFAULT_MODERATION_ACTIONS;
         const initialRoles = await fetchDashboardRoles(guildId);
@@ -277,7 +277,7 @@ export default class RolesDashboardCommand extends SubCommand {
 
                             try {
                                 for (const role of targetRoles) {
-                                    await repo.setRoleOverride(guildId, role.key, activeAction.key, override);
+                                    await GuildRolesRepo.setOverride(guildId, role.key, activeAction.key, override);
                                 }
                                 state.roles = await fetchDashboardRoles(guildId);
                                 state.feedback = `Override actualizado a ${formatOverrideLabel(override)} para ${targetRoles.length} rol(es) en ${activeAction.label}.`;
@@ -368,7 +368,14 @@ export default class RolesDashboardCommand extends SubCommand {
                         try {
                             if (limitNumber === 0) {
                                 for (const role of refreshedRoles) {
-                                    await repo.clearRoleLimit(guildId, role.key, refreshedAction.key);
+                                    await GuildRolesRepo.write(guildId, (roles) => {
+                                        if (!roles[role.key]) return roles;
+                                        const action = refreshedAction.key.toLowerCase().replace(/[\s-]+/g, "_");
+                                        if ((roles[role.key] as any).limits) {
+                                            delete (roles[role.key] as any).limits[action];
+                                        }
+                                        return roles;
+                                    });
                                 }
                                 state.feedback = `Se removieron los limites de ${refreshedAction.label} para ${refreshedRoles.length} rol(es).`;
                             } else {
@@ -379,7 +386,7 @@ export default class RolesDashboardCommand extends SubCommand {
                                 } as any;
 
                                 for (const role of refreshedRoles) {
-                                    await repo.setRoleLimit(guildId, role.key, refreshedAction.key, limitRecord);
+                                    await GuildRolesRepo.setLimit(guildId, role.key, refreshedAction.key, limitRecord);
                                 }
                                 state.feedback = `Limite actualizado para ${refreshedAction.label}: ${limitRecord.limit} uso(s) ${limitRecord.window ? secondsToTimeString(windowSeconds!) : "sin ventana"
                                     } (${refreshedRoles.length} rol(es)).`;
@@ -424,7 +431,14 @@ export default class RolesDashboardCommand extends SubCommand {
 
                         try {
                             for (const role of targetRoles) {
-                                await repo.clearRoleLimit(guildId, role.key, a.key);
+                                await GuildRolesRepo.write(guildId, (roles) => {
+                                    if (!roles[role.key]) return roles;
+                                    const action = a.key.toLowerCase().replace(/[\s-]+/g, "_");
+                                    if ((roles[role.key] as any).limits) {
+                                        delete (roles[role.key] as any).limits[action];
+                                    }
+                                    return roles;
+                                });
                             }
                             state.roles = await fetchDashboardRoles(guildId);
                             state.feedback = `Limite eliminado para ${a.label} en ${targetRoles.length} rol(es).`;

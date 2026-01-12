@@ -19,11 +19,13 @@ import {
   type TextGuildChannel,
 } from "seyfert";
 
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { Colors } from "@/modules/ui/colors";
 import { TICKET_CLOSE_BUTTON_ID } from "@/systems/tickets";
 import { closeTicket } from "@/systems/tickets/shared";
 import { create_transcription } from "@/systems/tickets/transcription";
+import { fetchStoredChannel } from "@/utils/channelGuard";
 
 const CLOSE_DELAY_MS = 5_000;
 
@@ -113,6 +115,24 @@ export default class CloseTicketButton extends ComponentCommand {
       | Record<string, { channelId: string } | null>
       | undefined;
     const ticketLogsChannelId = core?.ticketLogs?.channelId ?? null;
+    const fetchedLogs = ticketLogsChannelId
+      ? await fetchStoredChannel(ctx.client, ticketLogsChannelId, () =>
+          updateGuildPaths(guildId, {
+            "channels.core.ticketLogs": null,
+          }),
+        )
+      : null;
+    const logsChannel =
+      fetchedLogs?.channel && fetchedLogs.channel.isTextGuild()
+        ? fetchedLogs.channel
+        : null;
+    const resolvedLogsChannelId = logsChannel ? fetchedLogs?.channelId ?? null : null;
+    if (fetchedLogs?.channel && !logsChannel) {
+      ctx.client.logger?.error?.("[tickets] el canal de logs configurado no es de texto", {
+        guildId,
+        ticketLogsChannelId,
+      });
+    }
 
     const closingEmbed = new Embed()
       .setColor(Colors.info)
@@ -124,7 +144,7 @@ export default class CloseTicketButton extends ComponentCommand {
 
     await ctx.editOrReply({ embeds: [closingEmbed] });
 
-    if (ticketLogsChannelId) {
+    if (resolvedLogsChannelId && logsChannel) {
       try {
         const transcriptBuffer = await create_transcription(
           ctx.client,
@@ -135,27 +155,15 @@ export default class CloseTicketButton extends ComponentCommand {
           .setDescription("Transcripcion del ticket")
           .setFile("buffer", transcriptBuffer);
 
-        const logsChannel =
-          await ctx.client.channels.fetch(ticketLogsChannelId);
-        if (logsChannel?.isTextGuild()) {
-          await logsChannel.messages.write({
-            content: `Transcripcion del ticket: ${ticketChannel.name}`,
-            files: [transcriptAttachment],
-          });
+        await logsChannel.messages.write({
+          content: `Transcripcion del ticket: ${ticketChannel.name}`,
+          files: [transcriptAttachment],
+        });
 
-          closingEmbed.setDescription(
-            `${closingEmbed.data.description}\nLa transcripcion fue enviada a <#${ticketLogsChannelId}>.`,
-          );
-          await ctx.editOrReply({ embeds: [closingEmbed] });
-        } else {
-          ctx.client.logger?.error?.(
-            "[tickets] el canal de logs configurado no es de texto",
-            {
-              guildId,
-              ticketLogsChannelId,
-            },
-          );
-        }
+        closingEmbed.setDescription(
+          `${closingEmbed.data.description}\nLa transcripcion fue enviada a <#${resolvedLogsChannelId}>.`,
+        );
+        await ctx.editOrReply({ embeds: [closingEmbed] });
       } catch (error) {
         ctx.client.logger?.error?.(
           "[tickets] fallo al generar o enviar la transcripcion",

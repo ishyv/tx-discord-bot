@@ -63,6 +63,7 @@ export type FakeFactory = {
   suite: string;
   rng: Rng;
   nextId: (prefix: string) => string;
+  snowflake: () => string;
   int: (min: number, max: number) => number;
   bool: () => boolean;
   pick: <T>(items: T[]) => T;
@@ -91,6 +92,19 @@ export const createFakeFactory = (suiteName: string): FakeFactory => {
   const nextId = (prefix: string) => {
     counter += 1;
     return `${prefix}-${suite}-${namespace}-${counter}`;
+  };
+
+  const snowflake = () => {
+    let digits = "";
+    for (let i = 0; i < 18; i += 1) {
+      const next = int(0, 9);
+      if (i === 0 && next === 0) {
+        digits += "1";
+      } else {
+        digits += String(next);
+      }
+    }
+    return digits;
   };
 
   const int = (min: number, max: number) => {
@@ -131,6 +145,7 @@ export const createFakeFactory = (suiteName: string): FakeFactory => {
     suite,
     rng,
     nextId,
+    snowflake,
     int,
     bool,
     pick,

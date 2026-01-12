@@ -1,15 +1,7 @@
 /**
  * Repositorio de ofertas.
- *
- * Responsabilidad:
- * - CRUD sobre la colección `offers` (MongoDB).
- * - Validación de entradas/salidas con Zod (`OfferSchema`).
- *
- * @remarks
- * Este repositorio retorna `Result<T>` para que el caller pueda distinguir entre
- * “no existe” (`Ok(null)`) y un error real de DB/validación (`Err(error)`).
  */
-import { getDb } from "@/db/mongo";
+import { MongoStore } from "@/db/mongo-store";
 import {
   OfferSchema,
   OfferStatusSchema,
@@ -18,7 +10,6 @@ import {
   type OfferStatus,
 } from "@/db/schemas/offers";
 import type { GuildId, OfferId, UserId } from "@/db/types";
-import { unwrapFindOneAndUpdateResult } from "@/db/helpers";
 import { type Result, OkResult, ErrResult } from "@/utils/result";
 
 const ACTIVE_OFFER_STATUSES: OfferStatus[] = [
@@ -28,6 +19,12 @@ const ACTIVE_OFFER_STATUSES: OfferStatus[] = [
 
 const ACTIVE_OFFER_INDEX_KEY = { guildId: 1, authorId: 1 } as const;
 const ACTIVE_OFFER_INDEX_NAME = "uniq_active_offer_per_author";
+
+/**
+ * Store for Offers.
+ * Key: OfferId (string)
+ */
+export const OfferStore = new MongoStore<Offer>("offers", OfferSchema);
 
 let offersIndexesEnsured: Promise<void> | null = null;
 
@@ -56,12 +53,9 @@ function hasExactActiveStatusFilter(
 }
 
 async function ensureOffersIndexes(): Promise<void> {
-  const col = (await getDb()).collection<Offer>("offers");
+  const col = await OfferStore.collection();
 
   try {
-    // Índices son un detalle de infraestructura: no deben tumbar el bot en runtime.
-    // Si algo falla acá, preferimos degradar (log) y permitir que el resto del sistema
-    // siga funcionando (aunque se pierda la garantía de unicidad hasta que se arregle).
     const existing = await col.indexes();
     const alreadyOk = existing.some((idx) => {
       return (
@@ -79,8 +73,8 @@ async function ensureOffersIndexes(): Promise<void> {
     if (conflicting) {
       console.error(
         `[offers] Índice conflictivo detectado: '${conflicting.name}'. ` +
-          "Se requiere un índice UNIQUE con partialFilterExpression por estado para garantizar 1 oferta activa por autor. " +
-          `Solución: eliminar el índice '${conflicting.name}' y reiniciar el bot para que se regenere.`,
+        "Se requiere un índice UNIQUE con partialFilterExpression por estado para garantizar 1 oferta activa por autor. " +
+        `Solución: eliminar el índice '${conflicting.name}' y reiniciar el bot para que se regenere.`,
       );
       return;
     }
@@ -93,116 +87,28 @@ async function ensureOffersIndexes(): Promise<void> {
       },
     });
   } catch (error) {
-    // No propagar códigos del driver (ej. 11000) para que no se confunda con errores de dominio.
-    const message = error instanceof Error ? error.message : String(error);
     console.error("[offers] Failed to ensure indexes:", error);
-
-    // Si hay duplicados activos, ayudamos al operador listando algunos casos.
-    try {
-      const duplicates = await col
-        .aggregate([
-          { $match: { status: { $in: ACTIVE_OFFER_STATUSES } } },
-          {
-            $group: {
-              _id: { guildId: "$guildId", authorId: "$authorId" },
-              count: { $sum: 1 },
-              offerIds: { $push: "$_id" },
-            },
-          },
-          { $match: { count: { $gt: 1 } } },
-          { $sort: { count: -1 } },
-          { $limit: 10 },
-        ])
-        .toArray();
-
-      if (duplicates.length) {
-        console.error(
-          "[offers] Duplicate active offers found (showing up to 10 groups):",
-          duplicates,
-        );
-      }
-    } catch (scanError) {
-      console.error("[offers] Failed to scan duplicate active offers:", scanError);
-    }
-
-    console.error(`OFFERS_INDEX_SETUP_FAILED: ${message}`);
-    return;
   }
 }
 
-const offersCollection = async () => {
+async function offersCollection() {
   if (!offersIndexesEnsured) {
-    // Lazy init: se asegura al primer acceso a la colección para evitar trabajo extra
-    // en arranque si el módulo de ofertas no se usa.
     offersIndexesEnsured = ensureOffersIndexes();
   }
-
   await offersIndexesEnsured;
-  return (await getDb()).collection<Offer>("offers");
-};
+  return OfferStore.collection();
+}
 
-// Traduce errores del driver a errores de dominio (ej: clave duplicada).
+/**
+ * Traduce errores del driver a errores de dominio (ej: clave duplicada).
+ */
 const mapError = (error: unknown): Error => {
   if ((error as any)?.code === 11000) return new Error("ACTIVE_OFFER_EXISTS");
   return error instanceof Error ? error : new Error(String(error));
 };
 
-// Wrapper pequeño para ejecutar una operación de DB y devolverla como `Result<T>`.
-const withDb = async <T>(op: () => Promise<T>): Promise<Result<T>> => {
-  try {
-    return OkResult(await op());
-  } catch (error) {
-    return ErrResult(mapError(error));
-  }
-};
-
-// Todo documento que sale del repo se valida por Zod.
-const parseOffer = (doc: unknown): Offer => {
-  const parsed = OfferSchema.safeParse(doc);
-  if (parsed.success) return parsed.data;
-  console.error("[offers] invalid offer document; using safe fallback", parsed.error);
-
-  // Este fallback es deliberadamente conservador:
-  // - Evita que un documento corrupto/legacy provoque un crash en runtime.
-  // - Mantiene un shape mínimo para que los callers puedan mostrar/editar/retirar sin
-  //   reventar al acceder propiedades.
-  // - NO intenta "arreglar" ni persistir el documento: solo permite degradar.
-
-  const fallbackId =
-    typeof (doc as any)?._id === "string"
-      ? ((doc as any)._id as OfferId)
-      : typeof (doc as any)?.id === "string"
-        ? ((doc as any).id as OfferId)
-        : ("unknown" as OfferId);
-  const guildId =
-    typeof (doc as any)?.guildId === "string"
-      ? ((doc as any).guildId as GuildId)
-      : ("unknown" as GuildId);
-  const authorId =
-    typeof (doc as any)?.authorId === "string"
-      ? ((doc as any).authorId as UserId)
-      : ("unknown" as UserId);
-
-  const now = new Date();
-  return {
-    _id: fallbackId,
-    guildId,
-    authorId,
-    status: "PENDING_REVIEW" as OfferStatus,
-    details: ((doc as any)?.details ?? {}) as OfferDetails,
-    embed: (doc as any)?.embed ?? null,
-    reviewMessageId: (doc as any)?.reviewMessageId ?? null,
-    reviewChannelId: (doc as any)?.reviewChannelId ?? null,
-    createdAt: (doc as any)?.createdAt instanceof Date ? (doc as any).createdAt : now,
-    updatedAt: (doc as any)?.updatedAt instanceof Date ? (doc as any).updatedAt : now,
-  } as Offer;
-};
-
 /**
  * Datos necesarios para crear una oferta.
- *
- * @remarks
- * `id` es determinístico/externo (no usamos `ObjectId` como llave primaria).
  */
 export interface CreateOfferInput {
   id: OfferId;
@@ -216,16 +122,14 @@ export interface CreateOfferInput {
 
 /**
  * Crea una nueva oferta en la base de datos.
- *
- * @remarks
- * Si existe un constraint/índice que impide ofertas activas duplicadas, el repo retorna
- * `Err(Error("ACTIVE_OFFER_EXISTS"))` para que el caller pueda mostrar un mensaje claro.
  */
 export async function createOffer(input: CreateOfferInput): Promise<Result<Offer>> {
-  return withDb(async () => {
+  try {
+    await offersCollection();
     const now = new Date();
-    const doc = parseOffer({
+    const res = await OfferStore.set(input.id, {
       _id: input.id,
+      id: input.id,
       guildId: input.guildId,
       authorId: input.authorId,
       status: "PENDING_REVIEW",
@@ -235,24 +139,19 @@ export async function createOffer(input: CreateOfferInput): Promise<Result<Offer
       reviewChannelId: input.reviewChannelId,
       createdAt: now,
       updatedAt: now,
-    });
-    const col = await offersCollection();
-    await col.insertOne(doc);
-    return doc;
-  });
+    } as any);
+    return res;
+  } catch (error) {
+    return ErrResult(mapError(error));
+  }
 }
 
 /**
  * Busca una oferta por su id.
- *
- * @returns `Ok(Offer)` si existe, `Ok(null)` si no existe.
  */
 export async function findById(id: OfferId): Promise<Result<Offer | null>> {
-  return withDb(async () => {
-    const col = await offersCollection();
-    const doc = await col.findOne({ _id: id });
-    return doc ? parseOffer(doc) : null;
-  });
+  await offersCollection();
+  return OfferStore.get(id);
 }
 
 /**
@@ -262,15 +161,15 @@ export async function findActiveByAuthor(
   guildId: GuildId,
   authorId: UserId,
 ): Promise<Result<Offer | null>> {
-  return withDb(async () => {
-    const col = await offersCollection();
-    const doc = await col.findOne({
-      guildId,
-      authorId,
-      status: { $in: ["PENDING_REVIEW", "CHANGES_REQUESTED"] as OfferStatus[] },
-    });
-    return doc ? parseOffer(doc) : null;
+  await offersCollection();
+  const res = await OfferStore.find({
+    guildId,
+    authorId,
+    status: { $in: ["PENDING_REVIEW", "CHANGES_REQUESTED"] as OfferStatus[] },
   });
+  if (res.isErr()) return ErrResult(res.error);
+  const docs = res.unwrap();
+  return OkResult(docs.length > 0 ? docs[0] : null);
 }
 
 export interface UpdateOfferOptions {
@@ -284,55 +183,58 @@ export async function updateOffer(
   patch: Partial<Offer>,
   options: UpdateOfferOptions = {},
 ): Promise<Result<Offer | null>> {
-  return withDb(async () => {
-    const col = await offersCollection();
-    const query: Record<string, unknown> = { _id: id };
+  try {
+    await offersCollection();
+    const query: Record<string, any> = { _id: id };
     if (options.allowedFrom && options.allowedFrom.length) {
       query.status = { $in: options.allowedFrom };
     }
-    const now = new Date();
+
+    // We use raw findOneAndUpdate if we need a custom query with patch
+    const col = await OfferStore.collection();
     const updated = await col.findOneAndUpdate(
       query,
-      { $set: { ...patch, updatedAt: now } },
+      { $set: { ...patch, updatedAt: new Date() } as any },
       { returnDocument: "after" },
     );
-    const doc = unwrapFindOneAndUpdateResult<Offer>(updated);
-    return doc ? parseOffer(doc) : null;
-  });
+
+    // Using MongoStore's internal safeDoc mapping would be nice but it's private.
+    // However, OfferStore.get(id) will do the same after update.
+    // For efficiency we can just parse it here if we had access, 
+    // but findOneAndUpdate result needs to be parsed by OfferSchema.
+
+    if (!updated) return OkResult(null);
+    const parsed = OfferSchema.safeParse(updated);
+    if (!parsed.success) return ErrResult(new Error(parsed.error.message));
+    return OkResult(parsed.data);
+  } catch (error) {
+    return ErrResult(mapError(error));
+  }
 }
 
 /**
  * Lista ofertas por estado dentro del guild.
- *
- * @param statuses Se valida cada valor con `OfferStatusSchema` para evitar queries inválidas.
  */
 export async function listByStatus(
   guildId: GuildId,
   statuses: OfferStatus[],
 ): Promise<Result<Offer[]>> {
-  return withDb(async () => {
-    const col = await offersCollection();
-    const safeStatuses = statuses
-      .map((s) => OfferStatusSchema.safeParse(s))
-      .filter((r) => r.success)
-      .map((r) => (r as any).data as OfferStatus);
-    if (!safeStatuses.length) return [];
-    // Importante: consultamos con `safeStatuses` para evitar queries inválidas y para que
-    // el comportamiento coincida con la intención (validar inputs antes de tocar la DB).
-    const docs = await col.find({ guildId, status: { $in: safeStatuses } }).toArray();
-    return docs.map(parseOffer);
-  });
+  await offersCollection();
+  const safeStatuses = statuses
+    .map((s) => OfferStatusSchema.safeParse(s))
+    .filter((r) => r.success)
+    .map((r) => (r as any).data as OfferStatus);
+
+  if (!safeStatuses.length) return OkResult([]);
+
+  return OfferStore.find({ guildId, status: { $in: safeStatuses } });
 }
 
 /**
  * Elimina una oferta por id.
- *
- * @returns `Ok(true)` si se borró, `Ok(false)` si no existía.
  */
 export async function removeOffer(id: OfferId): Promise<Result<boolean>> {
-  return withDb(async () => {
-    const col = await offersCollection();
-    const res = await col.deleteOne({ _id: id });
-    return (res.deletedCount ?? 0) > 0;
-  });
+  await offersCollection();
+  const res = await OfferStore.delete(id);
+  return res.isOk() ? OkResult(true) : ErrResult(res.error);
 }

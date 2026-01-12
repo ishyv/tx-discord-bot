@@ -1,9 +1,5 @@
 /**
- * Motivación: encapsular el handler de componente "rep modal handler" para enrutar customId al sistema de UI sin duplicar filtros ni wiring.
- *
- * Idea/concepto: extiende las primitivas de Seyfert para componentes y delega en el registro de UI la resolución del callback adecuado.
- *
- * Alcance: filtra y despacha interacciones de este tipo; no define la lógica interna de cada componente ni su contenido visual.
+ * Rep Modal Handler Component
  */
 import {
     Embed,
@@ -12,7 +8,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { adjustUserReputation } from "@/db/repositories";
-import { syncUserReputationRoles } from "@/systems/autorole/service";
+import { AutoroleService } from "@/modules/autorole";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { assertFeatureEnabled, Features } from "@/modules/features";
@@ -34,7 +30,6 @@ function resolveRequestEmbed(ctx: ModalContext, footerText: string) {
  * Modal submissions return action rows; walk them to pull a specific input value.
  */
 function getTextInputValue(ctx: ModalContext, customId: string): string | null {
-    // Modal submissions come back as action rows; walk them to find our field.
     for (const row of ctx.components ?? []) {
         for (const component of row.components ?? []) {
             if (component.customId === customId) {
@@ -92,7 +87,7 @@ export default class RepModalHandler extends ModalCommand {
         }
         const total = totalResult.unwrap();
         await recordReputationChange(ctx.client, guildId, targetId, amount);
-        await syncUserReputationRoles(ctx.client, guildId, targetId, total);
+        await AutoroleService.syncUserReputationRoles(ctx.client, guildId, targetId, total);
 
         const embed = resolveRequestEmbed(ctx, `Revisado por ${ctx.author.username}`);
         const payload: {

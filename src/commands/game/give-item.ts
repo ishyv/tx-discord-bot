@@ -23,6 +23,10 @@ const options = {
     description: "El usuario a quien dar el item",
     required: true,
   }),
+  reason: createStringOption({
+    description: "Razón del ajuste",
+    required: false,
+  }),
 };
 
 @Declare({
@@ -33,7 +37,7 @@ const options = {
 @Options(options)
 export default class GiveItemCommand extends Command {
   async run(ctx: CommandContext<typeof options>) {
-    const { item, quantity, user } = ctx.options;
+    const { item, quantity, user, reason } = ctx.options;
 
     const result = await itemTransaction(user.id, {
       rewards: [{ itemId: item, quantity }],
@@ -61,6 +65,7 @@ export default class GiveItemCommand extends Command {
       fields: [
         { name: "Item", value: itemDef.name, inline: true },
         { name: "Cantidad", value: `${quantity}`, inline: true },
+        { name: "Razón", value: reason ?? "No especificada", inline: false },
       ],
       color: "Green",
     });

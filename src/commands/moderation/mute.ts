@@ -18,7 +18,7 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { isValid, parse } from "@/utils/ms";
-import { registerCase } from "@/db/repositories/users";
+import { registerCase } from "@/modules/moderation/service";
 
 const options = {
   user: createUserOption({

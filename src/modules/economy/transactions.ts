@@ -22,7 +22,9 @@ import { CurrencyRegistry, currencyRegistry } from "./currencyRegistry";
 import { ErrResult, OkResult, Result } from "@/utils/result";
 
 import "./currencies/coin";
-import { ensureUser, replaceCurrencyIfMatch } from "@/db/repositories";
+import "./currencies/reputation";
+import { runUserTransition } from "@/db/user-transition";
+import { UserStore } from "@/db/repositories/users";
 export { registerCurrency, currencyRegistry } from "./currencyRegistry";
 
 export type CurrencyAmount<TValue = unknown> = {
@@ -35,6 +37,8 @@ export type Transaction = {
   costs?: CurrencyAmount[];
   /** What gets added to the inventory. */
   rewards?: CurrencyAmount[];
+  /** Allow negative balances (debt) if true. */
+  allowDebt?: boolean;
 };
 
 export type TransactionResult = Result<CurrencyInventory, Error>;
@@ -46,6 +50,7 @@ class CurrencyEngine {
     target: CurrencyInventory,
     amounts: CurrencyAmount[],
     op: "add" | "sub",
+    tx: Transaction,
   ): boolean {
     // WHY: Esta función es el "core" del motor: unifica la aplicación de costos/recompensas
     // y valida cada paso.
@@ -65,7 +70,7 @@ class CurrencyEngine {
           ? currency.add(current, amount.value)
           : currency.sub(current, amount.value);
 
-      if (!currency.isValid(next)) {
+      if (!tx.allowDebt && !currency.isValid(next)) {
         return false;
       }
 
@@ -81,8 +86,8 @@ class CurrencyEngine {
     const rewards = tx.rewards ?? [];
 
     return (
-      this.applyAmounts(snapshot, costs, "sub") &&
-      this.applyAmounts(snapshot, rewards, "add")
+      this.applyAmounts(snapshot, costs, "sub", tx) &&
+      this.applyAmounts(snapshot, rewards, "add", tx)
     );
   }
 
@@ -102,8 +107,8 @@ class CurrencyEngine {
 
     const next: CurrencyInventory = { ...inv };
 
-    this.applyAmounts(next, costs, "sub");
-    this.applyAmounts(next, rewards, "add");
+    this.applyAmounts(next, costs, "sub", tx);
+    this.applyAmounts(next, rewards, "add", tx);
 
     return OkResult(next);
   }
@@ -128,33 +133,21 @@ export async function currencyTransaction(
   // Errores:
   // - `Err(...)` si la transacción es inválida, no puede aplicarse o si hay problemas de DB.
   // - `Err("CURRENCY_TX_CONFLICT")` si no se pudo ganar la carrera luego de varios reintentos.
-  const userResult = await ensureUser(userId);
-  if (userResult.isErr()) return ErrResult(userResult.error);
-  let inv: CurrencyInventory = (userResult.unwrap().currency as CurrencyInventory) ?? {};
-
   // Optimistic retry loop to avoid lost updates under concurrent writes.
   // WHY: Mongo update es "last write wins" si no condicionamos por estado previo.
   // RISK: Si quitamos el retry, dos comandos concurrentes pueden pisarse y perder dinero.
   // ALT: Transacciones de Mongo/locks. Se descartó por costo/complexidad; el patrón CAS
   // (compare-and-swap) es suficiente para este caso.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const result = engine.apply(inv, tx);
-    if (result.isErr()) {
-      return result;
-    }
-
-    const updated = await replaceCurrencyIfMatch(userId, inv, result.unwrap());
-    if (updated.isErr()) return ErrResult(updated.error);
-    const updatedUser = updated.unwrap();
-    if (updatedUser) {
-      return OkResult(updatedUser.currency ?? {});
-    }
-
-    // Currency changed concurrently; reload and retry.
-    const fresh = await ensureUser(userId);
-    if (fresh.isErr()) return ErrResult(fresh.error);
-    inv = fresh.unwrap().currency ?? {};
-  }
-
-  return ErrResult(new Error("CURRENCY_TX_CONFLICT"));
+  return runUserTransition(userId, {
+    getSnapshot: (user) => (user.currency as CurrencyInventory) ?? {},
+    computeNext: (inv) => engine.apply(inv, tx),
+    commit: (id, expected, next) =>
+      UserStore.replaceIfMatch(
+        id,
+        { currency: expected } as any,
+        { currency: next } as any
+      ),
+    project: (updatedUser) => (updatedUser.currency ?? {}) as CurrencyInventory,
+    conflictError: "CURRENCY_TX_CONFLICT",
+  });
 }

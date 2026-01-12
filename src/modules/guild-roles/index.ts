@@ -6,7 +6,8 @@
  * Alcance: helpers y orquestadores; no decide qué roles usar en cada flujo de negocio.
  */
 import { roleRateLimiter } from "./rateLimiter";
-import { getGuild } from "@/db/repositories/with_guild";
+import { GuildStore } from "@/db/repositories/guilds";
+import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import {
   type RoleCommandOverride,
   type RoleLimitRecord,
@@ -100,7 +101,8 @@ function normaliseKey(k: string) {
 }
 
 export async function listGuildRoleSnapshots(guildId: string): Promise<RoleSnapshot[]> {
-  const guild = await getGuild(guildId);
+  const res = await GuildStore.get(guildId);
+  const guild = res.unwrap();
   const rolesObj = guild?.roles ?? {};
   const entries = Object.entries(rolesObj);
   return entries.map(([key, rec]: [string, any]) => {
@@ -317,21 +319,19 @@ export async function consumeRoleLimits({
   };
 }
 
-import { withGuild } from "@/db/repositories/with_guild";
+
 
 export async function clearRoleLimit(
   guildId: string,
   roleKey: string,
   actionKey: string,
 ): Promise<void> {
-  await withGuild(guildId, (guild) => {
-    if (!guild.roles) return;
-    const role = guild.roles[roleKey] as GuildRoleRecord | undefined;
-    if (!role || !role.limits) return;
-
+  await GuildRolesRepo.write(guildId, (roles) => {
+    if (!roles[roleKey] || !(roles[roleKey] as any).limits) return roles;
     const action = normaliseAction(actionKey);
-    delete role.limits[action];
-  });
+    delete (roles[roleKey] as any).limits[action];
+    return roles;
+  }).then(r => r.unwrap());
 }
 
 export async function getManagedRole(guildId: string, key: string): Promise<RoleSnapshot | null> {
@@ -340,14 +340,16 @@ export async function getManagedRole(guildId: string, key: string): Promise<Role
 }
 
 export async function resetRoleOverrides(guildId: string, roleKey: string): Promise<void> {
-  await withGuild(guildId, (guild) => {
-    if (!guild.roles?.[roleKey]) return;
-    (guild.roles[roleKey] as GuildRoleRecord).reach = {};
-  });
+  await GuildRolesRepo.write(guildId, (roles) => {
+    if (!roles[roleKey]) return roles;
+    (roles[roleKey] as any).reach = {};
+    return roles;
+  }).then(r => r.unwrap());
 }
 
 export async function getRoleOverrides(guildId: string, roleKey: string): Promise<Record<string, RoleCommandOverride>> {
-  const guild = await getGuild(guildId);
+  const res = await GuildStore.get(guildId);
+  const guild = res.unwrap();
   return (guild?.roles?.[roleKey] as GuildRoleRecord)?.reach ?? {};
 }
 
@@ -357,14 +359,5 @@ export async function setRoleOverride(
   actionKey: string,
   override: RoleCommandOverride
 ): Promise<void> {
-  await withGuild(guildId, (guild) => {
-    if (!guild.roles) guild.roles = {};
-    if (!guild.roles[roleKey]) return; // Don't create if not exists
-    const role = guild.roles[roleKey] as GuildRoleRecord;
-    if (!role.reach) role.reach = {};
-
-    // Normalize action key
-    const action = normaliseAction(actionKey);
-    role.reach[action] = override;
-  });
+  await GuildRolesRepo.setOverride(guildId, roleKey, actionKey, override).then(r => r.unwrap());
 }

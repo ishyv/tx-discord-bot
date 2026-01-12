@@ -9,7 +9,9 @@ import { Embed } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import type { UsingClient } from "seyfert";
 
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
+import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
 
 export interface ModerationLogPayload {
   title: string;
@@ -48,7 +50,15 @@ export async function logModerationAction(
     const channels = await getGuildChannels(guildId);
     const core = channels.core as Record<string, { channelId: string } | null>;
     const logs = core?.[channel];
-    if (!logs?.channelId) return;
+    const fetched = await fetchStoredChannel(client, logs?.channelId, () =>
+      updateGuildPaths(guildId, {
+        [`channels.core.${channel}`]: null,
+      }),
+    );
+    if (!fetched.channel || !fetched.channelId) return;
+    if (!fetched.channel.isTextGuild()) {
+      return;
+    }
 
     const embed = new Embed({
       title,
@@ -58,12 +68,17 @@ export async function logModerationAction(
       footer: footer ? { text: footer } : undefined,
     });
 
-    await client.messages.write(logs.channelId, {
+    await client.messages.write(fetched.channelId, {
       content: actorId ? `<@${actorId}>` : undefined,
       embeds: [embed],
       allowed_mentions: { parse: [] },
     });
   } catch (error) {
+    if (isUnknownChannelError(error)) {
+      await updateGuildPaths(guildId, {
+        [`channels.core.${channel}`]: null,
+      });
+    }
     client.logger?.warn?.("[moderation] failed to log action to channel", {
       guildId,
       error,

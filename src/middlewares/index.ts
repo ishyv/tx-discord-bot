@@ -8,9 +8,11 @@
 import CooldownMiddleware from "./cooldown";
 import { featureToggleMiddleware } from "./featureToggle";
 import { moderationLimit } from "./moderationLimit";
+import { guardMiddleware } from "./guards/middleware";
 
 export const middlewares = {
   cooldown: CooldownMiddleware,
   moderationLimit,
   featureToggle: featureToggleMiddleware,
+  guard: guardMiddleware,
 };

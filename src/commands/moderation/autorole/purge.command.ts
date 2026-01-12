@@ -1,9 +1,5 @@
 /**
- * Motivación: registrar el comando "moderation / autorole / purge" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Autorole Purge Command
  */
 import {
   createStringOption,
@@ -13,7 +9,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import { AutoRoleRulesRepo, purgeRule } from "@/db/repositories";
+import { AutoroleService, AutoRoleRulesStore, autoroleKeys } from "@/modules/autorole";
 import { respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 
 const options = {
@@ -35,21 +31,23 @@ export default class AutorolePurgeCommand extends SubCommand {
     if (!context) return;
 
     const slug = ctx.options.name.trim().toLowerCase();
-    const rule = await AutoRoleRulesRepo.fetchOne(context.guildId, slug);
+    const id = autoroleKeys.rule(context.guildId, slug);
+    const res = await AutoRoleRulesStore.get(id);
+    const rule = res.isOk() ? res.unwrap() : null;
+
     if (!rule) {
       await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
       return;
     }
 
-    const result = await purgeRule(ctx.client, context.guildId, slug);
+    const result = await AutoroleService.purgeRule(ctx.client, context.guildId, slug);
 
     await ctx.write({
       content:
         `Se eliminaron ${result.removedGrants} motivos activos.` +
         (result.roleRevocations > 0
-          ? ` Se removieron ${result.roleRevocations} roles.` 
+          ? ` Se removieron ${result.roleRevocations} roles.`
           : " Ningun rol debia ser removido."),
     });
   }
 }
-

@@ -15,7 +15,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/db/repositories";
+import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import { requireGuildContext } from "./shared";
 
 const options = {
@@ -46,7 +46,8 @@ export default class RoleRemoveCommand extends SubCommand {
       return;
     }
 
-    const removed = await repo.removeRole(context.guildId, key);
+    const res = await GuildRolesRepo.remove(context.guildId, key);
+    const removed = res.isOk();
 
     const embed = new Embed({
       title: removed ? "Rol eliminado" : "Rol no encontrado",

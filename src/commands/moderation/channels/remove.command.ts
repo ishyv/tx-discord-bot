@@ -12,10 +12,11 @@ import {
   Options,
   SubCommand,
   createStringOption,
+  Middlewares,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { removeInvalidChannels, removeManagedChannel } from "@/modules/guild-channels";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
   id: createStringOption({
@@ -32,10 +33,13 @@ const options = {
   contexts: ["Guild"],
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class ChannelRemoveCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     const identifier = ctx.options.id.trim();
     if (!identifier) {

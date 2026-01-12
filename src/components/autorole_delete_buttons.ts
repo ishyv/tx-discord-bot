@@ -1,9 +1,5 @@
 /**
- * Motivación: encapsular el handler de componente "autorole delete buttons" para enrutar customId al sistema de UI sin duplicar filtros ni wiring.
- *
- * Idea/concepto: extiende las primitivas de Seyfert para componentes y delega en el registro de UI la resolución del callback adecuado.
- *
- * Alcance: filtra y despacha interacciones de este tipo; no define la lógica interna de cada componente ni su contenido visual.
+ * Autorole Delete Buttons Component
  */
 import {
   ActionRow,
@@ -13,12 +9,12 @@ import {
   type ComponentContext,
 } from "seyfert";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
-import { deleteRule, purgeRule } from "@/db/repositories";
 import {
-  clearDeleteSession,
+  AutoroleService,
   getDeleteSession,
+  clearDeleteSession,
   type DeleteSession,
-} from "@/systems/autorole/deleteSessions";
+} from "@/modules/autorole";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const ID_PREFIX = "autorole:delete:";
@@ -107,7 +103,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     await ctx.deferUpdate();
     let deleted = false;
     try {
-      deleted = await deleteRule(session.guildId, session.slug);
+      deleted = await AutoroleService.deleteRule(session.guildId, session.slug);
     } catch (error) {
       ctx.client.logger?.error?.("[autorole] rule delete failed", {
         guildId: session.guildId,
@@ -155,7 +151,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     session: DeleteSession,
   ) {
     await ctx.deferUpdate();
-    const result = await purgeRule(ctx.client, session.guildId, session.slug);
+    const result = await AutoroleService.purgeRule(ctx.client, session.guildId, session.slug);
     ctx.client.logger?.info?.("[autorole] rule purged", {
       guildId: session.guildId,
       ruleName: session.slug,
@@ -175,8 +171,8 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     });
 
     try {
-      const message = await ctx.fetchResponse();
-      const baseEmbed = message.embeds?.[0];
+      const resp = await ctx.fetchResponse();
+      const baseEmbed = resp.embeds?.[0];
       const embed = new Embed(baseEmbed);
       embed.setFooter({
         text: `Purgado: se eliminaron ${result.removedGrants} razones y se actualizaron ${result.roleRevocations} roles.`,
@@ -189,7 +185,6 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
       ctx.client.logger?.warn?.("[autorole] failed to update purge embed", {
         error,
         guildId: session.guildId,
-        messageId: ctx.interaction.message?.id,
       });
     }
   }
@@ -200,8 +195,8 @@ async function disableWithStatus(
   slug: string,
   status: string,
 ) {
-  const message = await ctx.fetchResponse();
-  const baseEmbed = message.embeds?.[0];
+  const resp = await ctx.fetchResponse();
+  const baseEmbed = resp.embeds?.[0];
   const embed = new Embed(baseEmbed);
   embed.setFooter({ text: status });
 
@@ -230,4 +225,3 @@ function buildDisabledRow(slug: string) {
 
   return new ActionRow<Button>().addComponents(confirm, purge, cancel);
 }
-

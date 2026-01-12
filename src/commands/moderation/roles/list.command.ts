@@ -9,7 +9,7 @@ import type { GuildCommandContext } from "seyfert";
 import { Declare, Embed, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-import * as repo from "@/db/repositories";
+import { GuildStore } from "@/db/repositories/guilds";
 import {
   buildModerationSummary,
   fetchManagedRoles,
@@ -35,7 +35,7 @@ export default class RoleListCommand extends SubCommand {
       return;
     }
 
-    await repo.ensureGuild(guildId);
+    await GuildStore.ensure(guildId);
 
     const roles = await fetchManagedRoles(guildId);
 

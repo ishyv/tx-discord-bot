@@ -27,8 +27,10 @@ import {
   findById,
   updateOffer,
 } from "@/db/repositories/offers";
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
 import type { CoreChannelRecord } from "@/db/schemas/guild";
+import { fetchStoredChannel } from "@/utils/channelGuard";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { type Result, OkResult, ErrResult } from "@/utils/result";
 import {
@@ -60,12 +62,27 @@ async function applyStatus(
 	return updateOffer(offerId, { ...patch, status }, { allowedFrom });
 }
 
-async function resolveChannels(guildId: string) {
+async function resolveChannels(client: UsingClient, guildId: string) {
 	const channels = await getGuildChannels(guildId);
 	const core = channels.core as Record<string, CoreChannelRecord | null>;
-	const reviewChannelId = core.offersReview?.channelId ?? null;
-	const approvedChannelId = core.approvedOffers?.channelId ?? null;
-	const generalLogsId = core.generalLogs?.channelId ?? null;
+
+	const resolveCoreChannelId = async (name: string): Promise<string | null> => {
+		const record = core?.[name] ?? null;
+		const fetched = await fetchStoredChannel(client, record?.channelId ?? null, () =>
+			updateGuildPaths(guildId, {
+				[`channels.core.${name}`]: null,
+			}),
+		);
+		if (!fetched.channel || !fetched.channelId) return null;
+		if (!fetched.channel.isTextGuild()) {
+			return null;
+		}
+		return fetched.channelId;
+	};
+
+	const reviewChannelId = await resolveCoreChannelId("offersReview");
+	const approvedChannelId = await resolveCoreChannelId("approvedOffers");
+	const generalLogsId = await resolveCoreChannelId("generalLogs");
 	return { reviewChannelId, approvedChannelId, generalLogsId };
 }
 
@@ -189,7 +206,7 @@ export async function createOfferForReview(
 		return ErrResult(new Error("ACTIVE_OFFER_EXISTS"));
 	}
 
-	const { reviewChannelId } = await resolveChannels(params.guildId);
+	const { reviewChannelId } = await resolveChannels(client, params.guildId);
 	if (!reviewChannelId) {
 		await logModerationAction(client, params.guildId, {
 			title: "Ofertas: canal de revisión no configurado",
@@ -352,7 +369,7 @@ export async function approveOffer(
 
 	if (!updated) return OkResult(null);
 
-	const { approvedChannelId, generalLogsId } = await resolveChannels(updated.guildId);
+	const { approvedChannelId, generalLogsId } = await resolveChannels(client, updated.guildId);
 
 	if (!approvedChannelId) {
 		await logModerationAction(client, updated.guildId, {

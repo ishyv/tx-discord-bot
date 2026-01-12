@@ -7,10 +7,12 @@
  */
 import type { Message, UsingClient } from "seyfert";
 import { scamFilterList, spamFilterList } from "@/constants/automod";
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import type { CoreChannelRecord } from "@/db/schemas/guild";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { recognizeText } from "@/services/ocr";
 import { Cache } from "@/utils/cache";
+import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
 import { phash } from "@/utils/phash";
 
 type AttachmentLike = {
@@ -266,13 +268,38 @@ export class AutoModSystem {
       );
       return;
     }
+    const fetched = await fetchStoredChannel(
+      this.client,
+      staffChannel.channelId,
+      () =>
+        updateGuildPaths(guildId, {
+          "channels.core.staff": null,
+        }),
+    );
+    if (!fetched.channel || !fetched.channelId) {
+      console.error(
+        "AutoModSystem: el canal de staff configurado no existe o es invalido.",
+      );
+      return;
+    }
+    if (!fetched.channel.isTextGuild()) {
+      console.error(
+        "AutoModSystem: el canal de staff configurado no es un canal de texto.",
+      );
+      return;
+    }
     // TODO: botones para borrar el mensaje directamente y saltar al mensaje
     await this.client.messages
-      .write(staffChannel.channelId, {
+      .write(fetched.channelId, {
         content: `**Advertencia:** ${warning}. ${message.url ?? ""}`,
       })
-      .catch((err: Error) =>
-        console.error("AutoModSystem: Error al advertir al staff:", err),
-      );
+      .catch(async (err: Error) => {
+        if (isUnknownChannelError(err)) {
+          await updateGuildPaths(guildId, {
+            "channels.core.staff": null,
+          });
+        }
+        console.error("AutoModSystem: Error al advertir al staff:", err);
+      });
   }
 }

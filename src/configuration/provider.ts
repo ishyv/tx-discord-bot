@@ -18,7 +18,7 @@
  *   silently degrades behavior to defaults/no-op.
  */
 
-import { ensureGuild, updateGuildPaths } from "@/db/repositories/guilds";
+import { GuildStore, updateGuildPaths } from "@/db/repositories/guilds";
 import { getConfigPath, type ConfigKey } from "./definitions";
 
 export interface ConfigProvider {
@@ -77,8 +77,9 @@ export class MongoGuildConfigProvider implements ConfigProvider {
     if (!path) return {};
 
     try {
-      const guild = await ensureGuild(guildId);
-      if (!guild) return {};
+      const res = await GuildStore.ensure(guildId);
+      if (res.isErr()) return {};
+      const guild = res.unwrap();
 
       // WHY: manual traversal keeps the provider independent of schema layers.
       // RISK: if the path diverges from the DB shape, we return `{}` and rely on defaults.

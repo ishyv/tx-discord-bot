@@ -1,9 +1,5 @@
 /**
- * Motivación: registrar el comando "moderation / dashboard" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Feature Dashboard Command
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -13,6 +9,7 @@ import {
   Declare,
   Embed,
   Options,
+  Middlewares,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
@@ -23,11 +20,10 @@ import {
   setAllFeatureFlags,
 } from "@/modules/features";
 import {
-  AutoRoleRulesRepo,
-  disableRule,
+  AutoroleService,
   refreshGuildRules,
-} from "@/db/repositories";
-import { requireGuildId } from "@/utils/commandGuards";
+} from "@/modules/autorole";
+import { Guard } from "@/middlewares/guards/decorator";
 
 const featureChoices = GUILD_FEATURES.map((feature) => ({
   name: feature,
@@ -62,10 +58,13 @@ const options = {
   defaultMemberPermissions: ["ManageGuild"],
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class FeatureDashboardCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     const feature = ctx.options.feature;
     const enabledInput = ctx.options.enabled;
@@ -145,14 +144,14 @@ export default class FeatureDashboardCommand extends Command {
     if (feature !== "autoroles" || enabled) return;
 
     try {
-      const rules = await AutoRoleRulesRepo.fetchByGuild(guildId);
+      const rules = await refreshGuildRules(guildId);
       const enabledRules = rules.filter((rule) => rule.enabled);
       if (enabledRules.length === 0) return;
 
       for (const rule of enabledRules) {
-        await disableRule(guildId, rule.name);
+        await AutoroleService.toggleRule(guildId, rule.name, false);
       }
-      await refreshGuildRules(guildId);
+
       ctx.client.logger?.info?.("[dashboard] autoroles deshabilitado: reglas apagadas", {
         guildId,
         disabledRules: enabledRules.length,

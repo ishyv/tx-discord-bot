@@ -6,7 +6,7 @@
  * Alcance: valida y persiste el modelo en la configuracion por guild.
  */
 import type { GuildCommandContext } from "seyfert";
-import { Declare, Options, SubCommand, createStringOption } from "seyfert";
+import { Declare, Options, SubCommand, createStringOption, Middlewares } from "seyfert";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import {
@@ -15,7 +15,7 @@ import {
   listModelsForProvider,
   isProviderAvailable,
 } from "@/services/ai";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 import { respondModelAutocomplete } from "./shared";
 
 const options = {
@@ -33,10 +33,13 @@ const options = {
   contexts: ["Guild"],
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class AiSetModelCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     const model = ctx.options.model?.trim();
     if (!model) {

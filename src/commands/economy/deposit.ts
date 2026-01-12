@@ -1,16 +1,12 @@
 import { Command, Declare, Options, createStringOption, type CommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { ensureUser } from "@/db/repositories/users";
+import { UserStore } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { EmbedColors } from "seyfert/lib/common";
 import { BindDisabled, Features } from "@/modules/features";
 import {
-  formatCoins,
-  normalizeBalances,
   parseAmountOrReply,
   replyMissingUser,
-  toBalanceLike,
-  readCoins,
 } from "./shared";
 import { currencyTransaction } from "@/modules/economy";
 
@@ -37,7 +33,7 @@ export default class DepositCommand extends Command {
     const { amount: rawAmount } = ctx.options;
     const userId = ctx.author.id;
 
-    const userResult = await ensureUser(userId);
+    const userResult = await UserStore.ensure(userId);
     if (userResult.isErr()) {
       await replyMissingUser(ctx);
       return;
@@ -48,7 +44,8 @@ export default class DepositCommand extends Command {
       return;
     }
 
-    const coins = readCoins(user.currency);
+    const coins = user.currency.coins!;
+
     const amount = await parseAmountOrReply(ctx, rawAmount, coins.hand);
     if (amount === null) return;
 
@@ -83,14 +80,12 @@ export default class DepositCommand extends Command {
       return;
     }
 
-    const updatedUser = normalizeBalances(toBalanceLike({ currency: result.unwrap() }));
+    const updated_coins = result.unwrap().coins!;
     await ctx.write({
       embeds: [
         {
           color: EmbedColors.Green,
-          description: `✅ Has depositado **${formatCoins(amount)}** coins.\n\n💳 **Banco:** ${formatCoins(
-            updatedUser.bank,
-          )}\n🖐️ **Mano:** ${formatCoins(updatedUser.hand)}`,
+          description: `✅ Has depositado **${amount}** coins.\n\n💳 **Banco:** ${updated_coins.bank}\n🖐️ **Mano:** ${updated_coins.hand}`,
         },
       ],
     });

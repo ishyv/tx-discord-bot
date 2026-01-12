@@ -11,11 +11,12 @@ import {
   Options,
   SubCommand,
   createChannelOption,
+  Middlewares,
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
 
 import { configStore, ConfigurableModule } from "@/configuration";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
   foro: createChannelOption({
@@ -32,10 +33,13 @@ const options = {
   contexts: ["Guild"],
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class ForumsAddCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     const forum = ctx.options.foro;
     if (!forum || forum.type !== ChannelType.GuildForum) {

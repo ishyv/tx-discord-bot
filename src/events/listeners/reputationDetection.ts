@@ -7,9 +7,11 @@
  */
 import { onMessageCreate } from "@/events/hooks/messageCreate";
 
+import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { sendReputationRequest } from "@/commands/moderation/rep/shared";
 import { isFeatureEnabled, Features } from "@/modules/features";
+import { fetchStoredChannel } from "@/utils/channelGuard";
 
 onMessageCreate(async (message, client) => {
     if (message.author.bot) return;
@@ -33,12 +35,15 @@ onMessageCreate(async (message, client) => {
 
     if (hasKeyword) {
         const guildChannels = await getGuildChannels(message.guildId);
-        const repChannelId = guildChannels?.core?.repRequests?.channelId;
-
-        if (!repChannelId) return;
-
-        const repChannel = await client.channels.fetch(repChannelId);
-        if (!repChannel || !repChannel.isTextGuild()) return;
+        const repChannelId = guildChannels?.core?.repRequests?.channelId ?? null;
+        const fetched = await fetchStoredChannel(client, repChannelId, () =>
+            updateGuildPaths(message.guildId!, {
+                "channels.core.repRequests": null,
+            }),
+        );
+        const repChannel = fetched.channel;
+        if (!repChannel || !fetched.channelId) return;
+        if (!repChannel.isTextGuild()) return;
 
         await sendReputationRequest(repChannel, message, message.author, true);
     }

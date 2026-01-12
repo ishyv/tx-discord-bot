@@ -27,6 +27,7 @@ import { Features, isFeatureEnabled } from "@/modules/features";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { openTicket } from "@/modules/tickets/service";
 import { Colors } from "@/modules/ui/colors";
+import { fetchStoredChannel } from "@/utils/channelGuard";
 
 export const TICKET_SELECT_CUSTOM_ID = "tickets:category";
 export const TICKET_MODAL_PREFIX = "tickets:modal";
@@ -124,10 +125,21 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
     const channels = await getGuildChannels(guildId);
     const core = channels.core as Record<string, { channelId: string } | null>;
     const ticketChannel = core.tickets;
-
-    const channelId = ticketChannel?.channelId;
-    if (!channelId) {
+    const fetched = await fetchStoredChannel(client, ticketChannel?.channelId, () =>
+      updateGuildPaths(guildId, {
+        "channels.core.tickets": null,
+      }),
+    );
+    const channelId = fetched.channelId;
+    if (!channelId || !fetched.channel) {
       client.logger?.warn?.("[tickets] no `tickets` channel; skipping.");
+      continue;
+    }
+    if (!fetched.channel.isTextGuild()) {
+      client.logger?.warn?.("[tickets] configured tickets channel is not text.", {
+        guildId,
+        channelId,
+      });
       continue;
     }
 
@@ -277,15 +289,24 @@ export function buildTicketModal(category: TicketCategory): Modal {
         }
 
         const channels = await getGuildChannels(guildId);
-        const ticketCategoryId =
+        const ticketCategoryRecord =
           (
             channels.core as Record<
               string,
               { channelId: string } | null | undefined
             >
-          )?.ticketCategory?.channelId ?? null;
+          )?.ticketCategory ?? null;
+        const fetchedCategory = await fetchStoredChannel(
+          ctx.client,
+          ticketCategoryRecord?.channelId,
+          () =>
+            updateGuildPaths(guildId, {
+              "channels.core.ticketCategory": null,
+            }),
+        );
+        const ticketCategoryId = fetchedCategory.channelId;
 
-        if (!ticketCategoryId) {
+        if (!ticketCategoryId || !fetchedCategory.channel) {
           await ctx.write({
             content:
               "No hay una categoria configurada para tickets. Avisale a un administrador.",

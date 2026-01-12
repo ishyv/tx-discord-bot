@@ -1,11 +1,27 @@
 /**
- * Motivación: aportar utilidades (index) para construir la funcionalidad de autoroles sin duplicar parseo ni validación.
- *
- * Idea/concepto: define tipos, caché y validadores que consumen los sistemas y comandos de autorole.
- *
- * Alcance: piezas de infraestructura; no programan las reglas de asignación en sí mismas.
+ * Autorole Module
+ * 
+ * Consolidates fragmented autorole logic into a single module.
  */
-export * from "./types";
-export * from "./parsers";
-export * from "./validation";
+
+// Domain
+export * from "./domain/types";
+export * from "./domain/schema";
+export * from "./domain/parsers";
+export * from "./domain/validation";
+export * from "./domain/presets";
+
+// Data
+export * from "./data/store";
+
+// Service
+export * from "./service";
+
+// Cache
 export * from "./cache";
+
+// Engine
+export * from "./engine/roleOps";
+export * from "./engine/scheduler";
+export * from "./engine/antiquity";
+export * from "./engine/deleteSessions";

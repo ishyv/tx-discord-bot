@@ -14,6 +14,7 @@ import {
   type GuildCommandContext,
   Options,
   SubCommand,
+  Middlewares,
 } from "seyfert";
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
 
@@ -23,7 +24,7 @@ import {
   updateTopConfig,
 } from "@/db/repositories";
 import { TOP_DEFAULTS } from "@/db/schemas/tops";
-import { requireGuildId } from "@/utils/commandGuards";
+import { Guard } from "@/middlewares/guards/decorator";
 import * as duration from "@/utils/ms";
 
 const options = {
@@ -61,10 +62,13 @@ const MIN_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos para evitar spam accidenta
   contexts: ["Guild"],
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+})
+@Middlewares(["guard"])
 export default class ConfigTopsCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const guildId = await requireGuildId(ctx);
-    if (!guildId) return;
+    const guildId = ctx.guildId;
 
     const currentWindow = await getTopWindow(guildId);
     const disable = ctx.options.desactivar ?? false;

@@ -7,7 +7,7 @@
  */
 import type { GuildCommandContext } from "seyfert";
 
-import * as repo from "@/db/repositories";
+import { GuildStore } from "@/db/repositories/guilds";
 import {
   DEFAULT_MODERATION_ACTIONS,
   type ModerationActionDefinition,
@@ -65,7 +65,7 @@ export async function requireGuildContext(
     return null;
   }
 
-  await repo.ensureGuild(guildId);
+  await GuildStore.ensure(guildId);
   return { guildId };
 }
 

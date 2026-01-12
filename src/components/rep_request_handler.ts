@@ -1,9 +1,5 @@
 /**
- * Motivación: encapsular el handler de componente "rep request handler" para enrutar customId al sistema de UI sin duplicar filtros ni wiring.
- *
- * Idea/concepto: extiende las primitivas de Seyfert para componentes y delega en el registro de UI la resolución del callback adecuado.
- *
- * Alcance: filtra y despacha interacciones de este tipo; no define la lógica interna de cada componente ni su contenido visual.
+ * Rep Request Handler Component
  */
 import {
   ActionRow,
@@ -15,7 +11,7 @@ import {
 } from "seyfert";
 import { MessageFlags, TextInputStyle } from "seyfert/lib/types";
 import { adjustUserReputation } from "@/db/repositories";
-import { syncUserReputationRoles } from "@/systems/autorole/service";
+import { AutoroleService } from "@/modules/autorole";
 import { buildRepChangeMessage } from "@/commands/moderation/rep/shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { CooldownType } from "@/modules/cooldown";
@@ -146,7 +142,7 @@ export default class RepRequestHandler extends ComponentCommand {
     }
     const total = totalResult.unwrap();
     await recordReputationChange(ctx.client, guildId, targetId, amount);
-    await syncUserReputationRoles(ctx.client, guildId, targetId, total);
+    await AutoroleService.syncUserReputationRoles(ctx.client, guildId, targetId, total);
 
     const embed = await resolveRequestEmbed(
       ctx,

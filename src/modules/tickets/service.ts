@@ -5,11 +5,7 @@
  */
 import type { UsingClient } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
-import {
-  addOpenTicketIfBelowLimit,
-  removeOpenTicket,
-  removeOpenTicketByChannel,
-} from "@/db/repositories";
+import { UserTicketsRepo } from "@/db/repositories/user-tickets";
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 
@@ -36,7 +32,7 @@ export async function openTicket(
       parent_id: params.parentId,
     });
 
-    const added = await addOpenTicketIfBelowLimit(
+    const added = await UserTicketsRepo.addWithLimit(
       params.userId,
       channel.id,
       maxPerUser,
@@ -63,7 +59,7 @@ export async function openTicket(
         },
       });
     } catch (error) {
-      await removeOpenTicket(params.userId, channel.id).catch(() => null);
+      await UserTicketsRepo.removeOpen(params.userId, channel.id).catch(() => null);
       await client.channels.delete(channel.id).catch(() => null);
       return ErrResult(
         error instanceof Error ? error : new Error(String(error)),
@@ -91,7 +87,7 @@ export async function recordTicketClosure(
         ],
       },
     });
-    await removeOpenTicketByChannel(channelId);
+    await UserTicketsRepo.removeByChannel(channelId);
     return OkResult(undefined);
   } catch (error) {
     return ErrResult(error instanceof Error ? error : new Error(String(error)));

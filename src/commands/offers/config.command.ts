@@ -10,7 +10,7 @@ import "./config";
 import { createChannelOption, Declare, Options, SubCommand, type GuildCommandContext } from "seyfert";
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
 
-import { ensureGuild } from "@/db/repositories/with_guild";
+import { GuildStore } from "@/db/repositories/guilds";
 import { ensureGuildContext } from "./shared";
 
 const options = {
@@ -40,7 +40,7 @@ export default class OfferConfigCommand extends SubCommand {
     const { revision, aprobadas } = ctx.options;
 
     // Asegura el documento del guild para persistir `channels.core`.
-    await ensureGuild(guildId);
+    await GuildStore.ensure(guildId);
 
     const { configStore, ConfigurableModule } = await import("@/configuration");
     await configStore.set(guildId, ConfigurableModule.Offers, {

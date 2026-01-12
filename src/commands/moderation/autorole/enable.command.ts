@@ -1,9 +1,5 @@
 /**
- * Motivación: registrar el comando "moderation / autorole / enable" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Autorole Enable Command
  */
 import {
   createStringOption,
@@ -13,7 +9,11 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import { AutoRoleRulesRepo, enableRule } from "@/db/repositories";
+import {
+  AutoroleService,
+  AutoRoleRulesStore,
+  autoroleKeys,
+} from "@/modules/autorole";
 import { formatRuleSummary, respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 
@@ -36,7 +36,10 @@ export default class AutoroleEnableCommand extends SubCommand {
     if (!context) return;
 
     const slug = ctx.options.name.trim().toLowerCase();
-    const rule = await AutoRoleRulesRepo.fetchOne(context.guildId, slug);
+    const id = autoroleKeys.rule(context.guildId, slug);
+    const res = await AutoRoleRulesStore.get(id);
+    const rule = res.isOk() ? res.unwrap() : null;
+
     if (!rule) {
       await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
       return;
@@ -46,7 +49,7 @@ export default class AutoroleEnableCommand extends SubCommand {
       return;
     }
 
-    const updated = await enableRule(context.guildId, slug);
+    const updated = await AutoroleService.toggleRule(context.guildId, slug, true);
     if (!updated) {
       await ctx.write({ content: "No se pudo habilitar la regla. Intenta nuevamente." });
       return;

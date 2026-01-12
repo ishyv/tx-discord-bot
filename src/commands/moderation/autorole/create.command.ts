@@ -1,9 +1,5 @@
 /**
- * Motivación: registrar el comando "moderation / autorole / create" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Autorole Create Command
  */
 import {
   createRoleOption,
@@ -18,16 +14,14 @@ import { EmbedColors } from "seyfert/lib/common";
 import { PermissionFlagsBits } from "seyfert/lib/types";
 
 import {
+  AutoroleService,
   isValidRuleSlug,
   normalizeRuleSlug,
-} from "@/modules/autorole/validation";
-import {
   parseDuration as parseDurationInput,
   parseTrigger,
-} from "@/modules/autorole/parsers";
-import type { AutoRoleRule, AutoRoleTrigger } from "@/modules/autorole/types";
-import { createRule, refreshGuildRules } from "@/db/repositories";
-import { runAntiquityChecks } from "@/systems/autorole/antiquity";
+  refreshGuildRules,
+} from "@/modules/autorole";
+import type { AutoRoleRule, AutoRoleTrigger } from "@/modules/autorole/domain/types";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 import {
@@ -99,12 +93,8 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-  const roleId = ctx.options.role.id;
-  if (
-    ctx.options.role.permissions?.has?.(
-        [...DANGEROUS_ROLE_PERMISSIONS],
-    )
-  ) {
+    const roleId = ctx.options.role.id;
+    if (ctx.options.role.permissions?.has?.([...DANGEROUS_ROLE_PERMISSIONS])) {
       await ctx.write({
         content:
           "No puedes crear una regla que otorgue un rol con permisos administrativos (Administrator / ManageGuild / ManageRoles).",
@@ -112,11 +102,7 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-    const invokerCanManage = await userCanManageTargetRole(
-      ctx,
-      context.guildId,
-      roleId,
-    );
+    const invokerCanManage = await userCanManageTargetRole(ctx, context.guildId, roleId);
     if (!invokerCanManage) {
       await ctx.write({
         content:
@@ -138,24 +124,18 @@ export default class AutoroleCreateCommand extends SubCommand {
     const durationMs = rawDuration ? parseDurationInput(rawDuration) : null;
     if (rawDuration && durationMs == null) {
       await ctx.write({
-        content:
-        "La duracion debe usar formatos como `30m`, `1h`, `2d`, `1w`.",
+        content: "La duracion debe usar formatos como `30m`, `1h`, `2d`, `1w`.",
       });
       return;
     }
 
-    const preflightError = await validateTriggerInput(
-      ctx,
-      context.guildId,
-      trigger,
-      existingRules,
-    );
+    const preflightError = await validateTriggerInput(ctx, context.guildId, trigger, existingRules);
     if (preflightError) {
       await ctx.write({ content: preflightError });
       return;
     }
 
-    const rule = await createRule({
+    const rule = await AutoroleService.createRule({
       guildId: context.guildId,
       name: slug,
       trigger,
@@ -166,8 +146,16 @@ export default class AutoroleCreateCommand extends SubCommand {
     });
 
     if (rule.trigger.type === "ANTIQUITY_THRESHOLD" && rule.enabled) {
-      // Ejecutar un chequeo inmediato para aplicar el rol a miembros existentes.
-      await runAntiquityChecks(ctx.client, context.guildId);
+      // Aplicar el rol a miembros existentes que cumplan la antigüedad
+      // En una implementación real, esto podría ser pesado, así que se hace asíncrono
+      ctx.client.members.list(context.guildId).then(async members => {
+        for (const member of members) {
+          await AutoroleService.syncUserAntiquityRoles(ctx.client, context.guildId, {
+            id: member.id,
+            joinedAt: member.joinedAt
+          });
+        }
+      }).catch(e => ctx.client.logger?.error?.("[autorole] initial antiquity sync failed", e));
     }
 
     const embed = new Embed({
@@ -212,11 +200,7 @@ async function validateTriggerInput(
     const emojiError = await ensureEmojiIsUsable(ctx, guildId, emojiKey);
     if (emojiError) return emojiError;
   } else if (trigger.type === "REACTED_THRESHOLD") {
-    const emojiError = await ensureEmojiIsUsable(
-      ctx,
-      guildId,
-      trigger.args.emojiKey,
-    );
+    const emojiError = await ensureEmojiIsUsable(ctx, guildId, trigger.args.emojiKey);
     if (emojiError) return emojiError;
   } else if (trigger.type === "REPUTATION_THRESHOLD") {
     const duplicate = existingRules.find(
@@ -289,5 +273,3 @@ async function userCanManageTargetRole(
     return false;
   }
 }
-
-

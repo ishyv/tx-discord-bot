@@ -1,10 +1,3 @@
-/**
- * Motivación: registrar el comando "moderation / rep / add" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
- */
 import {
   createNumberOption,
   createUserOption,
@@ -12,24 +5,26 @@ import {
   GuildCommandContext,
   Options,
   SubCommand,
+  Middlewares,
 } from "seyfert";
-
-import { adjustUserReputation } from "@/db/repositories";
-import { syncUserReputationRoles } from "@/systems/autorole/service";
 import {
-  buildRepChangeMessage,
-  normalizeRepAmount,
-  requireRepContext,
-} from "./shared";
-import { logModerationAction } from "@/utils/moderationLogger";
+  adjustUserReputation,
+} from "@/db/repositories/users";
 import { recordReputationChange } from "@/systems/tops";
+import { AutoroleService } from "@/modules/autorole";
+import { logModerationAction } from "@/utils/moderationLogger";
+import {
+  normalizeRepAmount,
+  buildRepChangeMessage,
+} from "./shared";
+import { Guard } from "@/middlewares/guards/decorator";
+import { Features } from "@/modules/features";
 
 const options = {
   user: createUserOption({
-    description: "Usuario a dar reputacion",
+    description: "Usuario al que dar reputacion",
     required: true,
   }),
-
   amount: createNumberOption({
     description: "Cantidad de reputacion a dar",
     required: true,
@@ -41,10 +36,14 @@ const options = {
   description: "Dar reputacion a un usuario",
 })
 @Options(options)
+@Guard({
+  guildOnly: true,
+  feature: Features.Reputation,
+})
+@Middlewares(["guard"])
 export default class RepAddCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const context = await requireRepContext(ctx);
-    if (!context) return;
+    const guildId = ctx.guildId;
 
     const amount = normalizeRepAmount(ctx.options.amount);
     if (amount == null) {
@@ -61,10 +60,10 @@ export default class RepAddCommand extends SubCommand {
       return;
     }
     const total = totalResult.unwrap();
-    await recordReputationChange(ctx.client, context.guildId, target.id, amount);
-    await syncUserReputationRoles(
+    await recordReputationChange(ctx.client, guildId, target.id, amount);
+    await AutoroleService.syncUserReputationRoles(
       ctx.client,
-      context.guildId,
+      guildId,
       target.id,
       total,
     );
@@ -73,7 +72,7 @@ export default class RepAddCommand extends SubCommand {
       content: buildRepChangeMessage("add", amount, target.id, total),
     });
 
-    await logModerationAction(ctx.client, context.guildId, {
+    await logModerationAction(ctx.client, guildId, {
       title: "Reputación agregada",
       description: `Se agregaron ${amount} puntos a <@${target.id}>`,
       fields: [
@@ -81,7 +80,6 @@ export default class RepAddCommand extends SubCommand {
         { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
       ],
       actorId: ctx.author.id,
-    },
-    "pointsLog");
+    }, "pointsLog");
   }
 }

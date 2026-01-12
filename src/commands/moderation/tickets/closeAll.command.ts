@@ -9,33 +9,33 @@ import {
     Declare,
     type GuildCommandContext,
     SubCommand,
+    Middlewares,
 } from "seyfert";
 
-import * as repo from "@/db/repositories";
+import { GuildStore } from "@/db/repositories/guilds";
 import { closeTicket } from "@/systems/tickets/shared";
-import { requireGuildId, requireGuildPermission } from "@/utils/commandGuards";
-
+import { Guard } from "@/middlewares/guards/decorator";
 
 @Declare({
     name: "close-all",
     description: "Cerrar todos los tickets abiertos en el servidor",
+    contexts: ["Guild"],
 })
+@Guard({
+    guildOnly: true,
+    permissions: ["ManageChannels"],
+})
+@Middlewares(["guard"])
 export default class ConfigTicketsCommand extends SubCommand {
     async run(ctx: GuildCommandContext) {
-        const guildId = await requireGuildId(ctx);
-        if (!guildId) return;
-
-        const allowed = await requireGuildPermission(ctx, {
-            guildId,
-            permissions: ["ManageChannels"],
-        });
-        if (!allowed) return;
+        const guildId = ctx.guildId;
 
         // Ensure guild row exists
-        await repo.ensureGuild(guildId);
-        
+        const res = await GuildStore.ensure(guildId);
+
         // Fetch all pending tickets
-        const pendingTickets = await repo.getPendingTickets(guildId);
+        const guild = res.unwrap();
+        const pendingTickets = (guild?.pendingTickets ?? []) as string[];
 
         // TODO: Generate transcript before closing
 
