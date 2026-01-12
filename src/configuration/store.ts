@@ -16,6 +16,28 @@
  * Gotchas:
  * - If a key is not registered, `get` returns `{}` and `set` no-ops.
  * - Fallback data is cached; changes in schemas require process restart.
+ * 
+ * Cache Invalidation Strategy
+ * ===========================
+ * 
+ * TTL-based: Each cache entry expires after 30 seconds (CACHE_TTL_MS).
+ * 
+ * Invalidation scenarios:
+ * 1. **Automatic (TTL)**: Entry expires, next `get()` fetches from DB.
+ * 2. **Write-through**: On `set()`, cache is updated immediately.
+ * 3. **Overflow eviction**: When > 2000 entries, oldest are removed (FIFO, not LRU).
+ * 
+ * Known limitations:
+ * - No cross-process invalidation (each process has its own cache).
+ * - No manual `invalidate(guildId, key)` method exposed.
+ * - Stale reads possible for up to 30s after external DB changes.
+ * 
+ * When to use manual invalidation (not currently supported):
+ * - Admin console makes direct DB changes
+ * - Migration scripts update configs
+ * 
+ * @see CACHE_TTL_MS for TTL duration
+ * @see MAX_CACHE_ENTRIES for cache size limit
  */
 
 import { ConfigKey, ConfigOf, getSchema } from "./definitions";

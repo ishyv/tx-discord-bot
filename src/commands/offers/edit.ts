@@ -15,10 +15,16 @@ import {
   parseOfferDetails,
   buildDesignerFields,
 } from "./shared";
+import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
   name: "editar",
   description: "Editar tu oferta activa (vuelve a revisión)",
+})
+@Cooldown({
+  type: CooldownType.User,
+  interval: 30000, // 30 seconds - prevent edit spam
+  uses: { default: 1 },
 })
 export default class OfferEditCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {

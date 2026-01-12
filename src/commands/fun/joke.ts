@@ -11,10 +11,16 @@ import { generateForGuild } from "@/services/ai";
 import { markAIMessage } from "@/services/ai/messageTracker";
 import type { Message } from "@/utils/userMemory";
 import { Modality } from "@google/genai";
+import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
   name: "chiste",
   description: "Genera un chiste",
+})
+@Cooldown({
+  type: CooldownType.User,
+  interval: 30000, // 30 seconds - AI API cost protection
+  uses: { default: 1 },
 })
 export default class JokeCommand extends Command {
   async run(ctx: CommandContext) {

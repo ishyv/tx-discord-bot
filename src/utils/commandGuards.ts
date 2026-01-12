@@ -139,23 +139,59 @@ export async function memberHasDiscordPermission(
 }
 
 /**
+ * Extracts the guild ID from a context object.
+ * 
+ * Use this for synchronous checks (e.g., in middlewares) where you don't need
+ * to send a message on failure.
+ * 
+ * @param ctx Context with optional guildId.
+ * @returns The guild ID or null if not in a guild.
+ */
+export function extractGuildId(ctx: GuildAwareContext | null | undefined): string | null {
+  return ctx?.guildId ?? null;
+}
+
+export interface RequireGuildIdOptions {
+  /** If true, don't send a message when guildId is missing. */
+  silent?: boolean;
+  /** Custom message to send when guildId is missing. */
+  message?: string;
+}
+
+/**
  * Ensure the current command context runs inside a guild.
- * Sends a standard warning message when invoked from DMs.
+ * Sends a standard warning message when invoked from DMs (unless silent).
  *
  * @param ctx Command or component context with a `guildId`.
- * @param message Override for the warning text.
+ * @param options Configuration for the check.
  * @returns Resolved guild identifier or null when unavailable.
+ * 
+ * @example
+ * // In a command handler (sends message on failure):
+ * const guildId = await requireGuildId(ctx);
+ * if (!guildId) return;
+ * 
+ * @example
+ * // In a middleware (silent check):
+ * const guildId = await requireGuildId(ctx, { silent: true });
+ * if (!guildId) return next();
  */
 export async function requireGuildId<T extends GuildAwareContext>(
   ctx: T,
-  message = DEFAULT_GUILD_ONLY_MESSAGE,
+  options: RequireGuildIdOptions | string = {},
 ): Promise<string | null> {
   if (!ctx) return null;
-  if (!ctx.guildId) {
-    await ctx.write({ content: message });
-    return null;
+
+  const guildId = extractGuildId(ctx);
+  if (guildId) return guildId;
+
+  // Handle legacy signature: requireGuildId(ctx, "message")
+  const opts = typeof options === "string" ? { message: options } : options;
+
+  if (!opts.silent) {
+    await ctx.write({ content: opts.message ?? DEFAULT_GUILD_ONLY_MESSAGE });
   }
-  return ctx.guildId;
+  return null;
 }
 
 export interface RequireGuildPermissionOptions {

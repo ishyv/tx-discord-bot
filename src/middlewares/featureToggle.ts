@@ -10,12 +10,13 @@ import { createMiddleware } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { isFeatureEnabled } from "@/modules/features";
 import { getBoundFeature } from "@/modules/features/decorator";
+import { extractGuildId } from "@/utils/commandGuards";
 
 export const featureToggleMiddleware = createMiddleware<void>(async ({ context, next, stop }) => {
   const boundFeature = getBoundFeature((context as { command?: unknown })?.command);
   if (!boundFeature) return next();
 
-  const guildId = context.guildId;
+  const guildId = extractGuildId(context);
   if (!guildId) return next();
 
   const enabled = await isFeatureEnabled(guildId, boundFeature);

@@ -15,10 +15,16 @@ import {
   parseOfferDetails,
   buildDesignerFields,
 } from "./shared";
+import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
   name: "crear",
   description: "Crear una nueva oferta y enviarla a revisión",
+})
+@Cooldown({
+  type: CooldownType.User,
+  interval: 60000, // 60 seconds - prevent offer spam
+  uses: { default: 1 },
 })
 export default class OfferCreateCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {

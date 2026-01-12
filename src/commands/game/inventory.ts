@@ -6,6 +6,7 @@ import {
 } from "@/modules/inventory";
 import { BindDisabled, Features } from "@/modules/features";
 import { startPagination } from "@/modules/prefabs/pagination";
+import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -14,6 +15,11 @@ const ITEMS_PER_PAGE = 6;
   description: "Muestra los articulos que tienes en tu inventario.",
 })
 @BindDisabled(Features.Economy)
+@Cooldown({
+  type: CooldownType.User,
+  interval: 5000, // 5 seconds - prevent spam
+  uses: { default: 1 },
+})
 export default class InventoryCommand extends Command {
   async run(ctx: CommandContext) {
     const inventory = await loadInventory(ctx.author.id);

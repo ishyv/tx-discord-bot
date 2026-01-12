@@ -59,6 +59,14 @@ const defaultCoreChannels = () => ({
   tickets: null,
 });
 
+const defaultGuildChannels = () => ({
+  core: defaultCoreChannels(),
+  managed: {},
+  ticketMessageId: null,
+  ticketHelperRoles: [],
+  ticketCategoryId: null,
+});
+
 export const CoreChannelSchema = z.object({
   channelId: z.string(),
 });
@@ -94,7 +102,7 @@ export const AiConfigSchema = z.object({
 export const GuildSchema = z.object({
   _id: z.string(),
   roles: GuildRolesSchema,
-  channels: GuildChannelsSchema,
+  channels: GuildChannelsSchema.catch(() => defaultGuildChannels()),
   pendingTickets: z.array(z.string()).catch(() => []),
   features: GuildFeaturesSchema,
   forumAutoReply: ForumAutoReplySchema.catch(() => ({ forumIds: [] })),

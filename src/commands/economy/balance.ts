@@ -3,13 +3,18 @@ import { EmbedColors } from "seyfert/lib/common";
 import { UserStore } from "@/db/repositories/users";
 import { BindDisabled, Features } from "@/modules/features";
 import { buildBalanceFields } from "./shared";
+import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
   name: "balance",
   description: "Muestra tu balance: mano, banco, total y reputación.",
 })
 @BindDisabled(Features.Economy)
-
+@Cooldown({
+  type: CooldownType.User,
+  interval: 5000, // 5 seconds - prevent spam
+  uses: { default: 1 },
+})
 export default class BalanceCommand extends Command {
   async run(ctx: CommandContext) {
     const userResult = await UserStore.ensure(ctx.author.id);

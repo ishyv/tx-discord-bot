@@ -97,6 +97,34 @@ export const suite: Suite = {
                 });
                 assertErr(failResult);
             }
+        },
+        {
+            name: "balance unchanged after failed transaction (invariant test)",
+            ops: [ops.update],
+            run: async ({ factory, cleanup }) => {
+                const userId = factory.userId();
+                cleanupUser(cleanup, userId);
+                assertOk(await UsersRepo.ensureUser(userId));
+
+                // Give exactly 10 coins
+                assertOk(await currencyTransaction(userId, {
+                    rewards: [{ currencyId: "coins", value: { hand: 10, bank: 0 } }]
+                }));
+
+                // Try to remove 11 coins without allowDebt - MUST fail
+                const result = await currencyTransaction(userId, {
+                    costs: [{ currencyId: "coins", value: { hand: 11, bank: 0 } }]
+                });
+                assertErr(result);
+
+                // Verify balance is still 10 (unchanged after failed transaction)
+                const userResult = await UsersRepo.UserStore.get(userId);
+                assert(userResult.isOk(), "should be able to get user");
+                const user = userResult.unwrap();
+                assert(user !== null, "user should exist");
+                const hand = (user.currency?.coins as any)?.hand;
+                assertEqual(hand, 10, "balance should be unchanged after failed transaction");
+            }
         }
     ]
 };

@@ -17,6 +17,7 @@ import {
 import {
   collectMemberRoleIds,
   memberHasDiscordPermission,
+  extractGuildId,
 } from "@/utils/commandGuards";
 
 function formatSeconds(seconds: number): string {
@@ -74,7 +75,9 @@ function buildBlockEmbed(actionKey: string, block: RoleLimitBlock): Embed {
 export const moderationLimit = createMiddleware<void>(async (middle) => {
   const context = middle.context as GuildCommandContext;
 
-  if (!context.inGuild()) {
+  // Use unified guildId extraction
+  const guildId = extractGuildId(context);
+  if (!guildId) {
     return middle.next();
   }
 
@@ -85,11 +88,6 @@ export const moderationLimit = createMiddleware<void>(async (middle) => {
 
   const roleIds = await collectMemberRoleIds(context.member ?? null);
   if (!roleIds.size) {
-    return middle.next();
-  }
-
-  const guildId = context.guildId;
-  if (!guildId) {
     return middle.next();
   }
 
