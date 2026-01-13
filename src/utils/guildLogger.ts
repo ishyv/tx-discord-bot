@@ -1,9 +1,15 @@
 /**
- * Motivación: centralizar el logging de acciones en servidores para evitar repetición de configuración de canales y embeds.
- *
- * Idea/concepto: inicializa canales de log y expone métodos de alto nivel para distintos tipos de eventos (moderación, voz, invitaciones).
- *
- * Alcance: capa de orquestación de logs; no define reglas de negocio ni decide qué eventos se generan.
+ * Propósito: ofrecer una API única para enviar logs de servidor sin duplicar
+ * lógica de resolución de canales o armado de embeds.
+ * Encaje: capa de orquestación sobre los stores/config de guild; los features
+ * (moderación, tickets, puntos) llaman a métodos de alto nivel.
+ * Dependencias clave: `guild-channels` (fuentes primarias), `CHANNELS_ID`
+ * (fallbacks) y `updateGuildPaths` para sanear referencias rotas.
+ * Invariantes: si existe `guildId`, siempre se intenta usar canales core antes
+ * de caer al fallback; los embeds siempre llevan `timestamp` y color por
+ * defecto `Blurple`.
+ * Gotchas: si la API devuelve error de canal desconocido, se limpia la ruta
+ * configurada; esto puede ocultar problemas de permisos si no se monitorea.
  */
 import { Embed, type UsingClient } from "seyfert";
 import type { ColorResolvable } from "seyfert/lib/common";
@@ -11,7 +17,10 @@ import type { APIEmbedField } from "seyfert/lib/types";
 import { CHANNELS_ID } from "@/constants/guild";
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
-import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
+import {
+  fetchStoredChannel,
+  isUnknownChannelError,
+} from "@/utils/channelGuard";
 
 type EmbedOptions = {
   title?: string;
@@ -29,6 +38,16 @@ type ResolvedChannel = {
   source: "core" | "fallback" | "none";
 };
 
+/**
+ * Logger desacoplado de features; resuelve canales y arma embeds seguros.
+ *
+ * Invariantes:
+ * - `init` debe llamarse antes de usar; almacena `client` y `guildId`.
+ * - Las resoluciones de canal preferirán core->managed->fallback constantes.
+ * - Si un canal core desaparece, se limpia en DB para evitar retrys infinitos.
+ * RISK: en ausencia de `guildId`, usa los ids por defecto globales; validar que
+ * existan para el entorno (dev/stg/prod).
+ */
 export class GuildLogger {
   private client!: UsingClient;
   private guildId?: string;
@@ -55,6 +74,14 @@ export class GuildLogger {
     return embed;
   }
 
+  /**
+   * Resuelve el canal objetivo siguiendo prioridad core -> fallback.
+   *
+   * WHY: preferimos canales configurados por guild; si están corruptos se
+   * limpian para no repetir errores en cada log.
+   * RISK: si `CHANNELS_ID` no tiene fallback para la clave, los logs se pierden
+   * silenciosamente (`source: none`). Monitorear warnings para claves faltantes.
+   */
   private async resolveChannel(
     key: keyof typeof CHANNELS_ID,
   ): Promise<ResolvedChannel> {
@@ -64,12 +91,6 @@ export class GuildLogger {
 
     try {
       const channels = await getGuildChannels(this.guildId);
-      // Try to find in core channels, then managed, then fallback to constant
-      // Note: mapping keys from CHANNELS_ID to schema keys might be needed if they differ.
-      // Assuming keys match for now or using specific logic.
-
-      // The schema has specific keys like 'messageLogs', 'voiceLogs', etc.
-      // CHANNELS_ID has 'messageLogs', 'voiceLogs', etc.
 
       const core = channels.core as
         | Record<string, { channelId?: string } | null | undefined>
@@ -106,6 +127,13 @@ export class GuildLogger {
     }
   }
 
+  /**
+   * Envía un log al canal resuelto.
+   *
+   * Propósito: punto único de envío para aplicar fallback y saneamiento.
+   * RISK: si el canal core falla, se limpia en DB para evitar retrys; si el
+   * error era temporal de permisos, se pierde la referencia hasta reconfigurar.
+   */
   private async sendLog(
     key: keyof typeof CHANNELS_ID,
     options: EmbedOptions,
@@ -117,7 +145,11 @@ export class GuildLogger {
     try {
       await this.client.messages.write(resolved.channelId, { embeds: [embed] });
     } catch (error) {
-      if (resolved.source === "core" && this.guildId && isUnknownChannelError(error)) {
+      if (
+        resolved.source === "core" &&
+        this.guildId &&
+        isUnknownChannelError(error)
+      ) {
         await updateGuildPaths(this.guildId, {
           [`channels.core.${key}`]: null,
         });

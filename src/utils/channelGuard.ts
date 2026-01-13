@@ -1,3 +1,15 @@
+/**
+ * Helpers para fetch de canales tolerante a rutas rotas.
+ *
+ * Propósito: normalizar snowflakes, distinguir canal desconocido (10003) y
+ * permitir callbacks de saneamiento (`onMissing`) cuando se detectan referencias
+ * corruptas.
+ * Dependencias: `normalizeSnowflake`, API de canales de Seyfert.
+ * Invariantes: nunca lanza; siempre retorna `{channel, channelId, missing}` con
+ * `missing` verdadero cuando Discord responde 10003.
+ * Gotchas: `onMissing` se ejecuta también si el snowflake no es válido; callers
+ * deben ser idempotentes.
+ */
 import type { UsingClient } from "seyfert";
 import { normalizeSnowflake } from "@/utils/snowflake";
 
@@ -26,6 +38,17 @@ export const isUnknownChannelError = (error: unknown): boolean => {
   return getDiscordErrorCode(error) === 10003;
 };
 
+/**
+ * Obtiene un canal configurado manejando snowflakes inválidos y 10003.
+ *
+ * Parámetros: `channelId` cualquier valor; `onMissing` opcional para limpiar
+ * rutas. Normaliza a string, intenta fetch y marca `missing` en error 10003 o
+ * IDs inválidos.
+ * Retorno: `{ channel, channelId, missing, error? }` sin lanzar.
+ * Side effects: ejecuta `onMissing` cuando detecta ruta rota.
+ * Gotchas: si el canal existe pero no es de texto/voz, se retorna igualmente;
+ * los callers deben validar el tipo.
+ */
 export async function fetchStoredChannel(
   client: UsingClient,
   channelId: unknown,

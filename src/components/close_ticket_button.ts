@@ -1,14 +1,14 @@
 /**
- * Motivación: encapsular el handler de componente "close ticket button" para enrutar customId al sistema de UI sin duplicar filtros ni wiring.
+ * Handler de botón "cerrar ticket" (UI -> dominio).
  *
- * Idea/concepto: extiende las primitivas de Seyfert para componentes y delega en el registro de UI la resolución del callback adecuado.
- *
- * Alcance: filtra y despacha interacciones de este tipo; no define la lógica interna de cada componente ni su contenido visual.
- */
-/**
- * Closes ticket channels with a short grace period so staff can trigger the flow
- * from any context.  The transcription and audit logging live in the ticket
- * system; this component just glues the interaction to those services.
+ * Encaje: componente Seyfert que filtra por `TICKET_CLOSE_BUTTON_ID` y coordina
+ * transcripción, logs y eliminación de canal antes de sincronizar DB.
+ * Dependencias: `guild-channels` para resolver logs, `transcription` para HTML,
+ * `closeTicket` para limpiar estado en repos, `channelGuard` para sanear rutas.
+ * Invariantes: `customId` debe seguir formato `tickets:close:{channelId}`;
+ * aplica un delay de gracia antes de borrar el canal.
+ * Gotchas: si el canal ya no existe, limpia estado y responde; si no hay canal
+ * de logs, cierra sin transcripción. Errores de UI no deben bloquear el cierre.
  */
 
 import {
@@ -126,12 +126,17 @@ export default class CloseTicketButton extends ComponentCommand {
       fetchedLogs?.channel && fetchedLogs.channel.isTextGuild()
         ? fetchedLogs.channel
         : null;
-    const resolvedLogsChannelId = logsChannel ? fetchedLogs?.channelId ?? null : null;
+    const resolvedLogsChannelId = logsChannel
+      ? (fetchedLogs?.channelId ?? null)
+      : null;
     if (fetchedLogs?.channel && !logsChannel) {
-      ctx.client.logger?.error?.("[tickets] el canal de logs configurado no es de texto", {
-        guildId,
-        ticketLogsChannelId,
-      });
+      ctx.client.logger?.error?.(
+        "[tickets] el canal de logs configurado no es de texto",
+        {
+          guildId,
+          ticketLogsChannelId,
+        },
+      );
     }
 
     const closingEmbed = new Embed()
@@ -146,6 +151,8 @@ export default class CloseTicketButton extends ComponentCommand {
 
     if (resolvedLogsChannelId && logsChannel) {
       try {
+        // WHY: generamos la transcripción antes de borrar el canal para no perder
+        // historial; si falla, el cierre continúa pero sin adjunto.
         const transcriptBuffer = await create_transcription(
           ctx.client,
           ticketChannelId,
@@ -190,6 +197,8 @@ export default class CloseTicketButton extends ComponentCommand {
     try {
       await ctx.client.channels.delete(ticketChannelId);
     } catch (error) {
+      // RISK: solo ignoramos error 10003 (canal inexistente); otros errores
+      // dejan el estado sin limpiar para no ocultar problemas de permisos.
       const code =
         typeof error === "object" &&
         error &&

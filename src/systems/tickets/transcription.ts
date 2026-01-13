@@ -1,53 +1,63 @@
 /**
- * Motivación: implementar el sistema tickets (transcription) para automatizar ese dominio sin duplicar lógica.
+ * Generador de transcripciones HTML para canales de tickets.
  *
- * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
- *
- * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
+ * Encaje: usado por el botón de cierre para adjuntar historial al canal de logs
+ * antes de borrar el ticket. Best-effort: si falla, el cierre sigue.
+ * Dependencias: API de mensajes de Seyfert (paginado manual) y `Buffer`.
+ * Invariantes: recorre mensajes en bloques de 100 hacia atrás hasta agotar; ordena
+ * por timestamp ascendente antes de renderizar; solo serializa contenido de texto
+ * (no adjuntos ni embeds ricos).
+ * Gotchas: puede ser costoso en canales grandes; sin rate-limit interno. Si el
+ * canal se borra durante la lectura, se devuelve la transcripción parcial.
  */
-import { UsingClient } from "seyfert";
+import type { UsingClient } from "seyfert";
 
 function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /**
- * Crea un archivo html con la transcripción de un ticket
- * Retorna un buffer con el contenido del archivo
+ * Genera una transcripción HTML de un canal de ticket.
+ *
+ * Parámetros: `client` con permisos de lectura; `channelId` objetivo.
+ * Retorno: `Buffer` con HTML listo para adjuntar.
+ * Side effects: múltiples llamadas a `messages.list` paginando de 100 en 100.
+ * Invariantes: ordena por timestamp antes de renderizar; escapa HTML para evitar
+ * inyección; omite adjuntos/embeds.
+ * Gotchas: canales muy largos => tiempo/memoria; no hay tope de mensajes.
  */
 export async function create_transcription(
-    client: UsingClient,
-    channelId: string,
+  client: UsingClient,
+  channelId: string,
 ) {
+  const messages = [];
+  let before: string | undefined;
 
-    const messages = [];
-    let before: string | undefined;
+  while (true) {
+    const batch = await client.messages.list(
+      channelId,
+      before ? { limit: 100, before } : { limit: 100 },
+    );
 
-    while (true) {
-        const batch = await client.messages.list(
-            channelId,
-            before ? { limit: 100, before } : { limit: 100 },
-        );
-
-        if (!batch.length) {
-            break;
-        }
-
-        messages.push(...batch);
-
-        if (batch.length < 100 || !batch[batch.length - 1]?.id) {
-            break;
-        }
-
-        before = batch[batch.length - 1].id;
+    if (!batch.length) {
+      break;
     }
 
-    const html = `<!DOCTYPE html>
+    messages.push(...batch);
+
+    if (batch.length < 100 || !batch[batch.length - 1]?.id) {
+      break;
+    }
+
+    before = batch[batch.length - 1].id;
+  }
+
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -64,26 +74,26 @@ export async function create_transcription(
 <body>
     <h1>Transcripción de Ticket</h1>
     ${messages
-        .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
-        .map((msg) => {
-            const author = escapeHtml(msg.author?.username || "Desconocido");
-            const timestamp = escapeHtml(
-                new Date(msg.timestamp ?? 0).toLocaleString(),
-            );
-            const content = escapeHtml(msg.content || "");
+      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+      .map((msg) => {
+        const author = escapeHtml(msg.author?.username || "Desconocido");
+        const timestamp = escapeHtml(
+          new Date(msg.timestamp ?? 0).toLocaleString(),
+        );
+        const content = escapeHtml(msg.content || "");
 
-            return `
+        return `
     <div class="message">
         <div class="author">${author}</div>
         <div class="timestamp">${timestamp}</div>
         <div class="content">${content}</div>
     </div>
     `;
-        }).join("")}
+      })
+      .join("")}
 </body>
 </html>`;
 
-
-    // Return file buffer
-    return Buffer.from(html, "utf-8");
+  // Return file buffer
+  return Buffer.from(html, "utf-8");
 }

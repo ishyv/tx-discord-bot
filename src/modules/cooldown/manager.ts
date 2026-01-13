@@ -1,9 +1,14 @@
 /**
- * Motivación: gestionar cooldowns (manager) y evitar abusos en comandos o eventos sin duplicar cálculos de tiempo.
- *
- * Idea/concepto: define recursos y un manager que centraliza almacenamiento de enfriamientos y verificación por clave.
- *
- * Alcance: controla ventanas temporales; no decide sanciones ni políticas externas que se disparen al exceder límites.
+ * Propósito: centralizar la contabilidad de cooldowns de comandos/listeners con
+ * un modelo de “fichas” (tokens) por ventana temporal.
+ * Encaje: capa de infraestructura para Seyfert; persiste en el cache del
+ * gateway para que los límites se compartan entre shards/sesiones.
+ * Invariantes: las claves siguen el formato `name:type:target`, `lastDrip`
+ * marca la última operación (no el inicio de la ventana) y `remaining` nunca
+ * debe ser negativa en almacenamiento. `uses.default` es el mínimo garantizado
+ * y se usan aliases `use` para variaciones por subcomando.
+ * Gotchas: `use` devuelve `number` cuando se rechaza (tiempo restante en ms);
+ * los callers deben tratar cualquier valor numérico como “denegado”.
  */
 import type { AnyContext, SubCommand, UsingClient } from "seyfert";
 import { CacheFrom, type ReturnCache } from "seyfert/lib/cache";
@@ -14,6 +19,19 @@ import {
   type CooldownType,
 } from "./resource";
 
+/**
+ * Administra recursos de cooldown en torno a comandos Seyfert.
+ *
+ * Invariantes operativos:
+ * - `resource` guarda los cooldowns en el cache gateway (persistente por
+ *   proceso) usando `namespace:cooldowns`.
+ * - `buildKey` debe ser determinista; cambiarlo invalidaría todas las llaves
+ *   previas.
+ * - `resolveTarget` debe alinearse con el tipo configurado en el comando.
+ * RISK: si `client.commands` no está cargado, `getCommandData` retorna
+ * `undefined` y el cooldown no se aplica (modo degradado); monitorizar en
+ * despliegues iniciales.
+ */
 export class CooldownManager {
   private readonly resource: CooldownResource;
 
@@ -64,6 +82,15 @@ export class CooldownManager {
     return undefined;
   }
 
+  /**
+   * Verifica si un target tiene cooldown activo sin consumir fichas.
+   *
+   * Propósito: chequeo previo (ej. middleware) antes de ejecutar la acción.
+   * Retorna `true` si ya no quedan fichas disponibles o `false` si aún puede
+   * usar el comando. Si no existe registro, lo inicializa con `allowed`.
+   * RISK: si `tokens` supera `allowed`, se considera automáticamente bloqueado
+   * para evitar underflow.
+   */
   has(options: CooldownHasOptions): ReturnCache<boolean> {
     const cmd = this.getCommandData(options.name, options.guildId);
     if (!cmd) return false;
@@ -105,6 +132,14 @@ export class CooldownManager {
     );
   }
 
+  /**
+   * Versión contextual que lee `context.command.cooldown` y aplica `use`.
+   *
+   * Propósito: middleware para comandos Seyfert; si no hay metadata de
+   * cooldown, deja pasar.
+   * RISK: si el context no trae `guildId` o `channelId`, el target cae en el
+   * usuario y las cuotas se comparten entre DM/guild.
+   */
   context(context: AnyContext, use?: keyof UsesProps, guildId?: string) {
     if (!("command" in context) || !("name" in context.command)) return true;
     if (!context.command.cooldown) return true;
@@ -113,6 +148,14 @@ export class CooldownManager {
     return this.use({ name: context.command.name, target, use, guildId });
   }
 
+  /**
+   * Consume fichas del cooldown y retorna `true` o milisegundos restantes.
+   *
+   * Propósito: registrar el uso real del comando. Si el target está en cooldown
+   * devuelve el tiempo restante para reintentar.
+   * RISK: callers deben tratar cualquier número como “deny”; no interpretar
+   * `0` como éxito.
+   */
   use(options: CooldownUseOptions): ReturnCache<number | true> {
     const cmd = this.getCommandData(options.name, options.guildId);
     if (!cmd) return true;
@@ -147,6 +190,17 @@ export class CooldownManager {
     });
   }
 
+  /**
+   * Núcleo de consumo: decide si reinicia ventana o descuenta fichas.
+   *
+   * Retorna `true` cuando se consumió (o se reinició la ventana) y `number`
+   * cuando no hay fichas suficientes (tiempo transcurrido desde `lastDrip`).
+   * WHY: se compara `deltaMS` con `interval` para permitir “ventanas
+   * deslizantes” simples sin cron; un reset reinicia `remaining` a `uses - 1`
+   * (ya se consumió la actual).
+   * RISK: si `remaining` en storage es negativo por corrupción, se puede
+   * devolver un número inesperado; mantener validaciones en upstream.
+   */
   drip(options: CooldownDripOptions): ReturnCache<boolean | number> {
     const now = Date.now();
     const deltaMS = now - options.data.lastDrip;
@@ -163,6 +217,9 @@ export class CooldownManager {
       ).then(() => true);
     }
 
+    // RISK: si `remaining` ya está en 0, devolvemos delta para calcular cuánto
+    // falta antes de reintentar; no se modifica `lastDrip` para no mover la
+    // ventana.
     if (options.data.remaining - 1 < 0) return deltaMS;
 
     return fakePromise(
@@ -172,6 +229,13 @@ export class CooldownManager {
     ).then(() => true);
   }
 
+  /**
+   * Restaura las fichas a su valor inicial para un target.
+   *
+   * Propósito: comandos administrativos o flujos de perdón manual.
+   * RISK: ignora `lastDrip`; usar con cuidado para no dejar ventanas
+   * incoherentes respecto al tiempo transcurrido.
+   */
   refill(name: string, target: string, use: keyof UsesProps = "default") {
     const cmd = this.getCommandData(name);
     if (!cmd) return false;

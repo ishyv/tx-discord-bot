@@ -1,14 +1,24 @@
 /**
- * Motivación: implementar el sistema tickets (index) para automatizar ese dominio sin duplicar lógica.
+ * Ticket system entrypoint: keeps UI prompts, modal builders, and limits in one place.
  *
- * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
+ * Encaje: puente entre comandos/componentes y los servicios de tickets (repositorios,
+ * features, canales). Aquí se definen los IDs de componentes, el payload inicial y
+ * los invariantes de deduplicación del mensaje de tickets por guild.
  *
- * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
- */
-/**
- * Ticket system utilities coordinate between UI components and the backing repo.
- * Centralising the constants and builders here keeps the commands/components
- * lightweight while ensuring every ticket entry point behaves consistently.
+ * Dependencias relevantes: config de canales (`guild-channels`), feature flags,
+ * `channelGuard` para sanear rutas rotas, `updateGuildPaths` para persistir el
+ * mensaje/IDs, y `openTicket` para crear el canal real.
+ *
+ * Invariantes clave:
+ * - Un único mensaje de ticket por guild (`channels.ticketMessageId`), con customId
+ *   prefijado `tickets:*` para compatibilidad hacia atrás.
+ * - Los componentes solo se renderizan si la feature `Tickets` está habilitada.
+ * - Los IDs guardados se limpian si el canal desaparece; no se reintenta en bucle.
+ *
+ * Gotchas: el selector se recrea si falta el mensaje o el bot encuentra prompts
+ * obsoletos; si cambian los prefixes/customIds, los handlers (`components/*`) dejan
+ * de matchear. No asume perms elevados: fallos de listado/borrado quedan logueados
+ * pero no abortan el boot.
  */
 
 import {
@@ -100,11 +110,21 @@ function messageHasTicketSelector(message: unknown): boolean {
 }
 
 /**
- * Ensures that the ticket message exists in the designated channel.
- * If the message does not exist, it will be created.
- * If there are stale messages, they will be deleted.
- * This will be called automatically on bot startup and when the ticket channel is configured via /tickets config or /channels set.
- * @param client The Discord client instance.
+ * Ensure a single ticket prompt per guild, recreating or cleaning as needed.
+ *
+ * Propósito: idempotentizar el mensaje principal del sistema de tickets para que
+ * comandos/listeners no dupliquen prompts ni se queden con referencias rotas.
+ *
+ * Parámetros: `client` Seyfert con acceso a guilds/messages y logger opcional.
+ * Retorno: `Promise<void>` best-effort (no lanza; loguea warnings/errores).
+ * Side effects: lee/writing en Discord (listar/borrar/crear mensajes) y en DB
+ * (`updateGuildPaths` cuando limpia rutas o persiste el nuevo mensaje).
+ * Invariantes: respeta feature flag `Tickets`; mantiene solo un mensaje cuyo
+ * `customId` inicia con `tickets:category`; conserva el primer prompt válido y
+ * borra duplicados posteriores del bot.
+ * Gotchas: si el canal configurado deja de existir o no es texto, se omite y se
+ * loguea; cambios de `customId` requieren actualizar los handlers registrados.
+ * Ejemplo: se invoca en boot y tras `/tickets config` para refrescar el prompt.
  */
 export async function ensureTicketMessage(client: UsingClient): Promise<void> {
   const guilds = await client.guilds.list();
@@ -125,10 +145,13 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
     const channels = await getGuildChannels(guildId);
     const core = channels.core as Record<string, { channelId: string } | null>;
     const ticketChannel = core.tickets;
-    const fetched = await fetchStoredChannel(client, ticketChannel?.channelId, () =>
-      updateGuildPaths(guildId, {
-        "channels.core.tickets": null,
-      }),
+    const fetched = await fetchStoredChannel(
+      client,
+      ticketChannel?.channelId,
+      () =>
+        updateGuildPaths(guildId, {
+          "channels.core.tickets": null,
+        }),
     );
     const channelId = fetched.channelId;
     if (!channelId || !fetched.channel) {
@@ -136,10 +159,13 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
       continue;
     }
     if (!fetched.channel.isTextGuild()) {
-      client.logger?.warn?.("[tickets] configured tickets channel is not text.", {
-        guildId,
-        channelId,
-      });
+      client.logger?.warn?.(
+        "[tickets] configured tickets channel is not text.",
+        {
+          guildId,
+          channelId,
+        },
+      );
       continue;
     }
 
@@ -180,6 +206,8 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
       : recent.filter((m) => messageHasTicketSelector(m));
 
     if (prompts.length > 0) {
+      // WHY: conservamos el primer prompt válido para no romper referencias previas
+      // (p.ej. logs o tickets abiertos que citan el mensaje); el resto se purga.
       const keep = prompts[0];
 
       for (const m of prompts.slice(1)) {
@@ -233,6 +261,18 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
   }
 }
 
+/**
+ * Construye el modal de creación de ticket para una categoría.
+ *
+ * Parámetros: `category` (id/label/desc/emoji) usado para customId y texto.
+ * Retorno: instancia `Modal` con input obligatorio `ticket_details`.
+ * Side effects: ninguno hasta que `run` se ejecuta; el callback crea canal y
+ * escribe mensajes.
+ * Invariantes: customId `${TICKET_MODAL_PREFIX}:{id}` debe alinearse con los
+ * handlers/filters; el input se valida con min/max y es requerido.
+ * Errores: respuestas de usuario o fallos de red se devuelven vía `ctx.write`
+ * con `MessageFlags.Ephemeral`.
+ */
 export function buildTicketModal(category: TicketCategory): Modal {
   return (
     new Modal()

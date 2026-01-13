@@ -1,22 +1,21 @@
 /**
- * Motivación: implementar el sistema tickets (shared) para automatizar ese dominio sin duplicar lógica.
- *
- * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
-/**
- * Motivación: implementar el sistema tickets (shared) para automatizar ese dominio sin duplicar lógica.
- *
- * Idea/concepto: organiza orquestadores y helpers específicos que combinan servicios, repositorios y eventos.
- *
- * Alcance: resuelve flujos del sistema; no define comandos ni middleware transversales.
+ * Utilidades compartidas del sistema de tickets (sin UI ni comandos).
+ * Encaje: orquesta sincronización de estado en repos cuando se cierra un ticket.
+ * Dependencias: `recordTicketClosure` en módulo de dominio.
  */
 import { recordTicketClosure } from "@/modules/tickets/service";
 
 /**
- * Synchronises repository state when a ticket channel is closed.
- * Removes the channel from the guild pending list and from any user
- * that still references it inside `openTickets`.
+ * Cierra un ticket a nivel de estado (guild + usuarios) de forma tolerante a fallos.
+ * Side effects: invoca `recordTicketClosure` que limpia `pendingTickets` y
+ * referencias en `openTickets`.
+ * Gotchas: pensado para llamarse después de eliminar el canal en Discord; si el
+ * repositorio falla, se loguea y continúa.
  */
-export async function closeTicket(guildId: string, channelId: string): Promise<void> {
+export async function closeTicket(
+  guildId: string,
+  channelId: string,
+): Promise<void> {
   const result = await recordTicketClosure(guildId, channelId);
   if (result.isErr()) {
     console.error("[tickets] failed to update ticket state during close", {
