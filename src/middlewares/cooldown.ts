@@ -8,14 +8,22 @@
 import { createMiddleware, Formatter } from "seyfert";
 import { TimestampStyle } from "seyfert/lib/common";
 
-export default createMiddleware<void>(async ({ context, next, stop }) => {
+const COOLDOWN_MARK = Symbol("cooldownChecked");
+
+export default createMiddleware<void>(async ({ context, next, pass }) => {
+  const state = context as unknown as Record<string | symbol, unknown>;
+  if (state[COOLDOWN_MARK]) return next();
+  state[COOLDOWN_MARK] = true;
+
   const inCooldown = context.client.cooldown.context(context);
 
-  //TODO: Mejorar mensaje
+  if (typeof inCooldown === "number") {
+    const remainingMs = Math.max(0, Math.ceil(inCooldown));
+    await context.write({
+      content: `Estas usando un comando muy seguido, intenta nuevamente en ${Formatter.timestamp(new Date(Date.now() + remainingMs), TimestampStyle.RelativeTime)}`,
+    });
+    return pass();
+  }
 
-  typeof inCooldown === "number"
-    ? stop(
-        `Estas usando un comando muy seguido, intenta nuevamente en ${Formatter.timestamp(new Date(Date.now() + inCooldown), TimestampStyle.RelativeTime)}`,
-      )
-    : next();
+  return next();
 });

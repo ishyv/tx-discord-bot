@@ -11,7 +11,6 @@ import {
   createStringOption,
   Declare,
   Embed,
-  Middlewares,
   Options,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
@@ -44,7 +43,6 @@ const options = {
     default: 1,
   },
 })
-@Middlewares(["cooldown"])
 @Options(options)
 @BindDisabled(Features.Suggest)
 export default class SuggestCommand extends Command {

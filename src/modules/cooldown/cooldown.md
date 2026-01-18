@@ -1,31 +1,37 @@
-## Sistema de cooldowns del bot
+## Cooldown system
 
-El sistema de cooldowns controla cuántas veces un usuario (o un recurso como un canal/guild) puede ejecutar un comando en un intervalo de tiempo.  
-Esto evita abusos y garantiza un uso equilibrado de las funciones del bot.
+The cooldown system prevents spam by limiting how often a command can be used.
 
-### Estructura principal
+### Main pieces
 
-- **`CooldownManager`** (`src/modules/cooldown/manager.ts`):  
-  Clase de alto nivel que expone métodos para consultar, usar y resetear cooldowns.
-- **`CooldownResource`** (`src/modules/cooldown/resource.ts`):  
-  Encargado de persistir el estado de cada cooldown en caché o base de datos.
+- `CooldownManager` (`src/modules/cooldown/manager.ts`)
+  - In-memory storage with monotonic timestamps.
+  - Key format: `commandName:type:target`.
+- `Cooldown` decorator (`src/modules/cooldown/index.ts`)
+  - Adds a `cooldown` config to the command class.
+- Middleware (`src/middlewares/cooldown.ts`)
+  - Executes the check before commands run.
 
-### Propiedades de configuración
+### Command config
 
-Cada comando puede definir su propio cooldown en la propiedad `cooldown`:
+Each command can define:
 
-- **`type`**: alcance del cooldown. Puede ser:
-  - `user`: el cooldown se aplica por usuario.
-  - `guild`: el cooldown se aplica por servidor.
-  - `channel`: el cooldown se aplica por canal.
-- **`interval`**: duración del cooldown en milisegundos.
-- **`uses`**: cantidad de usos permitidos dentro del intervalo (por defecto uno).
+- `type`: `user`, `guild`, or `channel`
+- `interval`: duration in milliseconds
+- `uses`: allowed uses per interval (default: 1)
 
-Ejemplo:
+Example:
 
 ```ts
-{
-  type: 'user',
+@Cooldown({
+  type: CooldownType.User,
   interval: 10_000,
-  uses: { default: 1 }
-}
+  uses: { default: 1 },
+})
+```
+
+### Behavior
+
+- On the first use, the cooldown starts and an expiration timestamp is saved.
+- If another invocation happens before expiration, it is blocked.
+- Expired entries are removed lazily on access (no background task).

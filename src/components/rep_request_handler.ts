@@ -100,20 +100,17 @@ export default class RepRequestHandler extends ComponentCommand {
     }
 
     if (action === "penalize") {
-      const now = Date.now();
       const commandName = "request";
       const cooldownType = CooldownType.User;
       const commandInterval = 300_000;
       const penalty = PENALTY_MS; // add 30 minutes on top of the base interval
 
-      // Extend the user cooldown by writing a future lastDrip to the cooldown store.
-      await ctx.client.cooldown.set({
+      // Extend the user cooldown by overriding the expiration.
+      ctx.client.cooldown.set({
         name: commandName,
         type: cooldownType,
         target: targetId,
-        interval: commandInterval,
-        remaining: 0,
-        lastDrip: now + penalty,
+        durationMs: commandInterval + penalty,
       });
 
       const penaltyMinutes = Math.round(penalty / 60_000);
