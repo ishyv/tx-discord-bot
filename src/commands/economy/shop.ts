@@ -7,7 +7,9 @@ import { Command, CommandContext, Declare } from "seyfert";
 })
 @BindDisabled(Features.Economy)
 export default class ShopCommand extends Command {
-  async run(_ctx: CommandContext) {
-    // const shopItems = []
+  async run(ctx: CommandContext) {
+    await ctx.write({
+      content: "La tienda está actualmente en construcción.",
+    });
   }
 }

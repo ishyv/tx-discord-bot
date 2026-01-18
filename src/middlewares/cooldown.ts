@@ -1,13 +1,17 @@
 /**
- * Motivación: aplicar la política de middleware "cooldown" de forma consistente antes de ejecutar comandos.
- *
- * Idea/concepto: usa el pipeline de Seyfert para evaluar permisos, límites o enfriamientos transversales.
- *
- * Alcance: validación previa y control de flujo; no ejecuta la lógica de los comandos ni persiste datos.
+ * Purpose: Enforce command cooldowns before execution.
+ * Context: Global middleware in Seyfert's pipeline.
+ * Dependencies: CooldownManager on the client; Seyfert formatter for timestamps.
+ * Invariants:
+ * - Executes at most once per invocation (even if registered globally and locally).
+ * - Emits exactly one cooldown response when blocked.
+ * Gotchas:
+ * - Uses pass() instead of stop() to avoid onMiddlewaresError side effects.
  */
 import { createMiddleware, Formatter } from "seyfert";
 import { TimestampStyle } from "seyfert/lib/common";
 
+// WHY: Prevent duplicate cooldown evaluation when middleware is both global and local.
 const COOLDOWN_MARK = Symbol("cooldownChecked");
 
 export default createMiddleware<void>(async ({ context, next, pass }) => {
@@ -22,6 +26,7 @@ export default createMiddleware<void>(async ({ context, next, pass }) => {
     await context.write({
       content: `Estas usando un comando muy seguido, intenta nuevamente en ${Formatter.timestamp(new Date(Date.now() + remainingMs), TimestampStyle.RelativeTime)}`,
     });
+    // WHY: pass() stops the chain without triggering onMiddlewaresError.
     return pass();
   }
 

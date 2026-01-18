@@ -1,9 +1,12 @@
 /**
- * Motivación: aplicar la política de middleware "index" de forma consistente antes de ejecutar comandos.
- *
- * Idea/concepto: usa el pipeline de Seyfert para evaluar permisos, límites o enfriamientos transversales.
- *
- * Alcance: validación previa y control de flujo; no ejecuta la lógica de los comandos ni persiste datos.
+ * Purpose: Central registry for all Seyfert middlewares used by the client.
+ * Context: Imported by the bot entrypoint to register middleware services.
+ * Dependencies: Individual middleware modules only.
+ * Invariants:
+ * - Keys here must match the names referenced in globalMiddlewares and @Middlewares.
+ * - Order is enforced by the client config, not by this file.
+ * Gotchas:
+ * - Renaming a key silently disables that middleware at runtime.
  */
 import CooldownMiddleware from "./cooldown";
 import { featureToggleMiddleware } from "./featureToggle";

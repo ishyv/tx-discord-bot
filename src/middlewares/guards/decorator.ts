@@ -1,36 +1,49 @@
 /**
- * Decorador para adjuntar metadata de guardas a los comandos.
+ * Purpose: Attach guard metadata to command classes.
+ * Context: Read by guard middleware before command execution.
+ * Dependencies: Seyfert permissions types only.
+ * Invariants:
+ * - Metadata is stored on the command instance (`__guard`).
+ * - The guard middleware must read the same shape.
+ * Gotchas:
+ * - If a command is wrapped or proxied, metadata may be lost.
  */
 import type { PermissionStrings } from "seyfert";
 
 export interface GuardMetadata {
-    /** Indica si el comando solo puede ejecutarse en un servidor. */
-    guildOnly?: boolean;
-    /** Permisos de Discord requeridos (o string[]). */
-    permissions?: PermissionStrings | bigint;
-    /** Clave de acción personalizada para el sistema de overrides de roles. */
-    actionKey?: string;
-    /** Feature asociada para validación de habilitación. */
-    feature?: string;
+  /** true when the command must run inside a guild. */
+  guildOnly?: boolean;
+  /** Discord permissions required for execution. */
+  permissions?: PermissionStrings | bigint;
+  /** Custom action key used for role-override rules. */
+  actionKey?: string;
+  /** Feature flag name to check before execution. */
+  feature?: string;
 }
 
 export interface GuardedCommand {
-    __guard?: GuardMetadata;
+  __guard?: GuardMetadata;
 }
 
 /**
- * Decorador que adjunta configuración de seguridad al comando.
- * Esta metadata es leída por el GuardMiddleware.
+ * Decorator that attaches guard configuration to a command class.
+ *
+ * Params:
+ * - metadata: guard configuration used by guardMiddleware.
+ *
+ * Side effects: Mutates the command prototype by setting `__guard`.
  */
 export function Guard(metadata: GuardMetadata): ClassDecorator {
-    return (target) => {
-        (target as any).prototype.__guard = metadata;
-    };
+  return (target) => {
+    (target as any).prototype.__guard = metadata;
+  };
 }
 
 /**
- * Extrae la metadata del guard de una instancia de comando.
+ * Read guard metadata from a command instance.
+ *
+ * Returns: GuardMetadata or null when not configured.
  */
 export function getGuardMetadata(command: any): GuardMetadata | null {
-    return command?.__guard ?? null;
+  return command?.__guard ?? null;
 }

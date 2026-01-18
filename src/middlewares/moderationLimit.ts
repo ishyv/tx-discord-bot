@@ -1,9 +1,14 @@
 /**
- * Motivación: aplicar la política de middleware "moderation Limit" de forma consistente antes de ejecutar comandos.
- *
- * Idea/concepto: usa el pipeline de Seyfert para evaluar permisos, límites o enfriamientos transversales.
- *
- * Alcance: validación previa y control de flujo; no ejecuta la lógica de los comandos ni persiste datos.
+ * Purpose: Enforce per-role moderation limits and overrides before command execution.
+ * Context: Global middleware that runs on guild commands.
+ * Dependencies: guild-roles module, command guard helpers, Seyfert embeds.
+ * Invariants:
+ * - Only applies inside guilds (needs guild + member roles).
+ * - `actionKey` must be stable or limits will not match.
+ * Gotchas:
+ * - Overrides are evaluated before consumption (denials short-circuit).
+ * - stop() triggers onMiddlewaresError; commands with custom handlers must avoid double replies.
+ * - Uses Date.now for user-facing timers (wall clock is OK for display only).
  */
 import type { GuildCommandContext } from "seyfert";
 import { Embed, createMiddleware } from "seyfert";
@@ -20,6 +25,14 @@ import {
   extractGuildId,
 } from "@/utils/commandGuards";
 
+/**
+ * Format seconds into a human-readable duration.
+ *
+ * Params:
+ * - seconds: remaining time (may be fractional).
+ *
+ * Returns: string like "2h 5m" or "30s".
+ */
 function formatSeconds(seconds: number): string {
   const total = Math.max(0, Math.ceil(seconds));
   const hours = Math.floor(total / 3_600);
@@ -33,6 +46,11 @@ function formatSeconds(seconds: number): string {
   return parts.join(" ");
 }
 
+/**
+ * Build the embed for override-based denial (explicit allow/deny).
+ *
+ * WHY: Keeps a consistent UX for admin-configured overrides.
+ */
 function buildOverrideDeniedEmbed(
   actionKey: string,
   decision: ResolveRoleActionPermissionResult,
@@ -42,9 +60,7 @@ function buildOverrideDeniedEmbed(
   ];
 
   if (decision.roleKey) {
-    lines.push(
-      `Override aplicado por la clave de rol \`${decision.roleKey}\`.`,
-    );
+    lines.push(`Override aplicado por la clave de rol \`${decision.roleKey}\`.`);
   }
 
   return new Embed({
@@ -54,6 +70,13 @@ function buildOverrideDeniedEmbed(
   });
 }
 
+/**
+ * Build the embed for rate-limit violations.
+ *
+ * Params:
+ * - actionKey: normalized command key used for limit lookup.
+ * - block: limit metadata returned by the guild-roles subsystem.
+ */
 function buildBlockEmbed(actionKey: string, block: RoleLimitBlock): Embed {
   const retrySeconds = Math.max(
     1,
@@ -72,10 +95,19 @@ function buildBlockEmbed(actionKey: string, block: RoleLimitBlock): Embed {
   });
 }
 
+/**
+ * Moderation limit middleware.
+ *
+ * Behavior:
+ * - Resolves role overrides first (deny/allow).
+ * - Consumes role-based limits if allowed.
+ *
+ * Side effects: Sends an embed response on denial or limit hit.
+ */
 export const moderationLimit = createMiddleware<void>(async (middle) => {
   const context = middle.context as GuildCommandContext;
 
-  // Use unified guildId extraction
+  // WHY: Use unified guildId extraction for compatibility across contexts.
   const guildId = extractGuildId(context);
   if (!guildId) {
     return middle.next();
@@ -115,8 +147,6 @@ export const moderationLimit = createMiddleware<void>(async (middle) => {
     memberRoleIds: [...roleIds],
   });
 
-  // console.debug("[moderation-limit] resultado", result);
-
   if (result.allowed) {
     return middle.next();
   }
@@ -127,4 +157,3 @@ export const moderationLimit = createMiddleware<void>(async (middle) => {
 
   return middle.stop("moderation-limit-blocked");
 });
-

@@ -1,5 +1,12 @@
 /**
- * Rep Request Handler Component
+ * Purpose: Handle moderation actions for reputation requests via button UI.
+ * Context: ComponentCommand bound to "rep:" button custom IDs.
+ * Dependencies: Autorole service, reputation storage, moderation logging.
+ * Invariants:
+ * - Custom IDs are `rep:<action>:<targetId>`.
+ * - Cooldown penalties must match the command name used by rep requests.
+ * Gotchas:
+ * - Changing the "request" command name breaks penalty enforcement.
  */
 import {
   ActionRow,
@@ -45,6 +52,11 @@ async function resolveRequestEmbed(
   }
 }
 
+/**
+ * Routes button interactions for reputation requests.
+ *
+ * Side effects: Writes moderation logs, adjusts reputation, and may extend cooldowns.
+ */
 export default class RepRequestHandler extends ComponentCommand {
   componentType = "Button" as const;
 
@@ -105,7 +117,8 @@ export default class RepRequestHandler extends ComponentCommand {
       const commandInterval = 300_000;
       const penalty = PENALTY_MS; // add 30 minutes on top of the base interval
 
-      // Extend the user cooldown by overriding the expiration.
+      // WHY: Override expiration so the base cooldown is extended without timers.
+      // RISK: If commandName changes, this penalty silently stops applying.
       ctx.client.cooldown.set({
         name: commandName,
         type: cooldownType,

@@ -34,3 +34,17 @@
 - Alternatives discarded: leave terse comments and rely on code reading.
 - Risks/impact: docs highlight that heavy transcriptions can be costly, channel default shapes diverge across schemas, and feature flags/config drift still require monitoring.
 - Verify: run `ensureTicketMessage`, open a ticket, close it via the button, and confirm pendingTickets/openTickets are cleared and (if configured) a transcript reaches the logs channel.
+
+## 2026-01-18 - Simplified cooldowns and unified response path
+- Change: Replaced token-bucket + gateway cache cooldowns with a monotonic in-memory map and a single middleware response path. Documented the new invariants.
+- Reason: Cooldowns never reset and the warning message was emitted twice due to double middleware execution and token accounting.
+- Alternatives discarded: keep token bucket and add cleanup timers; keep gateway cache for cross-shard sync.
+- Risks/impact: cooldowns are process-local (not shared across shards); penalties must reference the exact command name.
+- Verify: invoke a cooldowned command twice quickly (second blocked once), then wait the interval and invoke again (allowed).
+
+## 2026-01-18 - Documented middleware pipeline and guard/limit contracts
+- Change: Added consistent headers and JSDoc for global middlewares, bootstrap, and guard/limit logic.
+- Reason: Middleware order and denial paths are easy to break without explicit invariants.
+- Alternatives discarded: keep comments local to functions or rely on external docs.
+- Risks/impact: documentation now asserts ordering and scope assumptions; changes to middleware order must update docs.
+- Verify: invoke a guarded command in DM (expect guild-only message), disable a feature (expect feature denial), and hit a moderation limit (expect limit embed).
