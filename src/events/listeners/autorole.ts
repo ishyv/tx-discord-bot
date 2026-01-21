@@ -31,6 +31,8 @@ import {
   autoroleKeys,
   markPresence as trackPresence,
   clearPresence as clearTrackedPresence,
+  ensureAutoroleIndexes,
+  purgeInvalidAutoroleDocs,
 } from "@/modules/autorole";
 
 import { isFeatureEnabled, Features } from "@/modules/features";
@@ -57,6 +59,8 @@ const SPECIFIC_REASON = (ruleName: string) => `autorole:${ruleName}:react_specif
 const ANY_REASON = (ruleName: string) => `autorole:${ruleName}:react_any`;
 
 onBotReady(async (_user, client) => {
+  await ensureAutoroleIndexes().catch(() => undefined);
+  await purgeInvalidAutoroleDocs().catch(() => undefined);
   await loadRulesIntoCache().catch((error) => {
     client.logger?.error?.("[autorole] failed to load rules", { error });
   });

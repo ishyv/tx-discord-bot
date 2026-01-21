@@ -32,8 +32,8 @@ import {
   updateRole,
   writeChannels,
   writeRoles,
-} from "@/db/repositories/guilds";
-import { Features } from "@/db/schemas/guild";
+} from "../../src/db/repositories/guilds";
+import { Features } from "../../src/db/schemas/guild";
 import {
   assert,
   assertDeepEqual,

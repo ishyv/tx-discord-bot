@@ -52,12 +52,16 @@ export const GuildRolesRepo = {
         actionKey: string,
         override: any,
     ): Promise<Result<void>> {
-        const res = await this.update(id, roleKey, (ex: any) => {
-            const k = normAction(actionKey);
-            const reach = { ...(ex?.reach ?? {}) };
-            reach[k] = override;
-            return { reach };
-        });
+        const currentRes = await this.read(id);
+        if (currentRes.isErr()) return currentRes.map(() => undefined);
+
+        const current = currentRes.unwrap();
+        const role = (current as any)?.[roleKey] ?? {};
+        const k = normAction(actionKey);
+        const reach = { ...(role?.reach ?? {}) };
+        reach[k] = override;
+
+        const res = await this.update(id, roleKey, { reach });
         return res.map(() => undefined);
     },
 
@@ -67,16 +71,20 @@ export const GuildRolesRepo = {
         actionKey: string,
         limit: { limit: number; window?: string | null; windowSeconds?: number | null },
     ): Promise<Result<void>> {
-        const res = await this.update(id, roleKey, (ex: any) => {
-            const k = normAction(actionKey);
-            const limits = { ...(ex?.limits ?? {}) };
-            limits[k] = {
-                limit: limit.limit,
-                window: limit.window ?? null,
-                windowSeconds: limit.windowSeconds ?? null,
-            };
-            return { limits };
-        });
+        const currentRes = await this.read(id);
+        if (currentRes.isErr()) return currentRes.map(() => undefined);
+
+        const current = currentRes.unwrap();
+        const role = (current as any)?.[roleKey] ?? {};
+        const k = normAction(actionKey);
+        const limits = { ...(role?.limits ?? {}) };
+        limits[k] = {
+            limit: limit.limit,
+            window: limit.window ?? null,
+            windowSeconds: limit.windowSeconds ?? null,
+        };
+
+        const res = await this.update(id, roleKey, { limits });
         return res.map(() => undefined);
     }
 };

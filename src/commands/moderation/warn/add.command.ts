@@ -22,6 +22,7 @@ import { registerCase } from "@/modules/moderation/service";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 import { MessageFlags } from "seyfert/lib/types";
+import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
 	user: createUserOption({
@@ -46,6 +47,10 @@ export default class AddWarnCommand extends SubCommand {
 		const guildId = ctx.guildId;
 		if (!guildId) {
 			await ctx.editOrReply({ content: "Este comando solo funciona dentro de un servidor.", flags: MessageFlags.Ephemeral });
+			return;
+		}
+		if (!isSnowflake(guildId) || !isSnowflake(ctx.options.user.id)) {
+			await ctx.editOrReply({ content: "IDs inválidos. Intenta nuevamente.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 

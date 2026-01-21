@@ -1,6 +1,6 @@
-import { currencyTransaction } from "@/modules/economy/transactions";
-import { itemTransaction } from "@/modules/inventory/transactions";
-import * as UsersRepo from "@/db/repositories/users";
+import { currencyTransaction } from "../../src/modules/economy/transactions";
+import { itemTransaction } from "../../src/modules/inventory/transactions";
+import * as UsersRepo from "../../src/db/repositories/users";
 import { assert, assertErr, assertOk, assertEqual, type Suite, ops } from "./_utils";
 
 const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {

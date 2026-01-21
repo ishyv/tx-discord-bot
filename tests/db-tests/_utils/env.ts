@@ -1,4 +1,4 @@
-import { getDb, disconnectDb } from "@/db/mongo";
+import { getDb, disconnectDb } from "../../../src/db/mongo";
 
 const DEFAULT_DB_NAME = "pyebot_test";
 const DISALLOWED_DB_NAMES = new Set(["pyebot", "prod", "production"]);

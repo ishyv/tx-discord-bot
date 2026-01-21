@@ -103,7 +103,15 @@ async function offersCollection() {
  * Traduce errores del driver a errores de dominio (ej: clave duplicada).
  */
 const mapError = (error: unknown): Error => {
-  if ((error as any)?.code === 11000) return new Error("ACTIVE_OFFER_EXISTS");
+  const code = (error as any)?.code;
+  const message = String((error as any)?.message ?? "");
+  if (code === 11000) {
+    // Prefer domain error for the unique index that prevents multiple active offers.
+    if (message.includes(ACTIVE_OFFER_INDEX_NAME) || message.toLowerCase().includes("duplicate key")) {
+      return new Error("ACTIVE_OFFER_EXISTS");
+    }
+    return new Error("ACTIVE_OFFER_EXISTS");
+  }
   return error instanceof Error ? error : new Error(String(error));
 };
 
@@ -140,6 +148,9 @@ export async function createOffer(input: CreateOfferInput): Promise<Result<Offer
       createdAt: now,
       updatedAt: now,
     } as any);
+    if (res.isErr()) {
+      return ErrResult(mapError(res.error));
+    }
     return res;
   } catch (error) {
     return ErrResult(mapError(error));
@@ -236,5 +247,6 @@ export async function listByStatus(
 export async function removeOffer(id: OfferId): Promise<Result<boolean>> {
   await offersCollection();
   const res = await OfferStore.delete(id);
-  return res.isOk() ? OkResult(true) : ErrResult(res.error);
+  if (res.isErr()) return ErrResult(res.error);
+  return OkResult(res.unwrap());
 }

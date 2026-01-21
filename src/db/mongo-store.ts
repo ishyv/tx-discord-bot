@@ -61,6 +61,21 @@ export class MongoStore<T extends Document & { _id: string }> {
 
   private getDefault(id: string): T {
     const raw = { _id: id };
+    
+    // Check if schema expects guildId field and set it if needed
+    try {
+      const schemaDef = (this.schema as any)._def;
+      if (schemaDef && schemaDef.typeName === 'ZodObject' && schemaDef.shape) {
+        const shape = schemaDef.shape();
+        if (shape && shape.guildId) {
+          (raw as any).guildId = id;
+        }
+      }
+    } catch (error) {
+      // If we can't determine the schema shape, continue without guildId
+      // This maintains backward compatibility
+    }
+    
     const parsed = this.schema.safeParse(raw);
     if (parsed.success) return parsed.data;
 

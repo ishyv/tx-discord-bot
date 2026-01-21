@@ -1,5 +1,5 @@
-import { deleteGuild } from "@/db/repositories/guilds";
-import { ensureGuild, getGuild, withGuild } from "@/db/repositories/with_guild";
+import { deleteGuild } from "../../src/db/repositories/guilds";
+import { ensureGuild, getGuild, withGuild } from "../../src/db/repositories/with_guild";
 import {
   assert,
   assertDeepEqual,

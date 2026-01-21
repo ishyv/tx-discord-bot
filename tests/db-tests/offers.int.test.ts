@@ -5,8 +5,8 @@ import {
   listByStatus,
   removeOffer,
   updateOffer,
-} from "@/db/repositories/offers";
-import type { OfferDetails } from "@/db/schemas/offers";
+} from "../../src/db/repositories/offers";
+import type { OfferDetails } from "../../src/db/schemas/offers";
 import {
   assert,
   assertEqual,

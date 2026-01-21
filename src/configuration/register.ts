@@ -9,6 +9,7 @@
  */
 // Explicitly load config schemas so runtime does not depend on implicit side effects.
 import "@/commands/ai/config";
+import "@/commands/automod/config";
 import "@/commands/moderation/forums/config";
 import "@/commands/moderation/rep/config";
 import "@/commands/moderation/tickets/config";

@@ -12,6 +12,7 @@ import type { UsingClient } from "seyfert";
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
+import { isSnowflake } from "@/utils/snowflake";
 
 export interface ModerationLogPayload {
   title: string;
@@ -40,6 +41,15 @@ export async function logModerationAction(
 ): Promise<void> {
   const { title, description, fields, actorId, color, footer } = payload;
 
+  if (!isSnowflake(guildId)) {
+    client.logger?.warn?.("[moderation] invalid guildId for log action", {
+      guildId,
+      title,
+      actorId,
+    });
+    return;
+  }
+
   client.logger?.info?.("[moderation] action", {
     guildId,
     title,
@@ -56,6 +66,14 @@ export async function logModerationAction(
       }),
     );
     if (!fetched.channel || !fetched.channelId) return;
+    if (!isSnowflake(fetched.channelId)) {
+      client.logger?.warn?.("[moderation] invalid channelId for log action", {
+        guildId,
+        channelId: fetched.channelId,
+        title,
+      });
+      return;
+    }
     if (!fetched.channel.isTextGuild()) {
       return;
     }
@@ -68,8 +86,10 @@ export async function logModerationAction(
       footer: footer ? { text: footer } : undefined,
     });
 
+    const safeActorId = actorId && isSnowflake(actorId) ? actorId : null;
+
     await client.messages.write(fetched.channelId, {
-      content: actorId ? `<@${actorId}>` : undefined,
+      content: safeActorId ? `<@${safeActorId}>` : undefined,
       embeds: [embed],
       allowed_mentions: { parse: [] },
     });

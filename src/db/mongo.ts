@@ -18,12 +18,7 @@ const readEnv = (key: string): string | undefined => {
 };
 
 const getUri = (): string => {
-  const uri =
-    readEnv("MONGO_URI") ??
-    // Defensive fallback for accidental whitespace in `.env` keys (dotenv does not always trim keys).
-    readEnv("MONGO_URI ") ??
-    // Legacy/compat alias (matches older docs/env files).
-    readEnv("DB_URI");
+  const uri = readEnv("MONGO_URI")
 
   if (!uri) {
     throw new Error(

@@ -12,9 +12,9 @@ import {
   refreshGuildRules,
   removeReactionTally,
   trackPresence,
-} from "@/db/repositories/autorole.cache-service";
-import { getGuildRules, getTally } from "@/modules/autorole/cache";
-import { AutoRoleRulesRepo } from "@/db/repositories/autorole.repo";
+} from "../../src/db/repositories/autorole.cache-service";
+import { getGuildRules, getTally } from "../../src/modules/autorole/cache";
+import { AutoRoleRulesRepo } from "../../src/db/repositories/autorole.repo";
 import {
   assert,
   assertEqual,

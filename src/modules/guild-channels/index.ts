@@ -23,6 +23,7 @@ import type {
   ManagedChannelRecord,
 } from "@/db/schemas/guild";
 import type { CoreChannelName } from "./constants";
+import { isSnowflake } from "@/utils/snowflake";
 
 const emptyChannels = (): GuildChannelsRecord => ({
   core: {
@@ -194,6 +195,10 @@ export async function removeInvalidChannels(
   const core = channels.core as Record<string, CoreChannelRecord | null>;
   for (const [name, record] of Object.entries(core)) {
     if (!record) continue;
+    if (!isSnowflake(record.channelId)) {
+      sets[`channels.core.${name}`] = null;
+      continue;
+    }
     const channel = await client.channels
       .fetch(record.channelId)
       .catch(() => null);
@@ -206,6 +211,10 @@ export async function removeInvalidChannels(
   const managed = channels.managed as Record<string, ManagedChannelRecord>;
   for (const [key, record] of Object.entries(managed)) {
     if (!record) continue;
+    if (!isSnowflake(record.channelId)) {
+      unsets.push(`channels.managed.${key}`);
+      continue;
+    }
     const channel = await client.channels
       .fetch(record.channelId)
       .catch(() => null);

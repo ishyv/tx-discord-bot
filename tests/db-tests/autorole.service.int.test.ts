@@ -1,5 +1,5 @@
-import { AutoRoleGrantsRepo, AutoRoleRulesRepo } from "@/db/repositories/autorole.repo";
-import { grantByRule, purgeRule, revokeByRule } from "@/db/repositories/autorole.service";
+import { AutoRoleGrantsRepo, AutoRoleRulesRepo } from "../../src/db/repositories/autorole.repo";
+import { grantByRule, purgeRule, revokeByRule } from "../../src/db/repositories/autorole.service";
 import {
   assert,
   assertEqual,
@@ -60,9 +60,9 @@ export const suite: Suite = {
       ops: [ops.create, ops.service],
       run: async ({ factory }) => {
         const { client, calls } = buildClient();
-        const guildId = factory.guildId();
-        const roleId = factory.roleId();
-        const userId = factory.userId();
+        const guildId = factory.snowflake();
+        const roleId = factory.snowflake();
+        const userId = factory.snowflake();
         const ruleName = factory.nextId("rule");
 
         const liveRule = await AutoRoleRulesRepo.insert({
@@ -101,9 +101,9 @@ export const suite: Suite = {
       ops: [ops.create, ops.service],
       run: async ({ factory }) => {
         const { client, calls } = buildClient();
-        const guildId = factory.guildId();
-        const roleId = factory.roleId();
-        const userId = factory.userId();
+        const guildId = factory.snowflake();
+        const roleId = factory.snowflake();
+        const userId = factory.snowflake();
 
         const ruleA = await AutoRoleRulesRepo.insert({
           guildId,
@@ -139,9 +139,9 @@ export const suite: Suite = {
       ops: [ops.create, ops.service],
       run: async ({ factory }) => {
         const { client, calls } = buildClient();
-        const guildId = factory.guildId();
-        const roleId = factory.roleId();
-        const userId = factory.userId();
+        const guildId = factory.snowflake();
+        const roleId = factory.snowflake();
+        const userId = factory.snowflake();
 
         const timedRule = await AutoRoleRulesRepo.insert({
           guildId,
@@ -179,9 +179,9 @@ export const suite: Suite = {
       ops: [ops.delete, ops.service],
       run: async ({ factory }) => {
         const { client, calls } = buildClient();
-        const guildId = factory.guildId();
-        const roleId = factory.roleId();
-        const userId = factory.userId();
+        const guildId = factory.snowflake();
+        const roleId = factory.snowflake();
+        const userId = factory.snowflake();
 
         const ruleA = await AutoRoleRulesRepo.insert({
           guildId,
@@ -234,8 +234,8 @@ export const suite: Suite = {
       ops: [ops.delete, ops.service],
       run: async ({ factory }) => {
         const { client, calls } = buildClient();
-        const guildId = factory.guildId();
-        const roleId = factory.roleId();
+        const guildId = factory.snowflake();
+        const roleId = factory.snowflake();
 
         const ruleA = await AutoRoleRulesRepo.insert({
           guildId,
@@ -256,8 +256,8 @@ export const suite: Suite = {
           createdBy: "tester",
         });
 
-        const userA = factory.userId();
-        const userB = factory.userId();
+        const userA = factory.snowflake();
+        const userB = factory.snowflake();
 
         await AutoRoleGrantsRepo.upsert({
           guildId,

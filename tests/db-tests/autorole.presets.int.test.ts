@@ -1,6 +1,6 @@
-import { applyReputationPreset, updateReputationRule } from "@/db/repositories/autorole.presets";
-import { AutoRoleRulesRepo } from "@/db/repositories/autorole.repo";
-import { getGuildRules } from "@/modules/autorole/cache";
+import { applyReputationPreset, updateReputationRule } from "../../src/db/repositories/autorole.presets";
+import { AutoRoleRulesRepo } from "../../src/db/repositories/autorole.repo";
+import { getGuildRules } from "../../src/modules/autorole/cache";
 import {
   assert,
   assertEqual,

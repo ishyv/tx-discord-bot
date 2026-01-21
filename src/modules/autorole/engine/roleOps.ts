@@ -1,4 +1,5 @@
 import type { UsingClient } from "seyfert";
+import { isSnowflake } from "@/utils/snowflake";
 
 interface RoleOperation {
     guildId: string;
@@ -34,6 +35,19 @@ export function enqueueRoleGrant(
 ): Promise<void> {
     return enqueue(operation.guildId, async () => {
         try {
+            if (
+                !isSnowflake(operation.guildId) ||
+                !isSnowflake(operation.userId) ||
+                !isSnowflake(operation.roleId)
+            ) {
+                client.logger?.warn?.("[autorole] skip grant; invalid snowflake ids", {
+                    guildId: operation.guildId,
+                    userId: operation.userId,
+                    roleId: operation.roleId,
+                    reason: operation.reason,
+                });
+                return;
+            }
             await client.members.addRole(
                 operation.guildId,
                 operation.userId,
@@ -63,6 +77,19 @@ export function enqueueRoleRevoke(
 ): Promise<void> {
     return enqueue(operation.guildId, async () => {
         try {
+            if (
+                !isSnowflake(operation.guildId) ||
+                !isSnowflake(operation.userId) ||
+                !isSnowflake(operation.roleId)
+            ) {
+                client.logger?.warn?.("[autorole] skip revoke; invalid snowflake ids", {
+                    guildId: operation.guildId,
+                    userId: operation.userId,
+                    roleId: operation.roleId,
+                    reason: operation.reason,
+                });
+                return;
+            }
             await client.members.removeRole(
                 operation.guildId,
                 operation.userId,

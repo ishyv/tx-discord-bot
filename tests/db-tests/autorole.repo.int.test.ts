@@ -2,7 +2,7 @@ import {
   AutoRoleGrantsRepo,
   AutoRoleRulesRepo,
   AutoRoleTalliesRepo,
-} from "@/db/repositories/autorole.repo";
+} from "../../src/db/repositories/autorole.repo";
 import {
   assert,
   assertEqual,

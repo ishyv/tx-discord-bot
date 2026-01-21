@@ -56,12 +56,12 @@ export const AutoRoleTriggerSchema = z.discriminatedUnion("type", [
 ]);
 
 export const AutoRoleRuleSchema = z.object({
-    _id: z.string(),
-    id: z.string(),
-    guildId: z.string(),
-    name: z.string(),
-    roleId: z.string(),
-    trigger: AutoRoleTriggerSchema,
+    _id: z.string().catch("unknown"),
+    id: z.string().catch("unknown"),
+    guildId: z.string().catch(""),
+    name: z.string().catch(""),
+    roleId: z.string().catch(""),
+    trigger: AutoRoleTriggerSchema.catch({ type: "MESSAGE_REACT_ANY", args: {} }),
     durationMs: z.number().int().nullable().catch(null),
     enabled: z.boolean().catch(true),
     createdBy: z.string().nullable().catch(null),
@@ -70,12 +70,12 @@ export const AutoRoleRuleSchema = z.object({
 });
 
 export const AutoRoleGrantSchema = z.object({
-    _id: z.string(),
-    guildId: z.string(),
-    userId: z.string(),
-    roleId: z.string(),
-    ruleName: z.string(),
-    type: z.enum(["LIVE", "TIMED"]),
+    _id: z.string().catch("unknown"),
+    guildId: z.string().catch(""),
+    userId: z.string().catch(""),
+    roleId: z.string().catch(""),
+    ruleName: z.string().catch(""),
+    type: z.enum(["LIVE", "TIMED"]).catch("LIVE"),
     expiresAt: z.date().nullable().catch(null),
     createdAt: z.date().catch(() => new Date(0)),
     updatedAt: z.date().catch(() => new Date(0)),

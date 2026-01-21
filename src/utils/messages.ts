@@ -6,6 +6,7 @@
  * Alcance: utilidades de presentación; no disparan efectos secundarios ni consultan datos externos.
  */
 import type { Message, UsingClient } from "seyfert";
+import { isSnowflake } from "@/utils/snowflake";
 
 const DEFAULT_PAGE_LIMIT = 1900; // El limite por mensaje es aprox 2000 carácteres
 
@@ -30,6 +31,12 @@ export async function sendPaginatedMessages(
     if (!channelId) {
       console.warn(
         "sendPaginatedMessages: missing channelId; cannot send paginated message.",
+      );
+      return;
+    }
+    if (!isSnowflake(channelId)) {
+      console.warn(
+        "sendPaginatedMessages: invalid channelId; cannot send paginated message.",
       );
       return;
     }
@@ -78,6 +85,25 @@ export async function sendPaginatedByReference(
     const base = page.trim();
     const message = pageSuffix ? `${base}${pageSuffix}` : base;
     if (!message) continue;
+
+    if (!isSnowflake(reference.channelId)) {
+      console.warn(
+        "sendPaginatedByReference: invalid channelId; cannot send paginated message.",
+      );
+      return;
+    }
+    if (!isSnowflake(reference.messageId)) {
+      console.warn(
+        "sendPaginatedByReference: invalid messageId; cannot send paginated message.",
+      );
+      return;
+    }
+    if (reference.guildId && !isSnowflake(reference.guildId)) {
+      console.warn(
+        "sendPaginatedByReference: invalid guildId; cannot send paginated message.",
+      );
+      return;
+    }
 
     const payload: Record<string, unknown> = {
       content: message,

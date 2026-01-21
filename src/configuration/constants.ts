@@ -13,6 +13,10 @@
  */
 export enum ConfigurableModule {
     AI = "ai",
+    Automod = "automod",
+    AutomodLinkSpam = "automod.linkSpam",
+    AutomodDomainWhitelist = "automod.domainWhitelist",
+    AutomodShorteners = "automod.shorteners",
     Reputation = "reputation",
     Features = "features",
     Tops = "tops",

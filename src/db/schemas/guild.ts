@@ -2,7 +2,7 @@
  * Zod schema for guild documents.
  * Purpose: single definition of guild shape/defaults to validate repo reads/writes.
  */
-import { DEFAULT_GEMINI_MODEL, DEFAULT_PROVIDER_ID } from "@/services/ai";
+import { DEFAULT_GEMINI_MODEL, DEFAULT_PROVIDER_ID } from "@/services/ai/constants";
 import { z } from "zod";
 
 export enum Features {
@@ -99,6 +99,90 @@ export const AiConfigSchema = z.object({
   model: z.string().catch(DEFAULT_GEMINI_MODEL),
 });
 
+export const LinkSpamSchema = z.object({
+  enabled: z.boolean().catch(false),
+  maxLinks: z.number().int().catch(4),
+  windowSeconds: z.number().int().catch(10),
+  timeoutSeconds: z.number().int().catch(300),
+  action: z.enum(["timeout", "mute", "delete", "report"]).catch("timeout"),
+  reportChannelId: z.string().nullable().catch(null),
+});
+
+export const DomainWhitelistSchema = z.object({
+  enabled: z.boolean().catch(false),
+  domains: z.array(z.string()).catch(() => []),
+});
+
+export const ShortenersSchema = z.object({
+  enabled: z.boolean().catch(false),
+  resolveFinalUrl: z.boolean().catch(false),
+  allowedShorteners: z.array(z.string()).catch(() => [
+    "bit.ly",
+    "t.co",
+    "tinyurl.com",
+    "cutt.ly",
+    "is.gd",
+    "rebrand.ly",
+    "goo.gl",
+  ]),
+});
+
+export const AutomodSchema = z
+  .object({
+    linkSpam: LinkSpamSchema.catch(() => ({
+      enabled: false,
+      maxLinks: 4,
+      windowSeconds: 10,
+      timeoutSeconds: 300,
+      action: "timeout" as const,
+      reportChannelId: null,
+    })),
+    domainWhitelist: DomainWhitelistSchema.catch(() => ({
+      enabled: false,
+      domains: [],
+    })),
+    shorteners: ShortenersSchema.catch(() => ({
+      enabled: false,
+      resolveFinalUrl: false,
+      allowedShorteners: [
+        "bit.ly",
+        "t.co",
+        "tinyurl.com",
+        "cutt.ly",
+        "is.gd",
+        "rebrand.ly",
+        "goo.gl",
+      ],
+    })),
+  })
+  .catch(() => ({
+    linkSpam: {
+      enabled: false,
+      maxLinks: 4,
+      windowSeconds: 10,
+      timeoutSeconds: 300,
+      action: "timeout" as const,
+      reportChannelId: null,
+    },
+    domainWhitelist: {
+      enabled: false,
+      domains: [],
+    },
+    shorteners: {
+      enabled: false,
+      resolveFinalUrl: false,
+      allowedShorteners: [
+        "bit.ly",
+        "t.co",
+        "tinyurl.com",
+        "cutt.ly",
+        "is.gd",
+        "rebrand.ly",
+        "goo.gl",
+      ],
+    },
+  }));
+
 export const GuildSchema = z.object({
   _id: z.string(),
   roles: GuildRolesSchema,
@@ -115,6 +199,33 @@ export const GuildSchema = z.object({
       keywords: z.array(z.string()).catch(() => []),
     })
     .catch(() => ({ keywords: [] })),
+  automod: AutomodSchema.catch(() => ({
+    linkSpam: {
+      enabled: false,
+      maxLinks: 4,
+      windowSeconds: 10,
+      timeoutSeconds: 300,
+      action: "timeout" as const,
+      reportChannelId: null,
+    },
+    domainWhitelist: {
+      enabled: false,
+      domains: [],
+    },
+    shorteners: {
+      enabled: false,
+      resolveFinalUrl: false,
+      allowedShorteners: [
+        "bit.ly",
+        "t.co",
+        "tinyurl.com",
+        "cutt.ly",
+        "is.gd",
+        "rebrand.ly",
+        "goo.gl",
+      ],
+    },
+  })),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

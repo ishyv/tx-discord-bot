@@ -22,6 +22,7 @@ import {
   RESTRICTED_JOBS_ROLE_ID,
   RESTRICTED_VOICE_ROLE_ID,
 } from "@/constants/guild";
+import { isSnowflake } from "@/utils/snowflake";
 
 const TYPE_TRANSLATIONS: Record<string, string> = {
   forums: "Foros",
@@ -89,6 +90,13 @@ export default class RestrictCommand extends Command {
           "❌ No podés restringir a un usuario con un rol igual o superior al tuyo.",
       });
 
+    if (!ctx.guildId || !isSnowflake(ctx.guildId) || !isSnowflake(user.id)) {
+      return ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "❌ IDs invalidos. Intenta nuevamente.",
+      });
+    }
+
     const roles: Record<string, string | string[]> = {
       jobs: RESTRICTED_JOBS_ROLE_ID,
       forums: RESTRICTED_FORUMS_ROLE_ID,
@@ -100,12 +108,22 @@ export default class RestrictCommand extends Command {
       ],
     };
 
-    if (Array.isArray(roles[type])) {
+    const targetRoles = roles[type];
+    const roleIds = Array.isArray(targetRoles) ? targetRoles : [targetRoles];
+    const invalidRole = roleIds.find((roleId) => !isSnowflake(roleId));
+    if (invalidRole) {
+      return ctx.write({
+        flags: MessageFlags.Ephemeral,
+        content: "❌ Rol de restricción inválido configurado. Contacta al staff.",
+      });
+    }
+
+    if (Array.isArray(targetRoles)) {
       await Promise.all(
-        roles[type].map((roleId) => targetMember.roles.add(roleId)),
+        targetRoles.map((roleId) => targetMember.roles.add(roleId)),
       );
     } else {
-      await targetMember.roles.add(roles[type]);
+      await targetMember.roles.add(targetRoles);
     }
 
     const successEmbed = new Embed({

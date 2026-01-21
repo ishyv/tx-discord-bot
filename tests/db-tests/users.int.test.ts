@@ -1,5 +1,5 @@
-import * as UsersRepo from "@/db/repositories/users";
-import type { Warn } from "@/db/schemas/user";
+import * as UsersRepo from "../../src/db/repositories/users";
+import type { Warn } from "../../src/db/schemas/user";
 import {
   assert,
   assertDeepEqual,

@@ -19,6 +19,7 @@ import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { isValid, parse } from "@/utils/ms";
 import { registerCase } from "@/modules/moderation/service";
+import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   user: createUserOption({
@@ -48,6 +49,13 @@ export default class MuteCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
     const { user, time, reason = "Razón no especificada" } = ctx.options;
     const GuildLogger = await ctx.getGuildLogger();
+
+    if (!ctx.guildId || !isSnowflake(ctx.guildId) || !isSnowflake(user.id)) {
+      return ctx.write({
+        content: "❌ IDs invalidos. Intenta nuevamente.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
 
     if (!isValid(time))
       return await ctx.write({

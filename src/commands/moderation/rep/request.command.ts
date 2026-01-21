@@ -6,7 +6,6 @@ import {
     SubCommand,
     Middlewares,
 } from "seyfert";
-import { MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getCoreChannel } from "@/modules/guild-channels";
@@ -62,17 +61,15 @@ export default class RepRequestCommand extends SubCommand {
 
         const repChannel = fetched.channel;
         if (!fetched.channelId || !repChannel) {
-            await ctx.write({
+            await ctx.editResponse({
                 content: "Las solicitudes de reputacion no estan configuradas en este servidor.",
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         if (!repChannel.isTextGuild()) {
-            await ctx.write({
+            await ctx.editResponse({
                 content: "El canal de solicitudes de reputacion no es valido o no es de texto.",
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -84,9 +81,8 @@ export default class RepRequestCommand extends SubCommand {
         );
 
         if (!linkMatch) {
-            await ctx.write({
+            await ctx.editResponse({
                 content: "El enlace proporcionado no es valido. Usa el enlace directo al mensaje.",
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -94,18 +90,16 @@ export default class RepRequestCommand extends SubCommand {
         const [, guildIdFromLink, channelIdFromLink, messageIdFromLink] = linkMatch;
 
         if (guildIdFromLink !== guildId) {
-            await ctx.write({
+            await ctx.editResponse({
                 content: "El enlace no pertenece a este servidor.",
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         const targetChannel = await ctx.client.channels.fetch(channelIdFromLink);
         if (!targetChannel || !targetChannel.isTextGuild()) {
-            await ctx.write({
+            await ctx.editResponse({
                 content: "No se pudo acceder al canal del mensaje proporcionado.",
-                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -114,14 +108,12 @@ export default class RepRequestCommand extends SubCommand {
             const targetMessage = await targetChannel.messages.fetch(messageIdFromLink);
             await sendReputationRequest(repChannel, targetMessage, ctx.author);
 
-            await ctx.write({
+            await ctx.editResponse({
                 content: "Tu solicitud de reputacion ha sido enviada al equipo de moderacion.",
-                flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
-            await ctx.write({
+            await ctx.editResponse({
                 content: "No se pudo encontrar el mensaje o no tengo permisos para leerlo.",
-                flags: MessageFlags.Ephemeral,
             });
         }
     }

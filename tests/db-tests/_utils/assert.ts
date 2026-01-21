@@ -1,4 +1,4 @@
-import type { Result } from "@/utils/result";
+import type { Result } from "../../../src/utils/result";
 
 export class AssertionError extends Error {
   expected?: unknown;

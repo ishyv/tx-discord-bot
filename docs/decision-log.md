@@ -48,3 +48,24 @@
 - Alternatives discarded: keep comments local to functions or rely on external docs.
 - Risks/impact: documentation now asserts ordering and scope assumptions; changes to middleware order must update docs.
 - Verify: invoke a guarded command in DM (expect guild-only message), disable a feature (expect feature denial), and hit a moderation limit (expect limit embed).
+
+## 2026-01-21 - AutoMod System Architecture Documentation
+- Change: Added comprehensive engineering-level documentation to AutoModSystem, OCR service, and automod constants explaining purpose, invariants, tradeoffs, and critical failure points.
+- Reason: The system had misleading naming ("scan detection" vs actual "text-based scam detection") and critical undocumented tradeoffs that could cause operational issues.
+- Alternatives discarded: Keep minimal comments; rely on external documentation; add inline comments without explaining why.
+- Risks/impact: Documentation reveals system limitations (fixed OCR threshold, 7-day cache, permanent OCR failure) that must be understood before modifications.
+- Verify: Review AutoModSystem pipeline order, OCR preprocessing steps, and scam filter sensitivity before any changes to detection logic.
+
+## 2026-01-21 - OCR Service Critical Path Documentation
+- Change: Documented OCR preprocessing pipeline, lazy loading behavior, queue serialization, and failure handling in PaddleOCR service.
+- Reason: OCR failures are permanent (ocrUnavailable flag) and preprocessing uses fixed threshold that impacts detection accuracy significantly.
+- Alternatives discarded: Assume OCR "just works"; ignore preprocessing impact; treat failures as temporary.
+- Risks/impact: Fixed threshold(150) causes false negatives in poor lighting; permanent failure flag requires bot restart to recover.
+- Verify: Test OCR with varied lighting conditions and verify service becomes unavailable after initialization failure.
+
+## 2026-01-21 - Scam Filter Pattern Strategy Documentation
+- Change: Documented regex pattern generation strategy, permutation logic, and high false positive tolerance in automod constants.
+- Reason: The system intentionally prioritizes false positives over false negatives with aggressive pattern matching that needs to be understood.
+- Alternatives discarded: Treat patterns as simple regex; ignore permutation explosion; assume moderate sensitivity.
+- Risks/impact: High sensitivity generates staff notifications in legitimate communities (crypto, gaming); pattern complexity impacts performance.
+- Verify: Test scam detection against legitimate crypto/gaming conversations to verify false positive rate.

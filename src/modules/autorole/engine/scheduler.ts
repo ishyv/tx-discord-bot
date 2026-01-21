@@ -3,6 +3,7 @@ import { AutoRoleGrantsStore, AutoRoleRulesStore } from "../data/store";
 import type { AutoRoleRule } from "../domain/types";
 import { isFeatureEnabled, Features } from "@/modules/features";
 import { AutoroleService } from "../service";
+import { autoroleKeys } from "../data/store";
 
 const DEFAULT_INTERVAL_MS = 60_000;
 
@@ -49,14 +50,14 @@ async function sweep(client: UsingClient): Promise<void> {
             let rule = ruleCache.get(key);
 
             if (!rule) {
-                const fetchedRes = await AutoRoleRulesStore.get(`${grant.guildId}:${grant.ruleName}`);
+                const fetchedRes = await AutoRoleRulesStore.get(autoroleKeys.rule(grant.guildId, grant.ruleName));
                 if (fetchedRes.isOk() && fetchedRes.unwrap()) {
                     rule = fetchedRes.unwrap()!;
                 } else {
                     // Fallback rule if it was deleted but grant remains
                     rule = {
-                        _id: `${grant.guildId}:${grant.ruleName}`,
-                        id: `${grant.guildId}:${grant.ruleName}`,
+                        _id: autoroleKeys.rule(grant.guildId, grant.ruleName),
+                        id: autoroleKeys.rule(grant.guildId, grant.ruleName),
                         guildId: grant.guildId,
                         name: grant.ruleName,
                         trigger: { type: "MESSAGE_REACT_ANY", args: {} },
