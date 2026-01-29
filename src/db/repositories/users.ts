@@ -318,3 +318,69 @@ export async function replaceCurrencyIfMatch(
     currency: next,
   } as any);
 }
+
+/**
+ * Atomically increment a numeric currency value using $inc.
+ * This is the preferred method for simple numeric adjustments (mod-only operations).
+ * For complex currency types (like coins with hand/bank), use currencyTransaction.
+ *
+ * @param id User ID
+ * @param currencyId Currency field path (e.g., "rep" or "coins.hand")
+ * @param delta Amount to increment (can be negative)
+ * @returns Updated user or error
+ */
+export async function incrementCurrency(
+  id: UserId,
+  currencyId: string,
+  delta: number,
+): Promise<Result<User | null>> {
+  const fieldPath = `currency.${currencyId}`;
+
+  try {
+    const col = await UserStore.collection();
+    const now = new Date();
+
+    const result = await col.findOneAndUpdate(
+      { _id: id } as any,
+      {
+        $inc: { [fieldPath]: delta } as any,
+        $set: { updatedAt: now } as any,
+      },
+      { returnDocument: "after", upsert: false },
+    );
+
+    const doc = result as User | null;
+    if (!doc) {
+      return OkResult(null);
+    }
+
+    // Note: We bypass UserStore.parse here since we're doing a direct collection operation
+    // The document should already conform to UserSchema since it came from the DB
+    return OkResult(doc as import("@/db/schemas/user").User);
+  } catch (error) {
+    return ErrResult(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+/**
+ * Atomically increment reputation (specialized helper).
+ * Maintains backward compatibility with existing rep system.
+ */
+export async function incrementReputation(
+  id: UserId,
+  delta: number,
+): Promise<Result<number, Error>> {
+  const result = await incrementCurrency(id, "rep", delta);
+  if (result.isErr()) {
+    return ErrResult(result.error);
+  }
+
+  const user = result.unwrap();
+  if (!user) {
+    return ErrResult(new Error("User not found"));
+  }
+
+  const rep = (user.currency as Record<string, unknown>)?.rep;
+  const normalizedRep = typeof rep === "number" ? Math.max(0, Math.trunc(rep)) : 0;
+  return OkResult(normalizedRep);
+}

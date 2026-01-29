@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { CurrencyInventory } from "@/modules/economy/currency";
 import type { ItemInventory } from "@/modules/inventory/inventory";
+import { EconomyAccountSchema, type EconomyAccountData } from "./economy-account";
 
 export const WarnSchema = z.object({
   reason: z.string().catch(""),
@@ -36,6 +37,13 @@ export const UserSchema = z.object({
   inventory: z
     .record(z.string(), z.unknown())
     .catch(() => ({})) as z.ZodType<ItemInventory>,
+  // If economyAccount fails parsing, repair it instead of erasing (data-loss prevention)
+  economyAccount: EconomyAccountSchema.optional()
+    .catch((ctx) => {
+      // Repair: parse the input with defaults instead of returning undefined
+      const input = typeof ctx.input === "object" && ctx.input !== null ? ctx.input : {};
+      return EconomyAccountSchema.parse(input);
+    }) as z.ZodType<EconomyAccountData | undefined>,
 });
 
 export type Warn = z.infer<typeof WarnSchema>;

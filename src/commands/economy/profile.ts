@@ -1,12 +1,14 @@
 /**
- * Balance Command (Refactored for Phase 3).
+ * Profile Command (Phase 3).
  *
- * Purpose: Display user balance with improved UX.
- * Changes:
- * - Uses EconomyAccountService for data fetching
- * - Shows "and X more" for multiple currencies
+ * Purpose: Display comprehensive economy profile.
+ * Features:
+ * - Account status and metadata
+ * - Balance summary
+ * - Bank info
+ * - Inventory summary
+ * - Reputation
  * - Handles blocked/banned accounts gracefully
- * - Shows account creation notice on first use
  */
 
 import { Command, Declare, type CommandContext } from "seyfert";
@@ -16,7 +18,7 @@ import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
   economyAccountRepo,
   createEconomyAccountService,
-  buildBalanceEmbed,
+  buildProfileEmbed,
   buildAccessDeniedEmbed,
   buildAccountCreatedEmbed,
   buildErrorEmbed,
@@ -28,24 +30,24 @@ import {
 const economyService = createEconomyAccountService(economyAccountRepo);
 
 @Declare({
-  name: "balance",
-  description: "Muestra tu balance de monedas y reputación.",
+  name: "profile",
+  description: "Muestra tu perfil económico completo.",
 })
 @BindDisabled(Features.Economy)
 @Cooldown({
   type: CooldownType.User,
-  interval: 3000, // 3 seconds - shorter for read-only
+  interval: 5000,
   uses: { default: 1 },
 })
-export default class BalanceCommand extends Command {
+export default class ProfileCommand extends Command {
   async run(ctx: CommandContext) {
     const userId = ctx.author.id;
 
-    // Ensure account exists (for isNew check)
+    // Ensure account (for isNew check)
     const ensureResult = await economyService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu cuenta económica.")],
+        embeds: [buildErrorEmbed("No pude cargar tu perfil.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -53,16 +55,16 @@ export default class BalanceCommand extends Command {
 
     const { isNew } = ensureResult.unwrap();
 
-    // Get balance view
-    const result = await economyService.getBalanceView(userId, {
-      maxVisible: DEFAULT_MAX_VISIBLE_CURRENCIES,
-      showZeroBalances: false,
+    // Get full profile
+    const result = await economyService.getProfileSummary(userId, {
+      balanceOptions: {
+        maxVisible: DEFAULT_MAX_VISIBLE_CURRENCIES,
+        showZeroBalances: false,
+      },
     });
 
     if (result.isErr()) {
       const error = result.error;
-
-      // Handle specific error types
       if (error instanceof EconomyError) {
         if (error.code === "ACCOUNT_BLOCKED" || error.code === "ACCOUNT_BANNED") {
           await ctx.write({
@@ -74,16 +76,16 @@ export default class BalanceCommand extends Command {
       }
 
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu balance.")],
+        embeds: [buildErrorEmbed("No pude cargar tu perfil.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const view = result.unwrap();
-    const embed = buildBalanceEmbed(view, ctx.author.username, ctx.author.avatarURL());
+    const embed = buildProfileEmbed(view, ctx.author.username, ctx.author.avatarURL());
 
-    // On first use, show creation notice before balance
+    // On first use, show creation notice
     if (isNew) {
       await ctx.write({
         embeds: [

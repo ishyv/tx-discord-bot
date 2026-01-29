@@ -12,6 +12,9 @@ import {
   DEFAULT_MAX_STACK,
 } from "./definitions";
 
+// Re-export types for consumers
+export type { ItemDefinitionWithUse } from "./definitions";
+
 export function getItemDefinition(
   id: ItemId,
 ): ItemDefinitionWithUse | null {
@@ -20,4 +23,19 @@ export function getItemDefinition(
 
 export function resolveMaxStack(item: ItemDefinitionWithUse): number {
   return item.maxStack ?? DEFAULT_MAX_STACK;
+}
+
+/** Get item weight with default fallback. */
+export function resolveWeight(item: ItemDefinitionWithUse): number {
+  return item.weight ?? 1;
+}
+
+/** Check if item can stack. */
+export function resolveCanStack(item: ItemDefinitionWithUse): boolean {
+  return item.canStack ?? true;
+}
+
+/** Calculate total weight for a quantity of an item. */
+export function calculateItemWeight(item: ItemDefinitionWithUse, quantity: number): number {
+  return resolveWeight(item) * Math.max(0, quantity);
 }

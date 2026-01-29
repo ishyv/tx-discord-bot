@@ -1,3 +1,10 @@
+/**
+ * Give Currency Command (Phase 2a - Hardened).
+ *
+ * Purpose: Mod-only currency adjustment with audit logging.
+ * Security: currencyId sanitized, permissions centralized.
+ */
+
 import {
   Command,
   CommandContext,
@@ -8,12 +15,13 @@ import {
   createUserOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { currencyTransaction, currencyRegistry } from "@/modules/economy/transactions";
-import { GuildLogger } from "@/utils/guildLogger";
-import { adjustUserReputation } from "@/db/repositories";
+import { currencyRegistry } from "@/modules/economy/transactions";
+import { currencyMutationService } from "@/modules/economy/mutations";
+import { createEconomyPermissionChecker } from "@/modules/economy/permissions";
+import { economyAccountRepo } from "@/modules/economy/account";
 import { AutoroleService } from "@/modules/autorole";
 import { recordReputationChange } from "@/systems/tops";
-
+import { sanitizeCurrencyId } from "@/modules/economy/mutations/validation";
 
 const choices = currencyRegistry.list().map((currencyId) => {
   return { name: currencyId, value: currencyId };
@@ -21,43 +29,48 @@ const choices = currencyRegistry.list().map((currencyId) => {
 
 const options = {
   currency: createStringOption({
-    description: "Moneda a entregar",
+    description: "Moneda a ajustar",
     required: true,
     choices,
   }),
   amount: createIntegerOption({
-    description: "Cantidad a entregar",
+    description: "Cantidad a ajustar (puede ser negativa)",
     required: true,
-    min_value: 1,
   }),
   target: createUserOption({
-    description: "Usuario que recibira la moneda",
+    description: "Usuario objetivo",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razon del ajuste",
+    description: "Razón del ajuste",
     required: false,
   }),
 };
 
-function buildRewardValue(currencyId: string, amount: number) {
-  if (currencyId === "coins") {
-    return { hand: amount, bank: 0, use_total_on_subtract: false };
-  }
-  return amount;
-}
-
 @Declare({
   name: "give-currency",
-  description: "Dar moneda a un usuario",
+  description: "Ajustar balance de moneda de un usuario (mod-only)",
   defaultMemberPermissions: ["ManageGuild"],
 })
 @Options(options)
 export default class GiveCurrencyCommand extends Command {
   async run(ctx: CommandContext<typeof options>) {
-    const { currency, amount, target, reason } = ctx.options;
+    const { currency: rawCurrencyId, amount, target, reason } = ctx.options;
+    const actorId = ctx.author.id;
+    const guildId = ctx.guildId ?? undefined;
 
-    const currencyObj = currencyRegistry.get(currency);
+    // Security: Sanitize currency ID before any processing
+    const currencyId = sanitizeCurrencyId(rawCurrencyId);
+    if (!currencyId) {
+      await ctx.write({
+        content: "⚠️ ID de moneda inválido. Solo se permiten letras, números, guiones y guiones bajos.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Get currency object for display
+    const currencyObj = currencyRegistry.get(currencyId);
     if (!currencyObj) {
       await ctx.write({
         content: "La moneda especificada no existe.",
@@ -66,83 +79,71 @@ export default class GiveCurrencyCommand extends Command {
       return;
     }
 
-    if (currency === "rep") {
-      const totalResult = await adjustUserReputation(target.id, amount);
-      if (totalResult.isErr()) {
-        await ctx.write({
-          content: "No se pudo actualizar la reputacion.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
+    // Create permission checker using centralized system
+    const perms = createEconomyPermissionChecker(ctx.member);
+    const checkAdmin = perms.canAdjustCurrency;
 
-      const newBalance = totalResult.unwrap();
-      if (ctx.guildId) {
-        await recordReputationChange(ctx.client, ctx.guildId, target.id, amount);
-        await AutoroleService.syncUserReputationRoles(
-          ctx.client,
-          ctx.guildId,
-          target.id,
-          newBalance,
-        );
-      }
-
-      await ctx.write({
-        content: `Se han anadido **${currencyObj.display(amount as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
-      });
-
-      const logger = new GuildLogger();
-      await logger.init(ctx.client, ctx.guildId);
-      await logger.generalLog({
-        title: "Moneda entregada",
-        description: `El staff ${ctx.author.toString()} ha entregado moneda a ${target.toString()}.`,
-        fields: [
-          { name: "Moneda", value: currency, inline: true },
-          { name: "Cantidad", value: `${amount}`, inline: true },
-          { name: "Nuevo Saldo", value: currencyObj.display(newBalance as any), inline: true },
-          { name: "Razon", value: reason ?? "No especificada", inline: false },
-        ],
-        color: "Green",
-      });
-      return;
-    }
-
-    const rewardValue = buildRewardValue(currency, amount);
-    const result = await currencyTransaction(target.id, {
-      rewards: [
-        {
-          currencyId: currency,
-          value: rewardValue as any,
-        },
-      ],
-    });
+    // Use the currency mutation service
+    const result = await currencyMutationService.adjustCurrencyBalance(
+      {
+        actorId,
+        targetId: target.id,
+        guildId,
+        currencyId,
+        delta: amount,
+        reason,
+      },
+      checkAdmin,
+    );
 
     if (result.isErr()) {
+      const error = result.error;
+
+      // Map error codes to user-friendly messages
+      const errorMessages: Record<string, string> = {
+        INSUFFICIENT_PERMISSIONS: "❌ No tienes permisos para realizar esta acción.",
+        CURRENCY_NOT_FOUND: "La moneda especificada no existe.",
+        TARGET_NOT_FOUND: "El usuario objetivo no existe.",
+        TARGET_BLOCKED: "⛔ La cuenta del usuario tiene restricciones temporales.",
+        TARGET_BANNED: "🚫 La cuenta del usuario tiene restricciones permanentes.",
+        UPDATE_FAILED: "❌ No se pudo actualizar el balance. Intenta nuevamente.",
+      };
+
+      const message = errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+
       await ctx.write({
-        content: "No se pudo actualizar el inventario de monedas.",
+        content: message,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const newBalance = result.unwrap()[currency] ?? currencyObj.zero();
+    const adjustment = result.unwrap();
+
+    // Special handling for reputation (existing behavior)
+    if (currencyId === "rep" && guildId) {
+      await recordReputationChange(ctx.client, guildId, target.id, amount);
+      const targetAccount = await economyAccountRepo.findById(target.id);
+      if (targetAccount.isOk() && targetAccount.unwrap()) {
+        const repBalance = targetAccount.unwrap()!.status === "ok" ? adjustment.after : 0;
+        await AutoroleService.syncUserReputationRoles(
+          ctx.client,
+          guildId,
+          target.id,
+          repBalance as number,
+        );
+      }
+    }
+
+    // Build response message
+    const actionStr = amount >= 0 ? "añadido" : "removido";
 
     await ctx.write({
-      content: `Se han anadido **${currencyObj.display(rewardValue as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
+      content:
+        `✅ Se ha ${actionStr} **${currencyObj.display(amount as any)}** a ${target.toString()}.\n` +
+        `📊 Nuevo balance: ${currencyObj.display(adjustment.after as any)}`,
     });
 
-    const logger = new GuildLogger();
-    await logger.init(ctx.client, ctx.guildId);
-    await logger.generalLog({
-      title: "Moneda entregada",
-      description: `El staff ${ctx.author.toString()} ha entregado moneda a ${target.toString()}.`,
-      fields: [
-        { name: "Moneda", value: currency, inline: true },
-        { name: "Cantidad", value: `${amount}`, inline: true },
-        { name: "Nuevo Saldo", value: currencyObj.display(newBalance as any), inline: true },
-        { name: "Razón", value: reason ?? "No especificada", inline: false },
-      ],
-      color: "Green",
-    });
+    // Note: Audit logging is handled by the service layer
   }
 }
