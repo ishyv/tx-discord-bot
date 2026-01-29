@@ -271,15 +271,64 @@ economyAccount: {
 
 ---
 
+---
+
+## Phase 3a - Admin Config + Audit Query Commands
+
+### New Features
+
+#### Economy Config Commands (mod/admin)
+- **`/economy-config view`** - Show guild tax rate, deposit sector, thresholds, store tax rate, daily reward config
+  - Permission: mod or admin
+- **`/economy-config tax-rate <0..0.5>`** - Set guild tax rate (admin only)
+- **`/economy-config tax-sector <global|works|trade|tax>`** - Set sector for tax deposits (admin only)
+- **`/economy-config thresholds <warning> <alert> <critical>`** - Set transfer alert thresholds (admin only)
+- All config changes are audited (`operationType: config_update`) with actor, before/after snapshot, `correlationId`
+
+#### Sector Status
+- **`/economy-sectors`** - Show balances of all sectors (global, works, trade, tax) + last updated (mod/admin)
+
+#### Audit Query
+- **`/economy-audit recent`** - Query recent audit entries with filters:
+  - `target` (user), `actor` (user), `operationType`, `correlationId`, `since_days`, `limit` (max 25), `page`
+- Output: paginated, compact lines (timestamp, op, actor→target, amount, correlationId)
+
+### Technical
+
+- **Audit types**: Added `config_update` and `daily_claim`; query supports `correlationId` filter
+- **Guild economy config**: Added `daily` (dailyReward, dailyCooldownHours, dailyCurrencyId) with defaults (250, 24h, coins)
+- **GuildEconomyRepo**: `updateDailyConfig(guildId, partial)` for daily settings
+- Config validation: tax rate 0..0.5; thresholds ≥ 0; tax sector one of four
+
+---
+
+## Phase 3b - Daily Income Source
+
+### New Features
+
+- **`/daily`** - User claims a configurable amount of primary currency (default 250 coins)
+- **Cooldown**: 24h per user per guild (configurable via guild economy config)
+- **Concurrency-safe**: Atomic `findOneAndUpdate` on `economy_daily_claims`; double-click does not grant twice
+- **Status gating**: Blocked/banned cannot claim
+- **Audit**: `operationType: daily_claim` with `correlationId`, source `daily`
+
+### Technical
+
+- **Collection**: `economy_daily_claims` - `{ _id: guildId:userId, guildId, userId, lastClaimAt }`
+- **DailyClaimRepo.tryClaim(guildId, userId, cooldownHours)** - Returns true if claim granted, false if cooldown active
+- Uses `CurrencyMutationService.adjustCurrencyBalance()` for the grant; audit entry created after success
+
+---
+
 ## Future Considerations
 
 ### Phase 4 Ideas
-1. **Transaction History** - Audit log for all economy changes
-2. **Daily Rewards** - `/daily` command with streak tracking
+1. **Transaction History** - Audit log for all economy changes (query UI improved)
+2. **Daily streak** - Streak tracking for `/daily`
 3. **Leaderboards** - Top balances, reputation, inventory value
 4. **Transfer Limits** - Rate limiting for currency transfers
 5. **Shop Integration** - Buy/sell items with economy account
-6. **Guild-wide Settings** - Per-guild economy configuration
+6. **Guild-wide Settings** - Per-guild economy configuration (extended)
 
 ### Migration Path
 All changes maintain backward compatibility:

@@ -26,6 +26,8 @@ const EconomyAuditEntrySchema = z.object({
     "item_remove",
     "item_purchase",
     "item_sell",
+    "config_update",
+    "daily_claim",
   ]),
   actorId: z.string(),
   targetId: z.string(),
@@ -77,6 +79,9 @@ export async function ensureAuditIndexes(): Promise<void> {
 
     // Index for operation type queries (e.g., "show all transfers")
     await col.createIndex({ operationType: 1, timestamp: -1 }, { name: "optype_time_idx" });
+
+    // Index for correlation ID (e.g., config update, transfer pair)
+    await col.createIndex({ "metadata.correlationId": 1, timestamp: -1 }, { name: "correlation_time_idx" });
 
     // TTL index: auto-delete entries older than 2 years (optional, adjust as needed)
     // Uncomment if you want automatic cleanup:
@@ -157,6 +162,9 @@ class EconomyAuditRepoImpl implements EconomyAuditRepo {
       if (query.operationType) filter.operationType = query.operationType;
       if (query.currencyId) {
         filter["currencyData.currencyId"] = query.currencyId;
+      }
+      if (query.correlationId) {
+        filter["metadata.correlationId"] = query.correlationId;
       }
 
       // Date range

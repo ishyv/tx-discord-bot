@@ -15,7 +15,9 @@ export type AuditOperationType =
   | "item_grant"
   | "item_remove"
   | "item_purchase"
-  | "item_sell";
+  | "item_sell"
+  | "config_update"
+  | "daily_claim";
 
 /** Audit log entry for economy operations. */
 export interface EconomyAuditEntry {
@@ -88,6 +90,8 @@ export interface AuditQuery {
   operationType?: AuditOperationType;
   /** Filter by currency (for currency operations). */
   currencyId?: CurrencyId;
+  /** Filter by correlation ID (e.g. transfer pair, config update batch). */
+  correlationId?: string;
   /** Start date (inclusive). */
   fromDate?: Date;
   /** End date (inclusive). */

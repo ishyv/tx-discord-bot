@@ -15,9 +15,11 @@ import {
   type TransferThresholds,
   type EconomySector,
   type SectorBalances,
+  type DailyConfig,
   DEFAULT_SECTOR_BALANCES,
   DEFAULT_TAX_CONFIG,
   DEFAULT_TRANSFER_THRESHOLDS,
+  DEFAULT_DAILY_CONFIG,
   GuildEconomyError,
 } from "./types";
 
@@ -40,6 +42,17 @@ export const GuildEconomyDataSchema = z.object({
     alert: z.number().catch(1_000_000),
     critical: z.number().catch(10_000_000),
   }),
+  daily: z
+    .object({
+      dailyReward: z.number().min(0).catch(250),
+      dailyCooldownHours: z.number().min(0).max(168).catch(24),
+      dailyCurrencyId: z.string().catch("coins"),
+    })
+    .catch(() => ({
+      dailyReward: 250,
+      dailyCooldownHours: 24,
+      dailyCurrencyId: "coins",
+    })),
   updatedAt: z.date().catch(() => new Date()),
   version: z.number().catch(0),
 });
@@ -48,11 +61,13 @@ export type GuildEconomyData = z.infer<typeof GuildEconomyDataSchema>;
 
 /** Convert DB data to domain model. */
 function toDomain(guildId: string, data: GuildEconomyData): GuildEconomyConfig {
+  const daily = data.daily ?? DEFAULT_DAILY_CONFIG;
   return {
     guildId,
     sectors: data.sectors as SectorBalances,
     tax: data.tax as TaxConfig,
     thresholds: data.thresholds as TransferThresholds,
+    daily: daily as DailyConfig,
     updatedAt: data.updatedAt,
     version: data.version,
   };
@@ -75,6 +90,7 @@ function getDefaultData(): GuildEconomyData {
     sectors: { ...DEFAULT_SECTOR_BALANCES },
     tax: { ...DEFAULT_TAX_CONFIG },
     thresholds: { ...DEFAULT_TRANSFER_THRESHOLDS },
+    daily: { ...DEFAULT_DAILY_CONFIG },
     updatedAt: new Date(),
     version: 0,
   };
@@ -116,6 +132,14 @@ export interface GuildEconomyRepo {
   updateThresholds(
     guildId: GuildId,
     thresholds: Partial<TransferThresholds>,
+  ): Promise<Result<GuildEconomyConfig, Error>>;
+
+  /**
+   * Update daily claim configuration.
+   */
+  updateDailyConfig(
+    guildId: GuildId,
+    daily: Partial<DailyConfig>,
   ): Promise<Result<GuildEconomyConfig, Error>>;
 
   /**
@@ -316,6 +340,49 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       }
       if (thresholds.critical !== undefined) {
         setPaths["economy.thresholds.critical"] = Math.max(0, thresholds.critical);
+      }
+
+      const result = await col.findOneAndUpdate(
+        { _id: guildId } as any,
+        { $set: setPaths } as any,
+        { returnDocument: "after" },
+      );
+
+      if (!result) {
+        return ErrResult(new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"));
+      }
+
+      const raw = (result as any).economy;
+      return OkResult(toDomain(guildId, raw));
+    } catch (error) {
+      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  async updateDailyConfig(
+    guildId: GuildId,
+    daily: Partial<DailyConfig>,
+  ): Promise<Result<GuildEconomyConfig, Error>> {
+    const ensureResult = await this.ensure(guildId);
+    if (ensureResult.isErr()) return ErrResult(ensureResult.error);
+
+    try {
+      const col = await GuildStore.collection();
+      const now = new Date();
+      const setPaths: Record<string, unknown> = {
+        "economy.updatedAt": now,
+      };
+      if (daily.dailyReward !== undefined) {
+        setPaths["economy.daily.dailyReward"] = Math.max(0, daily.dailyReward);
+      }
+      if (daily.dailyCooldownHours !== undefined) {
+        setPaths["economy.daily.dailyCooldownHours"] = Math.max(
+          0,
+          Math.min(168, daily.dailyCooldownHours),
+        );
+      }
+      if (daily.dailyCurrencyId !== undefined) {
+        setPaths["economy.daily.dailyCurrencyId"] = daily.dailyCurrencyId;
       }
 
       const result = await col.findOneAndUpdate(

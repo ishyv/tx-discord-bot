@@ -75,12 +75,30 @@ export interface TaxResult {
   readonly depositedTo: EconomySector | null;
 }
 
+/** Daily claim configuration (guild-scoped). */
+export interface DailyConfig {
+  /** Amount of primary currency granted per claim (default 250). */
+  readonly dailyReward: number;
+  /** Cooldown in hours between claims (default 24). */
+  readonly dailyCooldownHours: number;
+  /** Currency ID for daily reward (default "coins"). */
+  readonly dailyCurrencyId: string;
+}
+
+/** Default daily config. */
+export const DEFAULT_DAILY_CONFIG: DailyConfig = {
+  dailyReward: 250,
+  dailyCooldownHours: 24,
+  dailyCurrencyId: "coins",
+};
+
 /** Guild economy configuration stored per guild. */
 export interface GuildEconomyConfig {
   readonly guildId: GuildId;
   readonly sectors: SectorBalances;
   readonly tax: TaxConfig;
   readonly thresholds: TransferThresholds;
+  readonly daily: DailyConfig;
   readonly updatedAt: Date;
   readonly version: number;
 }

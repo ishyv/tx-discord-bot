@@ -56,6 +56,11 @@ export {
   buildTransferAlertMessage,
 } from "./guild";
 
+// -------------------------------------------------------------------------
+// Daily Claim (Phase 3b)
+// -------------------------------------------------------------------------
+export { dailyClaimRepo } from "./daily";
+
 export type {
   EconomySector,
   SectorBalances,
@@ -68,6 +73,7 @@ export type {
   DepositToSectorInput,
   WithdrawFromSectorInput,
   SectorBalanceResult,
+  DailyConfig,
   GuildEconomyConfig,
   GuildEconomyError,
   GuildEconomyErrorCode,
@@ -77,6 +83,7 @@ export {
   DEFAULT_TAX_CONFIG,
   DEFAULT_TRANSFER_THRESHOLDS,
   DEFAULT_SECTOR_BALANCES,
+  DEFAULT_DAILY_CONFIG,
 } from "./guild";
 
 // -------------------------------------------------------------------------
