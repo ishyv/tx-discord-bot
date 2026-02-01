@@ -153,3 +153,9 @@ cache_forum_autoreply.json
 cache_ai_messages.json
 eng.traineddata
 tmp/
+
+.serana
+.serana/*
+
+# Anything that start with cache
+*cache*

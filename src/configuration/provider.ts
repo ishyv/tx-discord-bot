@@ -31,7 +31,10 @@ export interface ConfigProvider {
    * @sideEffects Reads from Mongo via `ensureGuild`.
    * @errors None thrown; failures return `{}` and log.
    */
-  getConfig<TConfig>(guildId: string, key: ConfigKey): Promise<Partial<TConfig>>;
+  getConfig<TConfig>(
+    guildId: string,
+    key: ConfigKey,
+  ): Promise<Partial<TConfig>>;
   /**
    * Persist a partial config update for a guild.
    *

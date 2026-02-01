@@ -10,7 +10,7 @@ const EPHEMERAL = MessageFlags.Ephemeral;
 
 @Declare({
   name: "embedplay",
-  description: "Probar el disenador de embeds interactivo",
+  description: "Test the interactive embed designer",
   contexts: ["Guild"],
 })
 export default class EmbedPlayCommand extends Command {
@@ -30,11 +30,11 @@ export default class EmbedPlayCommand extends Command {
 
     await startEmbedDesigner(ctx, {
       userId: ctx.author.id,
-      content: "Disena un embed y se devolvera como JSON.",
+      content: "Design an embed and it will be returned as JSON.",
       onSubmit: async ({ embed }) => {
-        console.log("[embedplay] Embed generado:", embed);
+        console.log("[embedplay] Generated embed:", embed);
 
-        await sendFollowup("Embed generado:", [embed]);
+        await sendFollowup("Embed generated:", [embed]);
 
         const embedJson = embed.toJSON();
         await sendFollowup(

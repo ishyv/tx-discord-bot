@@ -20,7 +20,10 @@ import {
   isValidRuleSlug,
   normalizeRuleSlug,
 } from "@/modules/autorole";
-import { GUILD_ONLY_MESSAGE, requireGuildPermission } from "@/utils/commandGuards";
+import {
+  GUILD_ONLY_MESSAGE,
+  requireGuildPermission,
+} from "@/utils/commandGuards";
 
 export interface AutoroleCommandContext {
   guildId: string;
@@ -87,8 +90,8 @@ export function formatTrigger(trigger: AutoRoleTrigger): string {
  */
 export function formatRuleMode(rule: AutoRoleRule): string {
   return rule.durationMs == null
-    ? "[permanente]"
-    : `[temporal ${formatDuration(rule.durationMs)}]`;
+    ? "[permanent]"
+    : `[temporary ${formatDuration(rule.durationMs)}]`;
 }
 
 function formatDuration(ms: number): string {
@@ -122,7 +125,7 @@ function formatDuration(ms: number): string {
 export function formatRuleSummary(rule: AutoRoleRule): string {
   const trigger = formatTrigger(rule.trigger);
   const mode = formatRuleMode(rule);
-  const enabled = rule.enabled ? "[activa]" : "[desactivada]";
+  const enabled = rule.enabled ? "[active]" : "[disabled]";
   return `${trigger} -> <@&${rule.roleId}> ${mode} ${enabled}`;
 }
 
@@ -141,7 +144,7 @@ export async function respondRuleAutocomplete(
 
   const input = interaction.getInput()?.toLowerCase() ?? "";
   const res = await AutoRoleRulesStore.find({ guildId });
-  const names = res.isOk() ? res.unwrap().map(r => r.name) : [];
+  const names = res.isOk() ? res.unwrap().map((r) => r.name) : [];
 
   const filtered = input
     ? names.filter((name) => name.toLowerCase().includes(input))
@@ -186,4 +189,3 @@ export async function botCanManageRole(
     return false;
   }
 }
-

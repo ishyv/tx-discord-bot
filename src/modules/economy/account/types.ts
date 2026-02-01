@@ -13,6 +13,7 @@
  */
 
 import type { CurrencyId } from "../currency";
+import type { ProgressionView } from "../progression/types";
 
 /** Account status for moderation and access control. */
 export type AccountStatus = "ok" | "blocked" | "banned";
@@ -131,6 +132,7 @@ export interface ProfileSummaryView {
   readonly bank: BankBreakdownView | null;
   readonly inventory: InventorySummaryView;
   readonly reputation: number;
+  readonly progression: ProgressionView | null;
 }
 
 // ============================================================================
@@ -210,9 +212,9 @@ export const DEFAULT_ECONOMY_ACCOUNT: Omit<EconomyAccount, "userId"> = {
 };
 
 export const ACCOUNT_STATUS_DISPLAY: Record<AccountStatus, string> = {
-  ok: "✅ Activa",
-  blocked: "⛔ Bloqueada",
-  banned: "🚫 Suspendida",
+  ok: "✅ Active",
+  blocked: "⛔ Blocked",
+  banned: "🚫 Banned",
 };
 
 export const EMPTY_BANK_BREAKDOWN: BankBreakdownView = {
@@ -232,8 +234,9 @@ export const EMPTY_INVENTORY_SUMMARY: InventorySummaryView = {
 };
 
 /** Default pagination settings. */
-export const DEFAULT_INVENTORY_PAGINATION: Required<Omit<InventoryPaginationOptions, "search">>
-= {
+export const DEFAULT_INVENTORY_PAGINATION: Required<
+  Omit<InventoryPaginationOptions, "search">
+> = {
   page: 0,
   pageSize: 6,
   sortBy: "name",

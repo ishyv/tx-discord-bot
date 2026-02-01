@@ -14,8 +14,8 @@ import { Modality } from "@google/genai";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
-  name: "chiste",
-  description: "Genera un chiste",
+  name: "joke",
+  description: "Generate a joke",
 })
 @Cooldown({
   type: CooldownType.User,
@@ -30,7 +30,7 @@ export default class JokeCommand extends Command {
       {
         role: "user",
         content:
-          "Actúa como un comediante profesional que cuenta chistes cortos en español para un público amplio (adolescentes y adultos jóvenes). Escribe un chiste original, muy breve (1-2 líneas), con un tono ligero, ingenioso y un remate inesperado que saque risas. El chiste debe ser universal, sin referencias a categorías específicas (como programación, deportes o profesiones) ni contextos culturales particulares. Evita humor infantil, subido de tono, ofensivo o demasiado absurdo. ¡Haz que suene como un chiste contado en un show de comedia para todos, con un toque de ingenio que sorprenda!",
+          "Act as a professional comedian telling short jokes in English for a broad audience (teenagers and young adults). Write an original, very brief joke (1-2 lines), with a light, witty tone and an unexpected punchline that gets laughs. The joke should be universal, without references to specific categories (like programming, sports, or professions) or particular cultural contexts. Avoid childish, raunchy, offensive, or too absurd humor. Make it sound like a joke told in a comedy show for everyone, with a touch of wit that surprises!",
       },
     ];
 

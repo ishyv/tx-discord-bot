@@ -10,25 +10,24 @@ import { ComponentCommand, type ComponentContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 
 export default class UIButtonHandler extends ComponentCommand {
-    componentType = "Button" as const;
+  componentType = "Button" as const;
 
-    filter(ctx: ComponentContext<"Button">) {
-        return id_exists(ctx.customId);
+  filter(ctx: ComponentContext<"Button">) {
+    return id_exists(ctx.customId);
+  }
+
+  async run(ctx: ComponentContext<"Button">) {
+    // Check if id has "defer" on it
+    if (ctx.customId.includes("defer")) {
+      await ctx.deferUpdate();
     }
 
-    async run(ctx: ComponentContext<"Button">) {
-
-        // Check if id has "defer" on it
-        if (ctx.customId.includes("defer")) {
-            await ctx.deferUpdate();
-        }
-
-        const ok = await resolveAndInvoke(ctx.customId, ctx);
-        if (!ok) {
-            await ctx.write({
-                content: "Este botón ya no está activo.",
-                flags: MessageFlags.Ephemeral,
-            });
-        }
+    const ok = await resolveAndInvoke(ctx.customId, ctx);
+    if (!ok) {
+      await ctx.write({
+        content: "Este botón ya no está activo.",
+        flags: MessageFlags.Ephemeral,
+      });
     }
+  }
 }

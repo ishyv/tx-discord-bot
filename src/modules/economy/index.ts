@@ -13,6 +13,7 @@ export * from "./account";
 // View Builders (re-export for convenience)
 // -------------------------------------------------------------------------
 export * from "./views";
+export * from "./progression";
 
 // -------------------------------------------------------------------------
 // Audit Logging
@@ -59,7 +60,48 @@ export {
 // -------------------------------------------------------------------------
 // Daily Claim (Phase 3b)
 // -------------------------------------------------------------------------
-export { dailyClaimRepo } from "./daily";
+export {
+  dailyClaimRepo,
+  computeDailyStreakBonus,
+  buildDailyClaimAuditMetadata,
+} from "./daily";
+
+// -------------------------------------------------------------------------
+// Work Claim (Phase 3d)
+// -------------------------------------------------------------------------
+export { workClaimRepo } from "./work";
+export { workService } from "./work/service";
+
+// -------------------------------------------------------------------------
+// Perks (Phase 3)
+// -------------------------------------------------------------------------
+export * from "./perks";
+
+// -------------------------------------------------------------------------
+// Equipment (Phase 4)
+// -------------------------------------------------------------------------
+export * from "./equipment";
+
+// -------------------------------------------------------------------------
+// Crafting (Phase 5)
+// -------------------------------------------------------------------------
+export * from "./crafting";
+
+// -------------------------------------------------------------------------
+// Minigames (Phase 6)
+// -------------------------------------------------------------------------
+export * from "./minigames";
+
+// -------------------------------------------------------------------------
+// Voting (Phase 7)
+// -------------------------------------------------------------------------
+export * from "./voting";
+
+// -------------------------------------------------------------------------
+// Rollback tooling (Phase 3e)
+// -------------------------------------------------------------------------
+export { rollbackByCorrelationId } from "./rollback";
+export type { RollbackInput, RollbackResult } from "./rollback";
 
 export type {
   EconomySector,
@@ -74,6 +116,7 @@ export type {
   WithdrawFromSectorInput,
   SectorBalanceResult,
   DailyConfig,
+  WorkConfig,
   GuildEconomyConfig,
   GuildEconomyError,
   GuildEconomyErrorCode,
@@ -84,6 +127,7 @@ export {
   DEFAULT_TRANSFER_THRESHOLDS,
   DEFAULT_SECTOR_BALANCES,
   DEFAULT_DAILY_CONFIG,
+  DEFAULT_WORK_CONFIG,
 } from "./guild";
 
 // -------------------------------------------------------------------------
@@ -113,9 +157,7 @@ export type {
   StoreTransactionAudit,
 } from "./store";
 
-export {
-  DEFAULT_STORE_CONFIG,
-} from "./store";
+export { DEFAULT_STORE_CONFIG } from "./store";
 
 // -------------------------------------------------------------------------
 // Validation & Permissions
@@ -131,6 +173,60 @@ export {
 // -------------------------------------------------------------------------
 // Legacy Transactions (for backward compatibility)
 // -------------------------------------------------------------------------
+export { currencyTransaction } from "./transactions";
+
+// -------------------------------------------------------------------------
+// Database Index Management
+// -------------------------------------------------------------------------
 export {
-  currencyTransaction,
-} from "./transactions";
+  ensureAllEconomyIndexes,
+  ensureDailyClaimsIndexes,
+  ensureWorkClaimsIndexes,
+  ensureVotingIndexes,
+  ensureMinigameStateIndexes,
+  ensurePerkStateIndexes,
+  ensureEquipmentIndexes,
+  ensureCraftingIndexes,
+  ensureStoreIndexes,
+  getEconomyIndexStats,
+  TTLConfig,
+} from "./db-indexes";
+
+// -------------------------------------------------------------------------
+// Quests (Phase 9a)
+// -------------------------------------------------------------------------
+export * from "./quests";
+
+// -------------------------------------------------------------------------
+// Achievements (Phase 9b)
+// -------------------------------------------------------------------------
+export * from "./achievements";
+
+// -------------------------------------------------------------------------
+// Events (Phase 9e)
+// -------------------------------------------------------------------------
+export * from "./events";
+
+// -------------------------------------------------------------------------
+// Reports (Phase 9f)
+// -------------------------------------------------------------------------
+export * from "./reports";
+
+// -------------------------------------------------------------------------
+// Launch Ops (Phase 10a)
+// -------------------------------------------------------------------------
+export * from "../ops";
+
+// -------------------------------------------------------------------------
+// Moderation (Phase 10c)
+// -------------------------------------------------------------------------
+export * from "./moderation";
+
+// -------------------------------------------------------------------------
+// Initialization
+// -------------------------------------------------------------------------
+export {
+  initEconomy,
+  checkEconomyHealth,
+  type EconomyInitOptions,
+} from "./init";

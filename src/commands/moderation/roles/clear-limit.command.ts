@@ -15,7 +15,6 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-
 import {
   findManagedRole,
   formatLimitRecord,
@@ -84,7 +83,6 @@ export default class RoleClearLimitCommand extends SubCommand {
 
     const existing = role.limits[action.key];
 
-
     await clearRoleLimit(context.guildId, role.key, action.key);
 
     const updated = await findManagedRole(context.guildId, key);
@@ -105,11 +103,11 @@ export default class RoleClearLimitCommand extends SubCommand {
         },
         ...(existing
           ? [
-            {
-              name: "Limite anterior",
-              value: formatLimitRecord(existing),
-            },
-          ]
+              {
+                name: "Limite anterior",
+                value: formatLimitRecord(existing),
+              },
+            ]
           : []),
       ],
     });
@@ -117,4 +115,3 @@ export default class RoleClearLimitCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

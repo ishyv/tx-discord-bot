@@ -54,7 +54,9 @@ const readRepFromCurrency = (currency?: CurrencyInventory): number =>
 const getReputationSnapshot = (user: User): ReputationSnapshot => {
   const currency = (user.currency ?? {}) as CurrencyInventory;
   const hasRepCurrency = Object.prototype.hasOwnProperty.call(currency, "rep");
-  const rep = hasRepCurrency ? readRepFromCurrency(currency) : normalizeRep(user.rep ?? 0);
+  const rep = hasRepCurrency
+    ? readRepFromCurrency(currency)
+    : normalizeRep(user.rep ?? 0);
   return { currency, rep, hasRepCurrency };
 };
 
@@ -65,9 +67,13 @@ export async function getUserReputation(id: UserId): Promise<Result<number>> {
   const snapshot = getReputationSnapshot(user.unwrap());
   if (!snapshot.hasRepCurrency && snapshot.rep > 0) {
     const nextCurrency = { ...snapshot.currency, rep: snapshot.rep };
-    await UserStore.replaceIfMatch(id, { currency: snapshot.currency } as any, {
-      currency: nextCurrency,
-    } as any);
+    await UserStore.replaceIfMatch(
+      id,
+      { currency: snapshot.currency } as any,
+      {
+        currency: nextCurrency,
+      } as any,
+    );
   }
 
   return OkResult(snapshot.rep);
@@ -80,11 +86,12 @@ export async function updateUserReputation(
   return atomicTransition({
     attempts: 5,
     getInitial: () => UserStore.ensure(id),
-    getFresh: (previousUser) => UserStore.get(id).then((res) => {
-      if (res.isErr()) return ErrResult(res.error);
-      const fresh = res.unwrap();
-      return OkResult(fresh ?? previousUser);
-    }),
+    getFresh: (previousUser) =>
+      UserStore.get(id).then((res) => {
+        if (res.isErr()) return ErrResult(res.error);
+        const fresh = res.unwrap();
+        return OkResult(fresh ?? previousUser);
+      }),
     getSnapshot: (user) => getReputationSnapshot(user),
     computeNext: (snapshot) => {
       const nextRep = normalizeRep(updater(snapshot.rep));
@@ -111,7 +118,7 @@ export const adjustUserReputation = (id: UserId, delta: number) =>
 /* Warns                                                                    */
 /* ------------------------------------------------------------------------- */
 
-// Warns are still here as they are simple array operations, 
+// Warns are still here as they are simple array operations,
 // but we could move them to a ModerationRepo later.
 export async function listWarns(id: UserId): Promise<Result<Warn[]>> {
   const res = await UserStore.ensure(id);
@@ -119,7 +126,10 @@ export async function listWarns(id: UserId): Promise<Result<Warn[]>> {
   return OkResult((res.unwrap().warns ?? []) as Warn[]);
 }
 
-export async function setWarns(id: UserId, warns: Warn[]): Promise<Result<Warn[]>> {
+export async function setWarns(
+  id: UserId,
+  warns: Warn[],
+): Promise<Result<Warn[]>> {
   const parsed = WarnSchema.array().safeParse(warns);
   if (!parsed.success) {
     return ErrResult(parsed.error);
@@ -142,7 +152,10 @@ export async function addWarn(id: UserId, warn: Warn): Promise<Result<Warn[]>> {
   return setWarns(id, currentRes.unwrap().concat([parsed.data]));
 }
 
-export async function removeWarn(id: UserId, warnId: string): Promise<Result<Warn[]>> {
+export async function removeWarn(
+  id: UserId,
+  warnId: string,
+): Promise<Result<Warn[]>> {
   const currentRes = await listWarns(id);
   if (currentRes.isErr()) return currentRes;
 
@@ -245,7 +258,9 @@ export async function setOpenTickets(
   id: UserId,
   tickets: string[],
 ): Promise<Result<string[]>> {
-  const next = Array.from(new Set((tickets ?? []).filter((t) => typeof t === "string")));
+  const next = Array.from(
+    new Set((tickets ?? []).filter((t) => typeof t === "string")),
+  );
   const res = await UserStore.patch(id, { openTickets: next } as any);
   if (res.isErr()) return ErrResult(res.error);
   return OkResult(res.unwrap().openTickets ?? []);
@@ -266,7 +281,10 @@ export async function removeOpenTicket(
 ): Promise<Result<string[]>> {
   const current = await listOpenTickets(id);
   if (current.isErr()) return current;
-  return setOpenTickets(id, current.unwrap().filter((c) => c !== channelId));
+  return setOpenTickets(
+    id,
+    current.unwrap().filter((c) => c !== channelId),
+  );
 }
 
 export async function addOpenTicketIfBelowLimit(
@@ -304,9 +322,13 @@ export async function replaceInventoryIfMatch(
   expected: ItemInventory,
   next: ItemInventory,
 ): Promise<Result<User | null>> {
-  return UserStore.replaceIfMatch(id, { inventory: expected } as any, {
-    inventory: next,
-  } as any);
+  return UserStore.replaceIfMatch(
+    id,
+    { inventory: expected } as any,
+    {
+      inventory: next,
+    } as any,
+  );
 }
 
 export async function replaceCurrencyIfMatch(
@@ -314,9 +336,13 @@ export async function replaceCurrencyIfMatch(
   expected: CurrencyInventory,
   next: CurrencyInventory,
 ): Promise<Result<User | null>> {
-  return UserStore.replaceIfMatch(id, { currency: expected } as any, {
-    currency: next,
-  } as any);
+  return UserStore.replaceIfMatch(
+    id,
+    { currency: expected } as any,
+    {
+      currency: next,
+    } as any,
+  );
 }
 
 /**
@@ -381,6 +407,7 @@ export async function incrementReputation(
   }
 
   const rep = (user.currency as Record<string, unknown>)?.rep;
-  const normalizedRep = typeof rep === "number" ? Math.max(0, Math.trunc(rep)) : 0;
+  const normalizedRep =
+    typeof rep === "number" ? Math.max(0, Math.trunc(rep)) : 0;
   return OkResult(normalizedRep);
 }

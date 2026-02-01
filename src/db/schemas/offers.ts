@@ -50,4 +50,3 @@ export const OfferSchema = OfferBaseSchema.transform((data) => ({
 export type Offer = z.infer<typeof OfferBaseSchema> & { id: string };
 export type OfferStatus = z.infer<typeof OfferStatusSchema>;
 export type OfferDetails = z.infer<typeof OfferDetailsSchema>;
-

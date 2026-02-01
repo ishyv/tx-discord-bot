@@ -27,7 +27,10 @@ import {
   type Suite,
 } from "./_utils";
 
-const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupUser = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await UsersRepo.deleteUser(id);
     if (res.isErr()) return;
@@ -61,7 +64,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject negative amount");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "INVALID_AMOUNT", "error should be INVALID_AMOUNT");
+        assertEqual(
+          error.code,
+          "INVALID_AMOUNT",
+          "error should be INVALID_AMOUNT",
+        );
       },
     },
     {
@@ -85,7 +92,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject zero amount");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "INVALID_AMOUNT", "error should be INVALID_AMOUNT");
+        assertEqual(
+          error.code,
+          "INVALID_AMOUNT",
+          "error should be INVALID_AMOUNT",
+        );
       },
     },
 
@@ -110,7 +121,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject self-transfer");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "SELF_TRANSFER", "error should be SELF_TRANSFER");
+        assertEqual(
+          error.code,
+          "SELF_TRANSFER",
+          "error should be SELF_TRANSFER",
+        );
       },
     },
 
@@ -143,7 +158,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject insufficient funds");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "INSUFFICIENT_FUNDS", "error should be INSUFFICIENT_FUNDS");
+        assertEqual(
+          error.code,
+          "INSUFFICIENT_FUNDS",
+          "error should be INSUFFICIENT_FUNDS",
+        );
       },
     },
 
@@ -177,12 +196,24 @@ export const suite: Suite = {
 
         const transfer = assertOk(result);
         assertEqual(transfer.senderId, senderId, "sender ID should match");
-        assertEqual(transfer.recipientId, recipientId, "recipient ID should match");
+        assertEqual(
+          transfer.recipientId,
+          recipientId,
+          "recipient ID should match",
+        );
         assertEqual(transfer.amount, 30, "amount should be 30");
         assertEqual(transfer.senderBefore, 100, "sender before should be 100");
         assertEqual(transfer.senderAfter, 70, "sender after should be 70");
-        assertEqual(transfer.recipientBefore, 50, "recipient before should be 50");
-        assertEqual(transfer.recipientAfter, 80, "recipient after should be 80");
+        assertEqual(
+          transfer.recipientBefore,
+          50,
+          "recipient before should be 50",
+        );
+        assertEqual(
+          transfer.recipientAfter,
+          80,
+          "recipient after should be 80",
+        );
       },
     },
 
@@ -200,7 +231,13 @@ export const suite: Suite = {
 
         // Block sender
         const { account } = assertOk(await economyAccountRepo.ensure(senderId));
-        assertOk(await economyAccountRepo.updateStatus(senderId, "blocked", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            senderId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         assertOk(await economyAccountRepo.ensure(recipientId));
 
@@ -213,7 +250,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject blocked sender");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "ACTOR_BLOCKED", "error should be ACTOR_BLOCKED");
+        assertEqual(
+          error.code,
+          "ACTOR_BLOCKED",
+          "error should be ACTOR_BLOCKED",
+        );
       },
     },
     {
@@ -228,8 +269,16 @@ export const suite: Suite = {
         assertOk(await economyAccountRepo.ensure(senderId));
 
         // Block recipient
-        const { account } = assertOk(await economyAccountRepo.ensure(recipientId));
-        assertOk(await economyAccountRepo.updateStatus(recipientId, "blocked", account.version));
+        const { account } = assertOk(
+          await economyAccountRepo.ensure(recipientId),
+        );
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            recipientId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         const result = await currencyMutationService.transferCurrency({
           senderId,
@@ -240,7 +289,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject blocked recipient");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "TARGET_BLOCKED", "error should be TARGET_BLOCKED");
+        assertEqual(
+          error.code,
+          "TARGET_BLOCKED",
+          "error should be TARGET_BLOCKED",
+        );
       },
     },
 
@@ -284,11 +337,19 @@ export const suite: Suite = {
         });
 
         const audit = assertOk(auditResult);
-        assertEqual(audit.entries.length >= 1, true, "should have audit entries");
+        assertEqual(
+          audit.entries.length >= 1,
+          true,
+          "should have audit entries",
+        );
 
         // Check that entries have the correlation ID
         const entry = audit.entries[0];
-        assertEqual(entry.metadata?.transferId, transfer.transferId, "audit should have matching transfer ID");
+        assertEqual(
+          entry.metadata?.transferId,
+          transfer.transferId,
+          "audit should have matching transfer ID",
+        );
       },
     },
 
@@ -332,22 +393,35 @@ export const suite: Suite = {
         }
 
         // At least 2 should succeed (100 / 20 = 5 max, but concurrent may have races)
-        assert(successCount >= 2, `at least 2 transfers should succeed, got ${successCount}`);
+        assert(
+          successCount >= 2,
+          `at least 2 transfers should succeed, got ${successCount}`,
+        );
 
         // Final balances should be consistent
         const senderUser = assertOk(await UsersRepo.findUser(senderId));
         const recipientUser = assertOk(await UsersRepo.findUser(recipientId));
 
-        const senderFinal = ((senderUser!.currency as CurrencyInventory).rep ?? 0) as number;
-        const recipientFinal = ((recipientUser!.currency as CurrencyInventory).rep ?? 0) as number;
+        const senderFinal = ((senderUser!.currency as CurrencyInventory).rep ??
+          0) as number;
+        const recipientFinal = ((recipientUser!.currency as CurrencyInventory)
+          .rep ?? 0) as number;
 
         // Sender should have 100 - (successCount * 20)
-        const expectedSender = 100 - (successCount * 20);
-        assertEqual(senderFinal, expectedSender, `sender should have ${expectedSender}`);
+        const expectedSender = 100 - successCount * 20;
+        assertEqual(
+          senderFinal,
+          expectedSender,
+          `sender should have ${expectedSender}`,
+        );
 
         // Recipient should have 0 + (successCount * 20)
-        const expectedRecipient = 0 + (successCount * 20);
-        assertEqual(recipientFinal, expectedRecipient, `recipient should have ${expectedRecipient}`);
+        const expectedRecipient = 0 + successCount * 20;
+        assertEqual(
+          recipientFinal,
+          expectedRecipient,
+          `recipient should have ${expectedRecipient}`,
+        );
       },
     },
   ],

@@ -22,18 +22,18 @@ import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   user: createUserOption({
-    description: "Usuario a banear",
+    description: "User to ban",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón del baneo",
+    description: "Reason for the ban",
     required: true,
   }),
 };
 
 @Declare({
   name: "ban",
-  description: "Banear a un usuario del servidor",
+  description: "Ban a user from the server",
   defaultMemberPermissions: ["BanMembers"],
   botPermissions: ["BanMembers"],
   contexts: ["Guild"],
@@ -48,14 +48,14 @@ export default class BanCommand extends Command {
     if (!ctx.guildId || !isSnowflake(ctx.guildId) || !isSnowflake(user.id)) {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ IDs invalidos. Intenta nuevamente.",
+        content: "❌ Invalid IDs. Try again.",
       });
     }
 
     if (ctx.author.id === user.id)
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ No podés banearte a vos mismo.",
+        content: "❌ You cannot ban yourself.",
       });
 
     const targetMember =
@@ -64,30 +64,30 @@ export default class BanCommand extends Command {
     if (!targetMember)
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ No se pudo encontrar al miembro a banear en el servidor.",
+        content: "❌ Could not find the member to ban in the server.",
       });
 
     if (!(await targetMember.moderatable()))
       return ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "❌ No podés banear a un usuario con un rol igual o superior al tuyo.",
+          "❌ You cannot ban a user with a role equal to or higher than yours.",
       });
 
-    const text = `${reason} | Baneado por ${ctx.author.username}`;
+    const text = `${reason} | Banned by ${ctx.author.username}`;
 
     await ctx.client.bans.create(ctx.guildId, user.id, {}, text);
 
     const successEmbed = new Embed({
-      title: "Usuario baneado correctamente",
+      title: "User banned correctly",
       description: `
-        El usuario **${ctx.options.user.username}** fue baneado exitosamente.
+        The user **${ctx.options.user.username}** was successfully banned.
 
-        **Razón:** ${reason}
+        **Reason:** ${reason}
       `,
       color: EmbedColors.Green,
       footer: {
-        text: `Baneado por ${ctx.author.username}`,
+        text: `Banned by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL(),
       },
     });
@@ -100,16 +100,16 @@ export default class BanCommand extends Command {
     await registerCase(user.id, ctx.guildId!, "BAN", reason);
 
     await GuildLogger.banSanctionLog({
-      title: "Usuario baneado",
+      title: "User banned",
       color: EmbedColors.Red,
       thumbnail: await user.avatarURL(),
       fields: [
         {
-          name: "Usuario",
+          name: "User",
           value: `${user.username} (${user.id})`,
           inline: true,
         },
-        { name: "Razón", value: reason, inline: false },
+        { name: "Reason", value: reason, inline: false },
       ],
       footer: {
         text: `${ctx.author.username} (${ctx.author.id})`,

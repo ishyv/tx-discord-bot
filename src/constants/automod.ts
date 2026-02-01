@@ -202,14 +202,14 @@ export function phraseToSpamRegex(phrase: string): RegExp {
   const parts = phrase.match(/(\$number)|\s+|[^\s]+/gi) ?? [];
 
   const body = parts
-    .map(seg => {
+    .map((seg) => {
       const s = seg.toString();
-      if (/^\s+$/.test(s)) return SEP;                  // espacios → separador permisivo
-      if (/^\$number$/i.test(s)) return NUMBER;         // token → patrón numérico
+      if (/^\s+$/.test(s)) return SEP; // espacios → separador permisivo
+      if (/^\$number$/i.test(s)) return NUMBER; // token → patrón numérico
       // literal → permitir "basura" entre cada carácter
       return s
         .split("")
-        .map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .map((ch) => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
         .join(SEP);
     })
     .join("");
@@ -231,7 +231,7 @@ export function phraseToSpamRegex(phrase: string): RegExp {
  *
  * Ejemplo: "free nitro code" → [
  *   "free nitro code",
- *   "free code nitro", 
+ *   "free code nitro",
  *   "nitro free code",
  *   "nitro code free",
  *   "code free nitro",
@@ -302,18 +302,16 @@ const BASE_PHRASES = [
   "take your free reward",
   "free nitro",
   "free nitro click here",
-  "free discord nitro",   
+  "free discord nitro",
   "claim your nitro",
 ] as const;
 
 // Expand with permutations, dedupe, and compile
 const PHRASES: string[] = Array.from(
-  new Set(
-    (BASE_PHRASES as readonly string[]).flatMap(wordPermutations)
-  )
+  new Set((BASE_PHRASES as readonly string[]).flatMap(wordPermutations)),
 );
 
-// ! Muy sensible a falsos positivos ! 
+// ! Muy sensible a falsos positivos !
 // NOTA: Esta advertencia del código original es CRÍTICA.
 // Los patrones generados son intencionalmente agresivos para maximizar
 // detección de scams, pero esto genera falsos positivos en

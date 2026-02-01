@@ -107,11 +107,20 @@ export default class RoleSetLimitCommand extends SubCommand {
     const uses = Math.max(0, Math.floor(ctx.options.uses));
     const limitRecord = buildLimitRecord(uses, parsedWindow.window);
 
-    await GuildRolesRepo.setLimit(context.guildId, key, action.key, limitRecord).then(r => r.unwrap());
+    await GuildRolesRepo.setLimit(
+      context.guildId,
+      key,
+      action.key,
+      limitRecord,
+    ).then((r) => r.unwrap());
 
     const updatedRes = await GuildRolesRepo.read(context.guildId);
-    const updated = updatedRes.isOk() ? (updatedRes.unwrap() as any)[key] : null;
-    const configuredLimits = Object.keys((updated?.limits ?? {}) as Record<string, unknown>).length;
+    const updated = updatedRes.isOk()
+      ? (updatedRes.unwrap() as any)[key]
+      : null;
+    const configuredLimits = Object.keys(
+      (updated?.limits ?? {}) as Record<string, unknown>,
+    ).length;
 
     const embed = new Embed({
       title: "Limite actualizado",
@@ -127,4 +136,3 @@ export default class RoleSetLimitCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

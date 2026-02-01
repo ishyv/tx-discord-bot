@@ -13,7 +13,7 @@ export const Colors = {
   low: "#10B981", // Low / Notice
   info: "#2563EB", // Info / Normal
   debug: "#6B7280", // Debug / Verbose
-  neutral: "#7C3AED", // Neutral / Default 
+  neutral: "#7C3AED", // Neutral / Default
 } as const;
 
 export type ColorKey = keyof typeof Colors;

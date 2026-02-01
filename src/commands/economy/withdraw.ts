@@ -1,4 +1,10 @@
-import { Command, Declare, Options, createStringOption, type CommandContext } from "seyfert";
+import {
+  Command,
+  Declare,
+  Options,
+  createStringOption,
+  type CommandContext,
+} from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { UserStore } from "@/db/repositories/users";
@@ -41,14 +47,19 @@ export default class WithdrawCommand extends Command {
       return;
     }
 
-    const coins = user.currency.coins ?? { hand: 0, bank: 0, use_total_on_subtract: false };
+    const coins = user.currency.coins ?? {
+      hand: 0,
+      bank: 0,
+      use_total_on_subtract: false,
+    };
     const bank = normalizeInt(coins.bank);
     const amount = await parseAmountOrReply(ctx, rawAmount, bank);
     if (amount === null) return;
 
     if (amount > bank) {
       await ctx.write({
-        content: "No tienes suficientes coins en el banco para retirar esa cantidad.",
+        content:
+          "No tienes suficientes coins en el banco para retirar esa cantidad.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -77,7 +88,11 @@ export default class WithdrawCommand extends Command {
       return;
     }
 
-    const updatedCoins = result.unwrap().coins ?? { hand: 0, bank: 0, use_total_on_subtract: false };
+    const updatedCoins = result.unwrap().coins ?? {
+      hand: 0,
+      bank: 0,
+      use_total_on_subtract: false,
+    };
     const updatedBank = normalizeInt(updatedCoins.bank);
     const updatedHand = normalizeInt(updatedCoins.hand);
     await ctx.write({

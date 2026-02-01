@@ -34,10 +34,18 @@ export const TopReportStore = new MongoStore<TopReport>(
 
 const buildTopReportId = (): string => new ObjectId().toHexString();
 
+function validateGuildId(guildId: string | undefined | null): string {
+  if (!guildId || typeof guildId !== "string") {
+    throw new Error("guildId is required and must be a string");
+  }
+  return guildId;
+}
+
 /**
  * Asegura que exista una ventana de TOPs para el guild indicado.
  */
 export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
+  validateGuildId(guildId);
   const now = new Date();
   const res = await TopWindowStore.ensure(guildId, {
     guildId,
@@ -57,6 +65,7 @@ export async function ensureTopWindow(guildId: GuildId): Promise<TopWindow> {
  * Obtiene la ventana de TOPs actual para el guild.
  */
 export async function getTopWindow(guildId: GuildId): Promise<TopWindow> {
+  validateGuildId(guildId);
   const window = await ensureTopWindow(guildId);
   return deepClone(window);
 }
@@ -68,6 +77,7 @@ export async function updateTopConfig(
   guildId: GuildId,
   patch: Partial<Pick<TopWindow, "channelId" | "intervalMs" | "topSize">>,
 ): Promise<TopWindow> {
+  validateGuildId(guildId);
   const safeInterval =
     typeof patch.intervalMs === "number" && Number.isFinite(patch.intervalMs)
       ? Math.max(1, Math.trunc(patch.intervalMs))
@@ -107,6 +117,7 @@ export async function resetTopWindow(
   guildId: GuildId,
   startedAt: Date = new Date(),
 ): Promise<TopWindow> {
+  validateGuildId(guildId);
   const res = await TopWindowStore.patch(guildId, {
     windowStartedAt: startedAt,
     lastReportAt: null,
@@ -128,6 +139,7 @@ export async function bumpEmojiCounts(
   guildId: GuildId,
   increments: Record<string, number>,
 ): Promise<void> {
+  validateGuildId(guildId);
   const inc: Record<string, number> = {};
   for (const [key, delta] of Object.entries(increments)) {
     if (!Number.isFinite(delta)) continue;
@@ -153,6 +165,7 @@ export async function bumpChannelCount(
   channelId: ChannelId,
   delta = 1,
 ): Promise<void> {
+  validateGuildId(guildId);
   if (!Number.isFinite(delta) || !channelId) return;
   const amount = Math.trunc(delta);
   if (amount === 0) return;
@@ -176,6 +189,7 @@ export async function bumpReputationDelta(
   userId: string,
   delta: number,
 ): Promise<void> {
+  validateGuildId(guildId);
   if (!Number.isFinite(delta) || delta === 0 || !userId) return;
   const amount = Math.trunc(delta);
   if (amount === 0) return;
@@ -209,18 +223,16 @@ export async function findDueWindows(
 /**
  * Guarda un snapshot histórico con los datos actuales del ciclo.
  */
-export async function persistTopReport(
-  payload: {
-    guildId: string;
-    periodStart: Date;
-    periodEnd: Date;
-    intervalMs: number;
-    emojiCounts: Record<string, number>;
-    channelCounts: Record<string, number>;
-    reputationDeltas: Record<string, number>;
-    metadata?: Record<string, unknown> | null;
-  },
-): Promise<TopReport> {
+export async function persistTopReport(payload: {
+  guildId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  intervalMs: number;
+  emojiCounts: Record<string, number>;
+  channelCounts: Record<string, number>;
+  reputationDeltas: Record<string, number>;
+  metadata?: Record<string, unknown> | null;
+}): Promise<TopReport> {
   const reportId = buildTopReportId();
   const res = await TopReportStore.set(reportId, {
     _id: reportId,
@@ -261,10 +273,13 @@ export async function listReports(
   guildId: string,
   limit = 10,
 ): Promise<TopReport[]> {
-  const res = await TopReportStore.find({ guildId }, {
-    limit,
-    sort: { createdAt: -1 } as any
-  });
+  const res = await TopReportStore.find(
+    { guildId },
+    {
+      limit,
+      sort: { createdAt: -1 } as any,
+    },
+  );
 
   return res.isOk() ? res.unwrap() : [];
 }

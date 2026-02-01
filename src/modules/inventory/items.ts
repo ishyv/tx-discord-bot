@@ -15,9 +15,7 @@ import {
 // Re-export types for consumers
 export type { ItemDefinitionWithUse } from "./definitions";
 
-export function getItemDefinition(
-  id: ItemId,
-): ItemDefinitionWithUse | null {
+export function getItemDefinition(id: ItemId): ItemDefinitionWithUse | null {
   return ITEM_DEFINITIONS[id] ?? null;
 }
 
@@ -36,6 +34,9 @@ export function resolveCanStack(item: ItemDefinitionWithUse): boolean {
 }
 
 /** Calculate total weight for a quantity of an item. */
-export function calculateItemWeight(item: ItemDefinitionWithUse, quantity: number): number {
+export function calculateItemWeight(
+  item: ItemDefinitionWithUse,
+  quantity: number,
+): number {
   return resolveWeight(item) * Math.max(0, quantity);
 }

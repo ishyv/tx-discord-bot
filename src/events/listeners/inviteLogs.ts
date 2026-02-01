@@ -10,10 +10,14 @@ import { EmbedColors } from "seyfert/lib/common";
 import { onInviteCreate } from "@/events/hooks/inviteEvents";
 import { logModerationAction } from "@/utils/moderationLogger";
 
-const toUnixSeconds = (value: number | string | Date | null | undefined): number | null => {
+const toUnixSeconds = (
+  value: number | string | Date | null | undefined,
+): number | null => {
   if (value instanceof Date) return Math.floor(value.getTime() / 1000);
   if (typeof value === "number") {
-    return value > 10_000_000_000 ? Math.floor(value / 1000) : Math.floor(value);
+    return value > 10_000_000_000
+      ? Math.floor(value / 1000)
+      : Math.floor(value);
   }
   if (typeof value === "string") {
     const parsed = Date.parse(value);
@@ -43,9 +47,11 @@ onInviteCreate(async (invite, client) => {
   const userId = (invite as any)?.inviter?.id ?? null;
   const channelId = (invite as any)?.channelId ?? null;
   const code = (invite as any)?.code ?? null;
-  const maxAge = typeof (invite as any)?.maxAge === "number" ? (invite as any).maxAge : null;
+  const maxAge =
+    typeof (invite as any)?.maxAge === "number" ? (invite as any).maxAge : null;
 
-  const createdSeconds = toUnixSeconds((invite as any)?.createdAt) ?? Math.floor(Date.now() / 1000);
+  const createdSeconds =
+    toUnixSeconds((invite as any)?.createdAt) ?? Math.floor(Date.now() / 1000);
   const expiresAt = maxAge && maxAge > 0 ? createdSeconds + maxAge : null;
 
   const lines = [

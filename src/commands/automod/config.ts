@@ -28,15 +28,17 @@ export const automodShortenersConfig = defineConfig(
   z.object({
     enabled: z.boolean().default(false),
     resolveFinalUrl: z.boolean().default(false),
-    allowedShorteners: z.array(z.string()).default([
-      "bit.ly",
-      "t.co",
-      "tinyurl.com",
-      "cutt.ly",
-      "is.gd",
-      "rebrand.ly",
-      "goo.gl",
-    ]),
+    allowedShorteners: z
+      .array(z.string())
+      .default([
+        "bit.ly",
+        "t.co",
+        "tinyurl.com",
+        "cutt.ly",
+        "is.gd",
+        "rebrand.ly",
+        "goo.gl",
+      ]),
   }),
   { path: "automod.shorteners" },
 );

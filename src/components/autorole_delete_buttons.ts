@@ -151,7 +151,11 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     session: DeleteSession,
   ) {
     await ctx.deferUpdate();
-    const result = await AutoroleService.purgeRule(ctx.client, session.guildId, session.slug);
+    const result = await AutoroleService.purgeRule(
+      ctx.client,
+      session.guildId,
+      session.slug,
+    );
     ctx.client.logger?.info?.("[autorole] rule purged", {
       guildId: session.guildId,
       ruleName: session.slug,
@@ -164,8 +168,16 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
       title: "Autorole purgado",
       description: `Regla \`${session.slug}\` purgada`,
       fields: [
-        { name: "Razones eliminadas", value: `${result.removedGrants}`, inline: true },
-        { name: "Roles actualizados", value: `${result.roleRevocations}`, inline: true },
+        {
+          name: "Razones eliminadas",
+          value: `${result.removedGrants}`,
+          inline: true,
+        },
+        {
+          name: "Roles actualizados",
+          value: `${result.roleRevocations}`,
+          inline: true,
+        },
       ],
       actorId: ctx.author.id,
     });

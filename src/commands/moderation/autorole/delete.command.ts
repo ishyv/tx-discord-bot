@@ -146,9 +146,15 @@ function scheduleExpiry(
     const row = buildDisabledRow(session.slug);
 
     try {
-      const current = await ctx.client.messages.fetch(messageId, channelId).catch(() => null);
+      const current = await ctx.client.messages
+        .fetch(messageId, channelId)
+        .catch(() => null);
       const embedJson = current?.embeds?.[0]
-        ? [new Embed(current.embeds[0]).setFooter({ text: "Expirado" }).toJSON()]
+        ? [
+            new Embed(current.embeds[0])
+              .setFooter({ text: "Expirado" })
+              .toJSON(),
+          ]
         : undefined;
       await ctx.client.messages.edit(messageId, channelId, {
         components: [row],
@@ -183,4 +189,3 @@ function buildDisabledRow(slug: string): ActionRow<Button> {
 
   return new ActionRow<Button>().addComponents(confirm, purge, cancel);
 }
-

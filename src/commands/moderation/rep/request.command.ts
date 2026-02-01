@@ -1,10 +1,10 @@
 import {
-    createStringOption,
-    Declare,
-    GuildCommandContext,
-    Options,
-    SubCommand,
-    Middlewares,
+  createStringOption,
+  Declare,
+  GuildCommandContext,
+  Options,
+  SubCommand,
+  Middlewares,
 } from "seyfert";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { updateGuildPaths } from "@/db/repositories/guilds";
@@ -16,10 +16,10 @@ import { Guard } from "@/middlewares/guards/decorator";
 import { Features } from "@/modules/features";
 
 const options = {
-    message_link: createStringOption({
-        description: "Enlace al mensaje por el cual solicitas reputacion",
-        required: true,
-    }),
+  message_link: createStringOption({
+    description: "Enlace al mensaje por el cual solicitas reputacion",
+    required: true,
+  }),
 };
 
 /**
@@ -29,92 +29,101 @@ const options = {
  * - Enforces a per-user cooldown (5m base) to avoid spam.
  */
 @Declare({
-    name: "request",
-    description: "Solicitar una revision de reputacion al staff",
+  name: "request",
+  description: "Solicitar una revision de reputacion al staff",
 })
 @Options(options)
 @Guard({
-    guildOnly: true,
-    feature: Features.Reputation,
+  guildOnly: true,
+  feature: Features.Reputation,
 })
 @Middlewares(["guard"])
 @Cooldown({
-    type: CooldownType.User,
-    interval: 300_000, // 5 minutes
-    uses: { default: 1 },
+  type: CooldownType.User,
+  interval: 300_000, // 5 minutes
+  uses: { default: 1 },
 })
 export default class RepRequestCommand extends SubCommand {
-    async run(ctx: GuildCommandContext<typeof options>) {
-        const guildId = ctx.guildId;
-        // Ack early to avoid timeouts when channel fetches or writes are slow.
-        await ctx.deferReply(true);
+  async run(ctx: GuildCommandContext<typeof options>) {
+    const guildId = ctx.guildId;
+    // Ack early to avoid timeouts when channel fetches or writes are slow.
+    await ctx.deferReply(true);
 
-        const repChannelConfig = await getCoreChannel(
-            guildId,
-            CoreChannelNames.RepRequests
-        );
-        const fetched = await fetchStoredChannel(ctx.client, repChannelConfig?.channelId, () =>
-            updateGuildPaths(guildId, {
-                "channels.core.repRequests": null,
-            }),
-        );
+    const repChannelConfig = await getCoreChannel(
+      guildId,
+      CoreChannelNames.RepRequests,
+    );
+    const fetched = await fetchStoredChannel(
+      ctx.client,
+      repChannelConfig?.channelId,
+      () =>
+        updateGuildPaths(guildId, {
+          "channels.core.repRequests": null,
+        }),
+    );
 
-        const repChannel = fetched.channel;
-        if (!fetched.channelId || !repChannel) {
-            await ctx.editResponse({
-                content: "Las solicitudes de reputacion no estan configuradas en este servidor.",
-            });
-            return;
-        }
-
-        if (!repChannel.isTextGuild()) {
-            await ctx.editResponse({
-                content: "El canal de solicitudes de reputacion no es valido o no es de texto.",
-            });
-            return;
-        }
-
-        const { message_link } = ctx.options;
-
-        const linkMatch = message_link.match(
-            /^https?:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)$/
-        );
-
-        if (!linkMatch) {
-            await ctx.editResponse({
-                content: "El enlace proporcionado no es valido. Usa el enlace directo al mensaje.",
-            });
-            return;
-        }
-
-        const [, guildIdFromLink, channelIdFromLink, messageIdFromLink] = linkMatch;
-
-        if (guildIdFromLink !== guildId) {
-            await ctx.editResponse({
-                content: "El enlace no pertenece a este servidor.",
-            });
-            return;
-        }
-
-        const targetChannel = await ctx.client.channels.fetch(channelIdFromLink);
-        if (!targetChannel || !targetChannel.isTextGuild()) {
-            await ctx.editResponse({
-                content: "No se pudo acceder al canal del mensaje proporcionado.",
-            });
-            return;
-        }
-
-        try {
-            const targetMessage = await targetChannel.messages.fetch(messageIdFromLink);
-            await sendReputationRequest(repChannel, targetMessage, ctx.author);
-
-            await ctx.editResponse({
-                content: "Tu solicitud de reputacion ha sido enviada al equipo de moderacion.",
-            });
-        } catch (error) {
-            await ctx.editResponse({
-                content: "No se pudo encontrar el mensaje o no tengo permisos para leerlo.",
-            });
-        }
+    const repChannel = fetched.channel;
+    if (!fetched.channelId || !repChannel) {
+      await ctx.editResponse({
+        content:
+          "Las solicitudes de reputacion no estan configuradas en este servidor.",
+      });
+      return;
     }
+
+    if (!repChannel.isTextGuild()) {
+      await ctx.editResponse({
+        content:
+          "El canal de solicitudes de reputacion no es valido o no es de texto.",
+      });
+      return;
+    }
+
+    const { message_link } = ctx.options;
+
+    const linkMatch = message_link.match(
+      /^https?:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)$/,
+    );
+
+    if (!linkMatch) {
+      await ctx.editResponse({
+        content:
+          "El enlace proporcionado no es valido. Usa el enlace directo al mensaje.",
+      });
+      return;
+    }
+
+    const [, guildIdFromLink, channelIdFromLink, messageIdFromLink] = linkMatch;
+
+    if (guildIdFromLink !== guildId) {
+      await ctx.editResponse({
+        content: "El enlace no pertenece a este servidor.",
+      });
+      return;
+    }
+
+    const targetChannel = await ctx.client.channels.fetch(channelIdFromLink);
+    if (!targetChannel || !targetChannel.isTextGuild()) {
+      await ctx.editResponse({
+        content: "No se pudo acceder al canal del mensaje proporcionado.",
+      });
+      return;
+    }
+
+    try {
+      const targetMessage =
+        await targetChannel.messages.fetch(messageIdFromLink);
+      await sendReputationRequest(repChannel, targetMessage, ctx.author);
+
+      await ctx.editResponse({
+        content:
+          "Tu solicitud de reputacion ha sido enviada al equipo de moderacion.",
+      });
+    } catch (error) {
+      await ctx.editResponse({
+        content:
+          "No se pudo encontrar el mensaje o no tengo permisos para leerlo.",
+      });
+    }
+  }
 }

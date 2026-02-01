@@ -60,7 +60,9 @@ function buildOverrideDeniedEmbed(
   ];
 
   if (decision.roleKey) {
-    lines.push(`Override aplicado por la clave de rol \`${decision.roleKey}\`.`);
+    lines.push(
+      `Override aplicado por la clave de rol \`${decision.roleKey}\`.`,
+    );
   }
 
   return new Embed({

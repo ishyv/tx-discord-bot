@@ -7,16 +7,11 @@ import {
   SubCommand,
   Middlewares,
 } from "seyfert";
-import {
-  adjustUserReputation,
-} from "@/db/repositories/users";
+import { adjustUserReputation } from "@/db/repositories/users";
 import { recordReputationChange } from "@/systems/tops";
 import { AutoroleService } from "@/modules/autorole";
 import { logModerationAction } from "@/utils/moderationLogger";
-import {
-  normalizeRepAmount,
-  buildRepChangeMessage,
-} from "./shared";
+import { normalizeRepAmount, buildRepChangeMessage } from "./shared";
 import { Guard } from "@/middlewares/guards/decorator";
 import { Features } from "@/modules/features";
 
@@ -72,14 +67,19 @@ export default class RepRemoveCommand extends SubCommand {
       content: buildRepChangeMessage("remove", amount, target.id, total),
     });
 
-    await logModerationAction(ctx.client, guildId, {
-      title: "Reputación removida",
-      description: `Se removieron ${amount} puntos de <@${target.id}>`,
-      fields: [
-        { name: "Total", value: `${total}`, inline: true },
-        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
-      ],
-      actorId: ctx.author.id,
-    }, "pointsLog");
+    await logModerationAction(
+      ctx.client,
+      guildId,
+      {
+        title: "Reputación removida",
+        description: `Se removieron ${amount} puntos de <@${target.id}>`,
+        fields: [
+          { name: "Total", value: `${total}`, inline: true },
+          { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+        ],
+        actorId: ctx.author.id,
+      },
+      "pointsLog",
+    );
   }
 }

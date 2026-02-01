@@ -32,7 +32,9 @@ import { buildAIResponse } from "./response";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
-  console.warn("[ai-service] GEMINI_API_KEY not set - AI features will return default responses");
+  console.warn(
+    "[ai-service] GEMINI_API_KEY not set - AI features will return default responses",
+  );
 }
 
 const genAI = new GoogleGenAI({

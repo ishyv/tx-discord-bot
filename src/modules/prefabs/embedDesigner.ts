@@ -53,7 +53,10 @@ export interface EmbedDesignerOptions {
   fields?: EmbedFieldDefinition[];
   submitLabel?: string;
   cancelLabel?: string;
-  onSubmit: (payload: { data: EmbedDraft; embed: Embed }) => Promise<void> | void;
+  onSubmit: (payload: {
+    data: EmbedDraft;
+    embed: Embed;
+  }) => Promise<void> | void;
 }
 
 interface EmbedDesignerSession {
@@ -81,7 +84,6 @@ const defaultDraft: EmbedDraft = {
   fields: [],
 };
 
-
 function buildEmbedFromDraft(draft: EmbedDraft): Embed {
   const embed = new Embed()
     .setTitle(draft.title || " ")
@@ -93,7 +95,11 @@ function buildEmbedFromDraft(draft: EmbedDraft): Embed {
   if (draft.fields.length > 0) {
     const sanitized = draft.fields
       .filter((f) => f.value && f.label)
-      .map((f) => ({ name: f.label, value: f.value, inline: f.inline ?? false }));
+      .map((f) => ({
+        name: f.label,
+        value: f.value,
+        inline: f.inline ?? false,
+      }));
     if (sanitized.length > 0) {
       embed.addFields(sanitized);
     }
@@ -139,7 +145,9 @@ function upsertFieldDraft(
   return next;
 }
 
-function buildSelectOptions(defs: EmbedFieldDefinition[]): StringSelectOption[] {
+function buildSelectOptions(
+  defs: EmbedFieldDefinition[],
+): StringSelectOption[] {
   const options = [
     new StringSelectOption({ label: "Título", value: "title" }),
     new StringSelectOption({ label: "Descripción", value: "description" }),
@@ -148,7 +156,9 @@ function buildSelectOptions(defs: EmbedFieldDefinition[]): StringSelectOption[] 
   ];
 
   for (const def of defs) {
-    options.push(new StringSelectOption({ label: def.label, value: `field:${def.key}` }));
+    options.push(
+      new StringSelectOption({ label: def.label, value: `field:${def.key}` }),
+    );
   }
 
   return options;
@@ -244,7 +254,8 @@ export async function startEmbedDesigner(
   ctx: CommandContext,
   options: EmbedDesignerOptions,
 ): Promise<void> {
-  const fieldDefs = options.fields && options.fields.length > 0 ? options.fields : [];
+  const fieldDefs =
+    options.fields && options.fields.length > 0 ? options.fields : [];
 
   const draft: EmbedDraft = {
     ...defaultDraft,
@@ -270,7 +281,8 @@ export async function startEmbedDesigner(
   const messageId = (sent as any)?.id as string | undefined;
   if (!messageId) {
     await ctx.write({
-      content: "No pude iniciar el diseñador de embeds (mensaje no disponible).",
+      content:
+        "No pude iniciar el diseñador de embeds (mensaje no disponible).",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -302,22 +314,20 @@ export async function startEmbedDesigner(
       const modal = new Modal().setTitle("Editar embed");
 
       if (selection === "color") {
-        modal
-          .setCustomId(`embed:modal:${messageId}:color`)
-          .addComponents(
-            new ActionRow<TextInput>().addComponents(
-              new TextInput()
-                .setCustomId("value")
-                .setLabel("Color hex (ej: #00ffaa)")
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false)
-                .setPlaceholder(
-                  session.draft.color
-                    ? `Actual: ${session.draft.color.toString(16)}`
-                    : "#00ffaa",
-                ),
-            ),
-          );
+        modal.setCustomId(`embed:modal:${messageId}:color`).addComponents(
+          new ActionRow<TextInput>().addComponents(
+            new TextInput()
+              .setCustomId("value")
+              .setLabel("Color hex (ej: #00ffaa)")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setPlaceholder(
+                session.draft.color
+                  ? `Actual: ${session.draft.color.toString(16)}`
+                  : "#00ffaa",
+              ),
+          ),
+        );
       } else if (
         selection === "title" ||
         selection === "description" ||
@@ -337,7 +347,9 @@ export async function startEmbedDesigner(
                       : "Footer",
                 )
                 .setStyle(
-                  selection === "description" ? TextInputStyle.Paragraph : TextInputStyle.Short,
+                  selection === "description"
+                    ? TextInputStyle.Paragraph
+                    : TextInputStyle.Short,
                 )
                 .setRequired(selection !== "footer")
                 .setPlaceholder("Ingresa el texto"),
@@ -346,7 +358,11 @@ export async function startEmbedDesigner(
       } else if (selection.startsWith("field:")) {
         const key = selection.slice("field:".length);
         const def = session.fieldDefs.find((f) => f.key === key);
-        const current = resolveFieldDraft(session.draft, session.fieldDefs, key);
+        const current = resolveFieldDraft(
+          session.draft,
+          session.fieldDefs,
+          key,
+        );
         modal
           .setCustomId(`embed:modal:${messageId}:field:${key}`)
           .addComponents(
@@ -356,7 +372,9 @@ export async function startEmbedDesigner(
                 .setLabel(def?.label ?? key)
                 .setStyle(TextInputStyle.Paragraph)
                 .setRequired(def?.required ?? false)
-                .setPlaceholder(def?.placeholder ?? current.value ?? "Ingresa el contenido"),
+                .setPlaceholder(
+                  def?.placeholder ?? current.value ?? "Ingresa el contenido",
+                ),
             ),
           );
       } else {
@@ -400,7 +418,10 @@ export async function startEmbedDesigner(
       try {
         await session.onSubmit({ data: session.draft, embed });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "No se pudo procesar el embed.";
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No se pudo procesar el embed.";
         await interactionCtx.write({
           content: message,
           flags: MessageFlags.Ephemeral,
@@ -533,7 +554,10 @@ export async function startEmbedDesigner(
       }
 
       const nextFields = session.draft.fields.slice(0, -1);
-      const next = { ...session, draft: { ...session.draft, fields: nextFields } };
+      const next = {
+        ...session,
+        draft: { ...session.draft, fields: nextFields },
+      };
       sessions.set(messageId, next);
       await renderSession(interactionCtx, next);
     },
@@ -567,7 +591,9 @@ export async function startEmbedDesigner(
   });
 }
 
-export function getEmbedDesignerSession(id: string): EmbedDesignerSession | null {
+export function getEmbedDesignerSession(
+  id: string,
+): EmbedDesignerSession | null {
   return sessions.get(id) ?? null;
 }
 

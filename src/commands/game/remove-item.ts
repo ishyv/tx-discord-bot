@@ -98,16 +98,20 @@ export default class RemoveItemCommand extends Command {
       const error = result.error;
 
       const errorMessages: Record<string, string> = {
-        INSUFFICIENT_PERMISSIONS: "❌ No tienes permisos para realizar esta acción.",
+        INSUFFICIENT_PERMISSIONS:
+          "❌ No tienes permisos para realizar esta acción.",
         ITEM_NOT_FOUND: "El item especificado no existe.",
         TARGET_NOT_FOUND: "El usuario objetivo no existe.",
-        TARGET_BLOCKED: "⛔ La cuenta del usuario tiene restricciones temporales.",
-        TARGET_BANNED: "🚫 La cuenta del usuario tiene restricciones permanentes.",
+        TARGET_BLOCKED:
+          "⛔ La cuenta del usuario tiene restricciones temporales.",
+        TARGET_BANNED:
+          "🚫 La cuenta del usuario tiene restricciones permanentes.",
         INVALID_QUANTITY: error.message || "❌ Cantidad inválida.",
         UPDATE_FAILED: "❌ Error al actualizar el inventario.",
       };
 
-      const message = errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+      const message =
+        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
 
       await ctx.write({
         content: message,

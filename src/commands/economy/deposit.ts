@@ -1,13 +1,16 @@
-import { Command, Declare, Options, createStringOption, type CommandContext } from "seyfert";
+import {
+  Command,
+  Declare,
+  Options,
+  createStringOption,
+  type CommandContext,
+} from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { UserStore } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { EmbedColors } from "seyfert/lib/common";
 import { BindDisabled, Features } from "@/modules/features";
-import {
-  parseAmountOrReply,
-  replyMissingUser,
-} from "./shared";
+import { parseAmountOrReply, replyMissingUser } from "./shared";
 import { currencyTransaction } from "@/modules/economy";
 
 const options = {
@@ -51,7 +54,8 @@ export default class DepositCommand extends Command {
 
     if (amount > coins.hand) {
       await ctx.write({
-        content: "No tienes suficientes coins en mano para depositar esa cantidad.",
+        content:
+          "No tienes suficientes coins en mano para depositar esa cantidad.",
         flags: MessageFlags.Ephemeral,
       });
       return;

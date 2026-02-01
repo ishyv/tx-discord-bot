@@ -27,7 +27,10 @@ import {
   type Suite,
 } from "./_utils";
 
-const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupUser = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await UsersRepo.deleteUser(id);
     if (res.isErr()) return;
@@ -71,7 +74,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject non-admin");
         const error = result.error as ItemMutationError;
-        assertEqual(error.code, "INSUFFICIENT_PERMISSIONS", "error should be INSUFFICIENT_PERMISSIONS");
+        assertEqual(
+          error.code,
+          "INSUFFICIENT_PERMISSIONS",
+          "error should be INSUFFICIENT_PERMISSIONS",
+        );
       },
     },
 
@@ -101,7 +108,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject invalid item ID");
         const error = result.error as ItemMutationError;
-        assertEqual(error.code, "ITEM_NOT_FOUND", "error should be ITEM_NOT_FOUND");
+        assertEqual(
+          error.code,
+          "ITEM_NOT_FOUND",
+          "error should be ITEM_NOT_FOUND",
+        );
       },
     },
 
@@ -133,8 +144,16 @@ export const suite: Suite = {
 
         const adjustment = assertOk(result);
         assertEqual(adjustment.afterQuantity, 50, "should have 50 items");
-        assertEqual(adjustment.capacity.currentSlots, 1, "stackable items use 1 slot");
-        assertEqual(adjustment.capacity.currentWeight, 50, "weight should be 50 (1x50)");
+        assertEqual(
+          adjustment.capacity.currentSlots,
+          1,
+          "stackable items use 1 slot",
+        );
+        assertEqual(
+          adjustment.capacity.currentWeight,
+          50,
+          "weight should be 50 (1x50)",
+        );
       },
     },
 
@@ -166,8 +185,16 @@ export const suite: Suite = {
 
         const adjustment = assertOk(result);
         assertEqual(adjustment.afterQuantity, 3, "should have 3 items");
-        assertEqual(adjustment.capacity.currentSlots, 3, "non-stackable items use 3 slots");
-        assertEqual(adjustment.capacity.currentWeight, 15, "weight should be 15 (5x3)");
+        assertEqual(
+          adjustment.capacity.currentSlots,
+          3,
+          "non-stackable items use 3 slots",
+        );
+        assertEqual(
+          adjustment.capacity.currentWeight,
+          15,
+          "weight should be 15 (5x3)",
+        );
       },
     },
 
@@ -198,9 +225,17 @@ export const suite: Suite = {
           mockCheckAdminTrue,
         );
 
-        assertEqual(result.isErr(), true, "should reject weight limit exceeded");
+        assertEqual(
+          result.isErr(),
+          true,
+          "should reject weight limit exceeded",
+        );
         const error = result.error as ItemMutationError;
-        assertEqual(error.code, "CAPACITY_EXCEEDED", "error should be CAPACITY_EXCEEDED");
+        assertEqual(
+          error.code,
+          "CAPACITY_EXCEEDED",
+          "error should be CAPACITY_EXCEEDED",
+        );
       },
     },
     {
@@ -228,8 +263,16 @@ export const suite: Suite = {
         );
 
         const adjustment = assertOk(result);
-        assertEqual(adjustment.afterQuantity, 250, "should allow with force flag");
-        assertEqual(adjustment.capacity.weightExceeded, true, "should mark weight as exceeded");
+        assertEqual(
+          adjustment.afterQuantity,
+          250,
+          "should allow with force flag",
+        );
+        assertEqual(
+          adjustment.capacity.weightExceeded,
+          true,
+          "should mark weight as exceeded",
+        );
       },
     },
 
@@ -295,9 +338,17 @@ export const suite: Suite = {
           mockCheckAdminTrue,
         );
 
-        assertEqual(result.isErr(), true, "should reject removing more than available");
+        assertEqual(
+          result.isErr(),
+          true,
+          "should reject removing more than available",
+        );
         const error = result.error as ItemMutationError;
-        assertEqual(error.code, "INVALID_QUANTITY", "error should be INVALID_QUANTITY");
+        assertEqual(
+          error.code,
+          "INVALID_QUANTITY",
+          "error should be INVALID_QUANTITY",
+        );
       },
     },
     {
@@ -350,7 +401,13 @@ export const suite: Suite = {
         cleanupUser(cleanup, targetId);
 
         const { account } = assertOk(await economyAccountRepo.ensure(targetId));
-        assertOk(await economyAccountRepo.updateStatus(targetId, "blocked", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            targetId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         const result = await itemMutationService.adjustItemQuantity(
           {
@@ -364,7 +421,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject blocked target");
         const error = result.error as ItemMutationError;
-        assertEqual(error.code, "TARGET_BLOCKED", "error should be TARGET_BLOCKED");
+        assertEqual(
+          error.code,
+          "TARGET_BLOCKED",
+          "error should be TARGET_BLOCKED",
+        );
       },
     },
 
@@ -405,9 +466,16 @@ export const suite: Suite = {
         assertEqual(audit.entries.length >= 1, true, "should have audit entry");
 
         const entry = audit.entries[0];
-        assertEqual(entry.itemData?.itemId, "palo", "audit should have item ID");
+        assertEqual(
+          entry.itemData?.itemId,
+          "palo",
+          "audit should have item ID",
+        );
         assertEqual(entry.itemData?.quantity, 10, "audit should have quantity");
-        assert(entry.metadata?.correlationId, "audit should have correlation ID");
+        assert(
+          entry.metadata?.correlationId,
+          "audit should have correlation ID",
+        );
       },
     },
 
@@ -438,12 +506,16 @@ export const suite: Suite = {
 
         // All should succeed
         for (const result of results) {
-          assertEqual(result.isOk(), true, "all concurrent grants should succeed");
+          assertEqual(
+            result.isOk(),
+            true,
+            "all concurrent grants should succeed",
+          );
         }
 
         // Final quantity should be 50
         const user = assertOk(await UsersRepo.findUser(targetId));
-        const finalQty = ((user!.inventory as ItemInventory).palo?.quantity) ?? 0;
+        const finalQty = (user!.inventory as ItemInventory).palo?.quantity ?? 0;
         assertEqual(finalQty, 50, "final quantity should be 50");
       },
     },

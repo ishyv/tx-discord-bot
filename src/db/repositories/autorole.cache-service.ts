@@ -21,10 +21,12 @@ const buildTallyId = (key: ReactionTallyKey) =>
   autoroleKeys.tally(key.guildId, key.messageId, key.emojiKey);
 
 export const trackPresence = (key: ReactionPresenceKey) => markPresence(key);
-export const clearTrackedPresence = (key: ReactionPresenceKey) => clearPresence(key);
+export const clearTrackedPresence = (key: ReactionPresenceKey) =>
+  clearPresence(key);
 
-export const createRule = (input: Parameters<typeof AutoroleService.createRule>[0]) =>
-  AutoroleService.createRule(input);
+export const createRule = (
+  input: Parameters<typeof AutoroleService.createRule>[0],
+) => AutoroleService.createRule(input);
 
 export const deleteRule = (guildId: string, name: string) =>
   AutoroleService.deleteRule(guildId, name);
@@ -47,12 +49,11 @@ export const decrementReactionTally = (
   AutoroleService.decrementReactionTally(key);
 
 export const loadRulesIntoCache = () => loadRulesIntoCacheFromCache();
-export const refreshGuildRules = (guildId: string) => refreshGuildRulesFromCache(guildId);
+export const refreshGuildRules = (guildId: string) =>
+  refreshGuildRulesFromCache(guildId);
 
-export const drainMessageState = (
-  guildId: string,
-  messageId: string,
-) => AutoroleService.drainMessageState(guildId, messageId);
+export const drainMessageState = (guildId: string, messageId: string) =>
+  AutoroleService.drainMessageState(guildId, messageId);
 
 export const readReactionTally = async (
   key: ReactionTallyKey,
@@ -66,7 +67,9 @@ export const readReactionTally = async (
   return tally;
 };
 
-export const removeReactionTally = async (key: ReactionTallyKey): Promise<void> => {
+export const removeReactionTally = async (
+  key: ReactionTallyKey,
+): Promise<void> => {
   const id = buildTallyId(key);
   await AutoRoleTalliesStore.delete(id);
   deleteTally(key);

@@ -1,12 +1,7 @@
 /**
  * Autorole List Command
  */
-import {
-  Declare,
-  Embed,
-  SubCommand,
-  type GuildCommandContext,
-} from "seyfert";
+import { Declare, Embed, SubCommand, type GuildCommandContext } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
 import { refreshGuildRules } from "@/modules/autorole";

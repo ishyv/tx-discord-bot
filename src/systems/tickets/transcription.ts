@@ -1,14 +1,14 @@
 /**
- * Generador de transcripciones HTML para canales de tickets.
+ * HTML transcription generator for ticket channels.
  *
- * Encaje: usado por el botón de cierre para adjuntar historial al canal de logs
- * antes de borrar el ticket. Best-effort: si falla, el cierre sigue.
- * Dependencias: API de mensajes de Seyfert (paginado manual) y `Buffer`.
- * Invariantes: recorre mensajes en bloques de 100 hacia atrás hasta agotar; ordena
- * por timestamp ascendente antes de renderizar; solo serializa contenido de texto
- * (no adjuntos ni embeds ricos).
- * Gotchas: puede ser costoso en canales grandes; sin rate-limit interno. Si el
- * canal se borra durante la lectura, se devuelve la transcripción parcial.
+ * Context: Used by the close button to attach history to the logs channel
+ * before deleting the ticket. Best-effort: if it fails, the closure continues.
+ * Dependencies: Seyfert message API (manual pagination) and `Buffer`.
+ * Invariants: Traverses messages in chunks of 100 backwards until exhausted; sorts
+ * by ascending timestamp before rendering; only serializes text content
+ * (no attachments or rich embeds).
+ * Gotchas: Can be expensive in large channels; no internal rate-limit. If the
+ * channel is deleted during reading, partial transcription is returned.
  */
 import type { UsingClient } from "seyfert";
 
@@ -22,14 +22,14 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Genera una transcripción HTML de un canal de ticket.
+ * Generates an HTML transcription of a ticket channel.
  *
- * Parámetros: `client` con permisos de lectura; `channelId` objetivo.
- * Retorno: `Buffer` con HTML listo para adjuntar.
- * Side effects: múltiples llamadas a `messages.list` paginando de 100 en 100.
- * Invariantes: ordena por timestamp antes de renderizar; escapa HTML para evitar
- * inyección; omite adjuntos/embeds.
- * Gotchas: canales muy largos => tiempo/memoria; no hay tope de mensajes.
+ * Parameters: `client` with read permissions; target `channelId`.
+ * Returns: `Buffer` with HTML ready to attach.
+ * Side effects: multiple calls to `messages.list` paginating 100 at a time.
+ * Invariants: sorts by timestamp before rendering; escapes HTML to prevent
+ * injection; omits attachments/embeds.
+ * Gotchas: very long channels => time/memory; no message cap.
  */
 export async function create_transcription(
   client: UsingClient,
@@ -62,7 +62,7 @@ export async function create_transcription(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transcripción de Ticket</title>
+    <title>Ticket Transcription</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
         .message { margin-bottom: 15px; padding: 10px; background-color: #fff; border-radius: 5px; }    
@@ -72,11 +72,11 @@ export async function create_transcription(
     </style>
 </head>
 <body>
-    <h1>Transcripción de Ticket</h1>
+    <h1>Ticket Transcription</h1>
     ${messages
       .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
       .map((msg) => {
-        const author = escapeHtml(msg.author?.username || "Desconocido");
+        const author = escapeHtml(msg.author?.username || "Unknown");
         const timestamp = escapeHtml(
           new Date(msg.timestamp ?? 0).toLocaleString(),
         );

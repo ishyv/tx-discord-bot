@@ -90,7 +90,8 @@ export function validateCurrencyIdDetailed(
   if (!SAFE_CURRENCY_ID_PATTERN.test(rawId)) {
     return {
       valid: false,
-      reason: "Currency ID can only contain letters, numbers, hyphens, and underscores",
+      reason:
+        "Currency ID can only contain letters, numbers, hyphens, and underscores",
     };
   }
 

@@ -1,15 +1,14 @@
 /**
- * Propósito: ofrecer una API única para enviar logs de servidor sin duplicar
- * lógica de resolución de canales o armado de embeds.
- * Encaje: capa de orquestación sobre los stores/config de guild; los features
- * (moderación, tickets, puntos) llaman a métodos de alto nivel.
- * Dependencias clave: `guild-channels` (fuentes primarias), `CHANNELS_ID`
- * (fallbacks) y `updateGuildPaths` para sanear referencias rotas.
- * Invariantes: si existe `guildId`, siempre se intenta usar canales core antes
- * de caer al fallback; los embeds siempre llevan `timestamp` y color por
- * defecto `Blurple`.
- * Gotchas: si la API devuelve error de canal desconocido, se limpia la ruta
- * configurada; esto puede ocultar problemas de permisos si no se monitorea.
+ * Purpose: Provide a single API for sending server logs without duplicating
+ * channel resolution or embed building logic.
+ * Context: Orchestration layer over guild stores/config; features
+ * (moderation, tickets, points) call high-level methods.
+ * Key Dependencies: `guild-channels` (primary sources), `CHANNELS_ID`
+ * (fallbacks), and `updateGuildPaths` to clean up broken references.
+ * Invariants: If `guildId` exists, core channels are always attempted before
+ * falling back; embeds always include a `timestamp` and default `Blurple` color.
+ * Gotchas: If the API returns an unknown channel error, the configured path
+ * is cleared; this may hide permission issues if not monitored.
  */
 import { Embed, type UsingClient } from "seyfert";
 import type { ColorResolvable } from "seyfert/lib/common";
@@ -39,14 +38,14 @@ type ResolvedChannel = {
 };
 
 /**
- * Logger desacoplado de features; resuelve canales y arma embeds seguros.
+ * Logger decoupled from features; resolves channels and builds safe embeds.
  *
- * Invariantes:
- * - `init` debe llamarse antes de usar; almacena `client` y `guildId`.
- * - Las resoluciones de canal preferirán core->managed->fallback constantes.
- * - Si un canal core desaparece, se limpia en DB para evitar retrys infinitos.
- * RISK: en ausencia de `guildId`, usa los ids por defecto globales; validar que
- * existan para el entorno (dev/stg/prod).
+ * Invariants:
+ * - `init` must be called before use; it stores `client` and `guildId`.
+ * - Channel resolutions prefer core -> managed -> constant fallback.
+ * - If a core channel disappears, it is cleared in the DB to avoid infinite retries.
+ * RISK: In the absence of `guildId`, it uses global default IDs; validate that
+ * they exist for the environment (dev/stg/prod).
  */
 export class GuildLogger {
   private client!: UsingClient;
@@ -75,12 +74,12 @@ export class GuildLogger {
   }
 
   /**
-   * Resuelve el canal objetivo siguiendo prioridad core -> fallback.
+   * Resolves the target channel following core -> fallback priority.
    *
-   * WHY: preferimos canales configurados por guild; si están corruptos se
-   * limpian para no repetir errores en cada log.
-   * RISK: si `CHANNELS_ID` no tiene fallback para la clave, los logs se pierden
-   * silenciosamente (`source: none`). Monitorear warnings para claves faltantes.
+   * WHY: We prefer channels configured per guild; if they are corrupt, they
+   * are cleared to avoid repeating errors in every log.
+   * RISK: If `CHANNELS_ID` does not have a fallback for the key, logs are lost
+   * silently (`source: none`). Monitor warnings for missing keys.
    */
   private async resolveChannel(
     key: keyof typeof CHANNELS_ID,
@@ -128,11 +127,11 @@ export class GuildLogger {
   }
 
   /**
-   * Envía un log al canal resuelto.
+   * Sends a log to the resolved channel.
    *
-   * Propósito: punto único de envío para aplicar fallback y saneamiento.
-   * RISK: si el canal core falla, se limpia en DB para evitar retrys; si el
-   * error era temporal de permisos, se pierde la referencia hasta reconfigurar.
+   * Purpose: Single point of sending to apply fallback and cleanup.
+   * RISK: If the core channel fails, it is cleared in the DB to avoid retries; if 
+   * the error was temporary permission-related, the reference is lost until reconfigured.
    */
   private async sendLog(
     key: keyof typeof CHANNELS_ID,

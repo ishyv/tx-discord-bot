@@ -34,7 +34,8 @@ import { logModerationAction } from "@/utils/moderationLogger";
 const asUserTag = (userId: string | null | undefined): string =>
   userId ? `<@${userId}>` : "Usuario desconocido";
 
-const formatTimestampNow = (): string => `<t:${Math.floor(Date.now() / 1000)}:f>`;
+const formatTimestampNow = (): string =>
+  `<t:${Math.floor(Date.now() / 1000)}:f>`;
 
 onMessageDelete(async (payload, client) => {
   const guildId = (payload as any).guildId ?? (payload as any).guild_id;
@@ -131,15 +132,11 @@ onChannelCreate(async (...args: any[]) => {
   const guildId = channel?.guildId;
   if (!guildId) return;
 
-  await logModerationAction(
-    client,
-    guildId,
-    {
-      title: "Canal creado",
-      description: `Se creó el canal \`${channel?.name ?? channel?.id}\` (<#${channel?.id}>)`,
-      color: EmbedColors.Green,
-    },
-  );
+  await logModerationAction(client, guildId, {
+    title: "Canal creado",
+    description: `Se creó el canal \`${channel?.name ?? channel?.id}\` (<#${channel?.id}>)`,
+    color: EmbedColors.Green,
+  });
 });
 
 onChannelDelete(async (...args: any[]) => {
@@ -147,15 +144,11 @@ onChannelDelete(async (...args: any[]) => {
   const guildId = channel?.guildId;
   if (!guildId) return;
 
-  await logModerationAction(
-    client,
-    guildId,
-    {
-      title: "Canal eliminado",
-      description: `Se eliminó el canal \`${channel?.name ?? channel?.id}\`.`,
-      color: EmbedColors.Red,
-    },
-  );
+  await logModerationAction(client, guildId, {
+    title: "Canal eliminado",
+    description: `Se eliminó el canal \`${channel?.name ?? channel?.id}\`.`,
+    color: EmbedColors.Red,
+  });
 });
 
 onChannelUpdate(async (...args: any[]) => {
@@ -171,15 +164,11 @@ onChannelUpdate(async (...args: any[]) => {
   const afterNSFW = Boolean(newChannel?.nsfw);
 
   if (beforeName !== afterName) {
-    await logModerationAction(
-      client,
-      guildId,
-      {
-        title: "Canal renombrado",
-        description: `\`${beforeName}\` -> \`${afterName}\``,
-        color: EmbedColors.Blurple,
-      },
-    );
+    await logModerationAction(client, guildId, {
+      title: "Canal renombrado",
+      description: `\`${beforeName}\` -> \`${afterName}\``,
+      color: EmbedColors.Blurple,
+    });
   }
 
   if (beforeSlowmode !== afterSlowmode) {
@@ -199,16 +188,18 @@ onChannelUpdate(async (...args: any[]) => {
       title: "NSFW actualizado",
       description: [
         `Canal: <#${newChannel?.id ?? oldChannel?.id}>`,
-        beforeNSFW
-          ? "Se desactivo la marca NSFW"
-          : "Se activo la marca NSFW",
+        beforeNSFW ? "Se desactivo la marca NSFW" : "Se activo la marca NSFW",
       ].join("\n"),
       color: afterNSFW ? EmbedColors.Red : EmbedColors.Green,
     });
   }
 
-  const beforePermissions = JSON.stringify(oldChannel?.permissionOverwrites ?? []);
-  const afterPermissions = JSON.stringify(newChannel?.permissionOverwrites ?? []);
+  const beforePermissions = JSON.stringify(
+    oldChannel?.permissionOverwrites ?? [],
+  );
+  const afterPermissions = JSON.stringify(
+    newChannel?.permissionOverwrites ?? [],
+  );
   if (beforePermissions !== afterPermissions) {
     await logModerationAction(client, guildId, {
       title: "Permisos del canal actualizados",
@@ -224,14 +215,15 @@ onGuildMemberAdd(async (...args: any[]) => {
   if (!guildId) return;
 
   const userId = member?.user?.id ?? member?.id ?? null;
-  const joinedAt = member?.joinedAt ? `<t:${Math.floor(new Date(member.joinedAt).getTime() / 1000)}:f>` : formatTimestampNow();
+  const joinedAt = member?.joinedAt
+    ? `<t:${Math.floor(new Date(member.joinedAt).getTime() / 1000)}:f>`
+    : formatTimestampNow();
 
   await logModerationAction(client, guildId, {
     title: "Miembro se unio",
-    description: [
-      `Usuario: ${asUserTag(userId)}`,
-      `Ingreso: ${joinedAt}`,
-    ].join("\n"),
+    description: [`Usuario: ${asUserTag(userId)}`, `Ingreso: ${joinedAt}`].join(
+      "\n",
+    ),
     color: EmbedColors.Green,
   });
 });
@@ -323,8 +315,12 @@ onGuildMemberUpdate(async (...args: any[]) => {
       description: [
         `Usuario: ${asUserTag(userId)}`,
         addedRoles.length ? `Agregados: ${renderRoleList(addedRoles)}` : null,
-        removedRoles.length ? `Removidos: ${renderRoleList(removedRoles)}` : null,
-      ].filter(Boolean).join("\n"),
+        removedRoles.length
+          ? `Removidos: ${renderRoleList(removedRoles)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
       color: EmbedColors.Blurple,
     });
   }
@@ -343,10 +339,12 @@ onGuildMemberUpdate(async (...args: any[]) => {
     });
   }
 
-  const oldTimeout = (oldMember as any)?.communicationDisabledUntilTimestamp
-    ?? (oldMember as any)?.communicationDisabledUntil;
-  const newTimeout = (newMember as any)?.communicationDisabledUntilTimestamp
-    ?? (newMember as any)?.communicationDisabledUntil;
+  const oldTimeout =
+    (oldMember as any)?.communicationDisabledUntilTimestamp ??
+    (oldMember as any)?.communicationDisabledUntil;
+  const newTimeout =
+    (newMember as any)?.communicationDisabledUntilTimestamp ??
+    (newMember as any)?.communicationDisabledUntil;
 
   if (oldTimeout !== newTimeout) {
     const toUnix = (value: any): number | null => {
@@ -389,13 +387,23 @@ onGuildRoleUpdate(async (...args: any[]) => {
 
   const changes: string[] = [];
   if (oldRole?.name !== newRole?.name) {
-    changes.push(`Nombre: \`${oldRole?.name ?? "?"}\` -> \`${newRole?.name ?? "?"}\``);
+    changes.push(
+      `Nombre: \`${oldRole?.name ?? "?"}\` -> \`${newRole?.name ?? "?"}\``,
+    );
   }
   if (oldRole?.color !== newRole?.color) {
-    changes.push(`Color: ${oldRole?.color ?? "sin color"} -> ${newRole?.color ?? "sin color"}`);
+    changes.push(
+      `Color: ${oldRole?.color ?? "sin color"} -> ${newRole?.color ?? "sin color"}`,
+    );
   }
-  const beforePerms = (oldRole?.permissions as any)?.bitfield ?? (oldRole?.permissions as any)?.bitField ?? oldRole?.permissions;
-  const afterPerms = (newRole?.permissions as any)?.bitfield ?? (newRole?.permissions as any)?.bitField ?? newRole?.permissions;
+  const beforePerms =
+    (oldRole?.permissions as any)?.bitfield ??
+    (oldRole?.permissions as any)?.bitField ??
+    oldRole?.permissions;
+  const afterPerms =
+    (newRole?.permissions as any)?.bitfield ??
+    (newRole?.permissions as any)?.bitField ??
+    newRole?.permissions;
   if (beforePerms !== afterPerms) {
     changes.push("Permisos actualizados");
   }
@@ -433,7 +441,8 @@ onInviteDelete(async (...args: any[]) => {
   if (!guildId) return;
 
   const code = (invite as any)?.code ?? "desconocida";
-  const channelId = (invite as any)?.channelId ?? (invite as any)?.channel?.id ?? null;
+  const channelId =
+    (invite as any)?.channelId ?? (invite as any)?.channel?.id ?? null;
 
   await logModerationAction(client, guildId, {
     title: "Invitacion eliminada o expirada",

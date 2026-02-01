@@ -6,7 +6,11 @@
  *
  * Alcance: solo tipos/interfaces; no contiene implementaciones ni side-effects.
  */
-import type { FinishReason, GenerateContentResponse, Modality } from "@google/genai";
+import type {
+  FinishReason,
+  GenerateContentResponse,
+  Modality,
+} from "@google/genai";
 import type { Message } from "@/utils/userMemory";
 import type { AIProviderId } from "./constants";
 
@@ -51,5 +55,8 @@ export interface AIProvider {
   label: string;
   defaultModel: string;
   models: readonly string[];
-  generate(messages: Message[], options?: AIRequestOptions): Promise<AIResponse>;
+  generate(
+    messages: Message[],
+    options?: AIRequestOptions,
+  ): Promise<AIResponse>;
 }

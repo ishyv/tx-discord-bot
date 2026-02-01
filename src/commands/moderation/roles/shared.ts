@@ -24,11 +24,11 @@ import {
 } from "@/utils/commandGuards";
 
 export const WINDOW_DESCRIPTIONS: Record<LimitWindow, string> = {
-  "10m": "cada 10 minutos",
-  "1h": "cada hora",
-  "6h": "cada 6 horas",
-  "24h": "cada 24 horas",
-  "7d": "cada 7 dias",
+  "10m": "every 10 minutes",
+  "1h": "every hour",
+  "6h": "every 6 hours",
+  "24h": "every 24 hours",
+  "7d": "every 7 days",
 };
 
 const LIMIT_WINDOW_PATTERN = /^(\d+)(m|h|d)$/;
@@ -56,10 +56,13 @@ export async function requireGuildContext(
     return null;
   }
 
-  const enabled = await import("@/modules/features").then(m => m.isFeatureEnabled(guildId, Features.Roles));
+  const enabled = await import("@/modules/features").then((m) =>
+    m.isFeatureEnabled(guildId, Features.Roles),
+  );
   if (!enabled) {
     await ctx.write({
-      content: "El sistema de roles administrados está deshabilitado en este servidor.",
+      content:
+        "The managed roles system is disabled in this server.",
       flags: 64,
     });
     return null;
@@ -73,7 +76,10 @@ export async function requireGuildContext(
 /* Roles snapshots from repo.readRoles()                               */
 /* ------------------------------------------------------------------ */
 
-import { listGuildRoleSnapshots, type RoleSnapshot } from "@/modules/guild-roles";
+import {
+  listGuildRoleSnapshots,
+  type RoleSnapshot,
+} from "@/modules/guild-roles";
 
 export type ManagedRoleSnapshot = RoleSnapshot;
 
@@ -103,15 +109,15 @@ export interface ResolvedAction {
 export function resolveActionInput(
   raw: string | undefined,
 ): { action: ResolvedAction } | { error: string } {
-  if (!raw) return { error: "Debes indicar una accion de moderacion." };
+  if (!raw) return { error: "You must specify a moderation action." };
 
   const normalised = raw.trim().toLowerCase();
-  if (!normalised) return { error: "Debes indicar una accion de moderacion." };
+  if (!normalised) return { error: "You must specify a moderation action." };
 
   if (normalised.includes(".")) {
     return {
       error:
-        "Formato de accion invalido. Usa nombres simples como `kick`, `ban`, `warn`, `timeout` o `purge`.",
+        "Invalid action format. Use simple names like `kick`, `ban`, `warn`, `timeout`, or `purge`.",
     };
   }
 
@@ -125,7 +131,7 @@ export function resolveActionInput(
     const available = DEFAULT_MODERATION_ACTIONS.map(
       (entry) => `\`${entry.key}\``,
     ).join(", ");
-    return { error: `Accion desconocida. Opciones disponibles: ${available}.` };
+    return { error: `Unknown action. Available options: ${available}.` };
   }
 
   return { action: { definition: action, key: action.key } };
@@ -159,7 +165,7 @@ export function parseLimitWindowInput(
 export function limitWindowToSeconds(window: LimitWindow): number {
   const match = window.match(LIMIT_WINDOW_PATTERN);
   if (!match) {
-    console.warn(`[roles] Ventana invalida: ${window}. Returning 0 seconds.`);
+    console.warn(`[roles] Invalid window: ${window}. Returning 0 seconds.`);
     return 0;
   }
 
@@ -185,32 +191,28 @@ export function formatOverrideValue(
 ): string {
   switch (override) {
     case "allow":
-      return "Permitir";
+      return "Allow";
     case "deny":
-      return "Denegar";
+      return "Deny";
     default:
-      return "Heredar";
+      return "Inherit";
   }
 }
 
-export function formatLimitRecord(
-  limit: RoleLimitRecord | undefined,
-): string {
+export function formatLimitRecord(limit: RoleLimitRecord | undefined): string {
   if (!limit || !Number.isFinite(limit.limit) || limit.limit <= 0) {
-    return "Sin limite configurado";
+    return "No limit configured";
   }
 
   const count = Math.max(0, Math.floor(limit.limit));
   const description =
     (limit.window ? WINDOW_DESCRIPTIONS[limit.window] : null) ??
-    (limit.windowSeconds ? `cada ${limit.windowSeconds}s` : "sin ventana fija");
+    (limit.windowSeconds ? `every ${limit.windowSeconds}s` : "without fixed window");
 
-  return `${count} uso(s) - ${description}`;
+  return `${count} use(s) - ${description}`;
 }
 
-export function buildModerationSummary(
-  snapshot: ManagedRoleSnapshot,
-): string {
+export function buildModerationSummary(snapshot: ManagedRoleSnapshot): string {
   return DEFAULT_MODERATION_ACTIONS.map((action) => {
     const override = snapshot.overrides[action.key] ?? "inherit";
     const limit = snapshot.limits[action.key];

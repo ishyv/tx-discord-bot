@@ -39,7 +39,8 @@ export default class RoleRemoveCommand extends SubCommand {
     if (!key) {
       const embed = new Embed({
         title: "Clave invalida",
-        description: "Proporciona una clave conocida para eliminar la configuracion.",
+        description:
+          "Proporciona una clave conocida para eliminar la configuracion.",
         color: EmbedColors.Red,
       });
       await ctx.write({ embeds: [embed] });
@@ -60,4 +61,3 @@ export default class RoleRemoveCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

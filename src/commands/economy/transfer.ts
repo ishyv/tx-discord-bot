@@ -143,13 +143,17 @@ export default class TransferCommand extends Command {
         SELF_TRANSFER: "No puedes transferirte a ti mismo.",
         ACTOR_BLOCKED: "⛔ Tu cuenta tiene restricciones temporales.",
         ACTOR_BANNED: "🚫 Tu cuenta tiene restricciones permanentes.",
-        TARGET_BLOCKED: "⛔ La cuenta del destinatario tiene restricciones temporales.",
-        TARGET_BANNED: "🚫 La cuenta del destinatario tiene restricciones permanentes.",
-        INSUFFICIENT_FUNDS: "❌ No tienes suficientes fondos para esta transferencia.",
+        TARGET_BLOCKED:
+          "⛔ La cuenta del destinatario tiene restricciones temporales.",
+        TARGET_BANNED:
+          "🚫 La cuenta del destinatario tiene restricciones permanentes.",
+        INSUFFICIENT_FUNDS:
+          "❌ No tienes suficientes fondos para esta transferencia.",
         UPDATE_FAILED: "❌ Error en la transferencia. Intenta nuevamente.",
       };
 
-      const message = errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+      const message =
+        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
 
       await ctx.write({
         content: message,

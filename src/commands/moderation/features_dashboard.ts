@@ -19,10 +19,7 @@ import {
   setFeatureFlag,
   setAllFeatureFlags,
 } from "@/modules/features";
-import {
-  AutoroleService,
-  refreshGuildRules,
-} from "@/modules/autorole";
+import { AutoroleService, refreshGuildRules } from "@/modules/autorole";
 import { Guard } from "@/middlewares/guards/decorator";
 
 const featureChoices = GUILD_FEATURES.map((feature) => ({
@@ -32,27 +29,27 @@ const featureChoices = GUILD_FEATURES.map((feature) => ({
 
 const options = {
   feature: createStringOption({
-    description: "Feature a habilitar/deshabilitar",
+    description: "Feature to enable/disable",
     required: false,
     choices: featureChoices,
   }),
   enabled: createBooleanOption({
-    description: "true = habilitar, false = deshabilitar",
+    description: "true = enable, false = disable",
     required: false,
   }),
   enable_all: createBooleanOption({
-    description: "Habilita todas las features",
+    description: "Enable all features",
     required: false,
   }),
   disable_all: createBooleanOption({
-    description: "Deshabilita todas las features",
+    description: "Disable all features",
     required: false,
   }),
 };
 
 @Declare({
   name: "features",
-  description: "Habilita o deshabilita las features principales del bot",
+  description: "Enable or disable main bot features",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
   defaultMemberPermissions: ["ManageGuild"],
@@ -73,7 +70,7 @@ export default class FeatureDashboardCommand extends Command {
 
     if (enableAll && disableAll) {
       await ctx.write({
-        content: "No puedes habilitar y deshabilitar todo al mismo tiempo.",
+        content: "You cannot enable and disable everything at the same time.",
       });
       return;
     }
@@ -86,11 +83,13 @@ export default class FeatureDashboardCommand extends Command {
       }
 
       const embed = new Embed({
-        title: value ? "Todas las features habilitadas" : "Todas las features deshabilitadas",
+        title: value
+          ? "All features enabled"
+          : "All features disabled",
         color: value ? EmbedColors.Green : EmbedColors.Red,
         fields: GUILD_FEATURES.map((f) => ({
           name: f,
-          value: updated[f] ? "✅ Activado" : "⛔ Desactivado",
+          value: updated[f] ? "✅ Active" : "⛔ Inactive",
           inline: true,
         })),
       });
@@ -101,13 +100,13 @@ export default class FeatureDashboardCommand extends Command {
     if (!feature || enabledInput === undefined) {
       const features = await getFeatureFlags(guildId);
       const embed = new Embed({
-        title: "Dashboard de features",
+        title: "Features Dashboard",
         color: EmbedColors.Blurple,
         description:
-          "Resumen del estado actual de cada sistema. Usa `/dashboard feature:<nombre> enabled:<true|false>` para actualizar.",
+          "Summary of the current state of each system. Use `/features feature:<name> enabled:<true|false>` to update.",
         fields: GUILD_FEATURES.map((f) => ({
           name: f,
-          value: features[f] ? "✅ Activado" : "⛔ Desactivado",
+          value: features[f] ? "✅ Active" : "⛔ Inactive",
           inline: true,
         })),
       });
@@ -119,12 +118,12 @@ export default class FeatureDashboardCommand extends Command {
     await this.applySideEffects(ctx, guildId, feature, enabledInput);
 
     const embed = new Embed({
-      title: "Feature actualizada",
+      title: "Feature updated",
       color: enabledInput ? EmbedColors.Green : EmbedColors.Red,
-      description: `\`${feature}\` ahora está ${enabledInput ? "habilitada" : "deshabilitada"}.`,
+      description: `\`${feature}\` is now ${enabledInput ? "enabled" : "disabled"}.`,
       fields: GUILD_FEATURES.map((f) => ({
         name: f,
-        value: updated[f] ? "✅ Activado" : "⛔ Desactivado",
+        value: updated[f] ? "✅ Active" : "⛔ Inactive",
         inline: true,
       })),
     });
@@ -152,15 +151,21 @@ export default class FeatureDashboardCommand extends Command {
         await AutoroleService.toggleRule(guildId, rule.name, false);
       }
 
-      ctx.client.logger?.info?.("[dashboard] autoroles deshabilitado: reglas apagadas", {
-        guildId,
-        disabledRules: enabledRules.length,
-      });
+      ctx.client.logger?.info?.(
+        "[dashboard] autoroles deshabilitado: reglas apagadas",
+        {
+          guildId,
+          disabledRules: enabledRules.length,
+        },
+      );
     } catch (error) {
-      ctx.client.logger?.error?.("[dashboard] no se pudieron deshabilitar reglas de autoroles", {
-        guildId,
-        error,
-      });
+      ctx.client.logger?.error?.(
+        "[dashboard] no se pudieron deshabilitar reglas de autoroles",
+        {
+          guildId,
+          error,
+        },
+      );
     }
   }
 }

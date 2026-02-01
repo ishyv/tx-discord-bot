@@ -11,7 +11,10 @@ import type { UsingClient } from "seyfert";
 
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
-import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
+import {
+  fetchStoredChannel,
+  isUnknownChannelError,
+} from "@/utils/channelGuard";
 import { isSnowflake } from "@/utils/snowflake";
 
 export interface ModerationLogPayload {

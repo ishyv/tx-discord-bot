@@ -96,4 +96,3 @@ export default class ListWarnCommand extends SubCommand {
     return warnEntries.join("\n\n");
   }
 }
-

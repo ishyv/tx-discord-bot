@@ -1,4 +1,3 @@
-
 /**
  * Motivación: registrar el comando "moderation / tickets / config" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
  *
@@ -56,7 +55,11 @@ const options = {
 @Middlewares(["guard"])
 export default class ConfigTicketsCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const { channel: tickets, category: ticketCategory, logchannel: ticketLogs } = ctx.options;
+    const {
+      channel: tickets,
+      category: ticketCategory,
+      logchannel: ticketLogs,
+    } = ctx.options;
 
     const guildId = ctx.guildId;
 
@@ -70,7 +73,7 @@ export default class ConfigTicketsCommand extends SubCommand {
     await configStore.set(guildId, ConfigurableModule.Tickets, {
       tickets: { channelId: tickets.id },
       ticketCategory: { channelId: ticketCategory.id },
-      ticketLogs: { channelId: ticketLogs.id }
+      ticketLogs: { channelId: ticketLogs.id },
     });
 
     // Debug: read back stored values

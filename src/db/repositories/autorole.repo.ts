@@ -16,7 +16,10 @@ import type {
 } from "@/modules/autorole/domain/types";
 import { deleteTally, setTally } from "@/modules/autorole/cache";
 
-const DEFAULT_TRIGGER: AutoRoleTrigger = { type: "MESSAGE_REACT_ANY", args: {} };
+const DEFAULT_TRIGGER: AutoRoleTrigger = {
+  type: "MESSAGE_REACT_ANY",
+  args: {},
+};
 
 const sanitizeTrigger = (trigger: AutoRoleTrigger) => {
   const parsed = AutoRoleTriggerSchema.safeParse(trigger);
@@ -26,7 +29,8 @@ const sanitizeTrigger = (trigger: AutoRoleTrigger) => {
   return { valid: false, value: DEFAULT_TRIGGER };
 };
 
-const buildRuleId = (guildId: string, name: string) => autoroleKeys.rule(guildId, name);
+const buildRuleId = (guildId: string, name: string) =>
+  autoroleKeys.rule(guildId, name);
 
 const buildRuleDocument = (
   input: CreateAutoRoleRuleInput,
@@ -54,7 +58,7 @@ export const AutoRoleRulesRepo = {
   async insert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRule> {
     const now = new Date();
     const sanitized = sanitizeTrigger(input.trigger);
-    const enabled = sanitized.valid ? input.enabled ?? true : false;
+    const enabled = sanitized.valid ? (input.enabled ?? true) : false;
     const document = buildRuleDocument(input, sanitized.value, now, enabled);
 
     if (!sanitized.valid) {
@@ -68,7 +72,7 @@ export const AutoRoleRulesRepo = {
   async upsert(input: CreateAutoRoleRuleInput): Promise<AutoRoleRule> {
     const now = new Date();
     const sanitized = sanitizeTrigger(input.trigger);
-    const enabled = sanitized.valid ? input.enabled ?? true : false;
+    const enabled = sanitized.valid ? (input.enabled ?? true) : false;
     const document = buildRuleDocument(input, sanitized.value, now, enabled);
 
     const res = await AutoRoleRulesStore.set(document._id, document);
@@ -96,9 +100,13 @@ export const AutoRoleRulesRepo = {
     return res.isOk() ? res.unwrap() : [];
   },
 
-  async updateEnabled(input: UpdateRuleEnabledInput): Promise<AutoRoleRule | null> {
+  async updateEnabled(
+    input: UpdateRuleEnabledInput,
+  ): Promise<AutoRoleRule | null> {
     const id = buildRuleId(input.guildId, input.name);
-    const res = await AutoRoleRulesStore.patch(id, { enabled: input.enabled } as Partial<AutoRoleRule>);
+    const res = await AutoRoleRulesStore.patch(id, {
+      enabled: input.enabled,
+    } as Partial<AutoRoleRule>);
     if (res.isOk()) {
       return res.unwrap();
     }
@@ -178,7 +186,10 @@ export const AutoRoleGrantsRepo = {
     return res.isOk() ? res.unwrap() : [];
   },
 
-  async listForRule(guildId: string, ruleName: string): Promise<DbAutoRoleGrant[]> {
+  async listForRule(
+    guildId: string,
+    ruleName: string,
+  ): Promise<DbAutoRoleGrant[]> {
     const res = await AutoRoleGrantsStore.find({ guildId, ruleName });
     return res.isOk() ? res.unwrap() : [];
   },
@@ -196,7 +207,11 @@ export const AutoRoleGrantsRepo = {
     if (!res.isOk()) return [];
     return res
       .unwrap()
-      .filter((grant) => grant.expiresAt !== null && grant.expiresAt.getTime() <= now.getTime());
+      .filter(
+        (grant) =>
+          grant.expiresAt !== null &&
+          grant.expiresAt.getTime() <= now.getTime(),
+      );
   },
 
   async deleteOne(input: {
@@ -238,12 +253,17 @@ export const AutoRoleGrantsRepo = {
   },
 };
 
-const buildTallyId = (key: { guildId: string; messageId: string; emojiKey: string }) =>
-  autoroleKeys.tally(key.guildId, key.messageId, key.emojiKey);
+const buildTallyId = (key: {
+  guildId: string;
+  messageId: string;
+  emojiKey: string;
+}) => autoroleKeys.tally(key.guildId, key.messageId, key.emojiKey);
 
 export const AutoRoleTalliesRepo = {
-  increment: (key: { guildId: string; messageId: string; emojiKey: string }, authorId: string) =>
-    AutoroleService.incrementReactionTally(key, authorId),
+  increment: (
+    key: { guildId: string; messageId: string; emojiKey: string },
+    authorId: string,
+  ) => AutoroleService.incrementReactionTally(key, authorId),
 
   decrement: (key: { guildId: string; messageId: string; emojiKey: string }) =>
     AutoroleService.decrementReactionTally(key),
@@ -263,7 +283,11 @@ export const AutoRoleTalliesRepo = {
     return res.isOk() ? res.unwrap() : [];
   },
 
-  async deleteOne(key: { guildId: string; messageId: string; emojiKey: string }) {
+  async deleteOne(key: {
+    guildId: string;
+    messageId: string;
+    emojiKey: string;
+  }) {
     const id = buildTallyId(key);
     const res = await AutoRoleTalliesStore.delete(id);
     if (res.isOk()) {

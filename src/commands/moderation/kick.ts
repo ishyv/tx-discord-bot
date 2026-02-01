@@ -22,18 +22,18 @@ import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   user: createUserOption({
-    description: "Usuario a expulsar",
+    description: "User to kick",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón de la expulsión",
+    description: "Reason for the kick",
     required: false,
   }),
 };
 
 @Declare({
   name: "kick",
-  description: "Expulsar a un usuario del servidor",
+  description: "Kick a user from the server",
   defaultMemberPermissions: ["KickMembers"],
   botPermissions: ["KickMembers"],
   contexts: ["Guild"],
@@ -42,20 +42,20 @@ const options = {
 @Options(options)
 export default class KickCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const { user, reason = "Razón no especificada" } = ctx.options;
+    const { user, reason = "No reason specified" } = ctx.options;
     const GuildLogger = await ctx.getGuildLogger();
 
     if (!ctx.guildId || !isSnowflake(ctx.guildId) || !isSnowflake(user.id)) {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ IDs invalidos. Intenta nuevamente.",
+        content: "❌ Invalid IDs. Try again.",
       });
     }
 
     if (ctx.author.id === user.id)
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ No podés expulsarte a vos mismo.",
+        content: "❌ You cannot kick yourself.",
       });
 
     const targetMember =
@@ -65,30 +65,30 @@ export default class KickCommand extends Command {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "❌ No se pudo encontrar al miembro a expulsar en el servidor.",
+          "❌ Could not find the member to kick in the server.",
       });
 
     if (!(await targetMember.moderatable()))
       return ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "❌ No podés expulsar a un usuario con un rol igual o superior al tuyo.",
+          "❌ You cannot kick a user with a role equal to or higher than yours.",
       });
 
-    const text = `${reason} | Expulsado por ${ctx.author.username}`;
+    const text = `${reason} | Kicked by ${ctx.author.username}`;
 
     await targetMember.kick(text);
 
     const successEmbed = new Embed({
-      title: "Usuario expulsado correctamente",
+      title: "User kicked correctly",
       description: `
-        El usuario **${ctx.options.user.username}** fue expulsado exitosamente.
+        The user **${ctx.options.user.username}** was successfully kicked.
 
-        **Razón:** ${reason}
+        **Reason:** ${reason}
       `,
       color: EmbedColors.Green,
       footer: {
-        text: `Expulsado por ${ctx.author.username}`,
+        text: `Kicked by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL(),
       },
     });
@@ -101,16 +101,16 @@ export default class KickCommand extends Command {
     await registerCase(user.id, ctx.guildId!, "KICK", reason);
 
     await GuildLogger.banSanctionLog({
-      title: "Usuario expulsado",
+      title: "User kicked",
       color: EmbedColors.DarkOrange,
       thumbnail: await user.avatarURL(),
       fields: [
         {
-          name: "Usuario",
+          name: "User",
           value: `${user.username} (${user.id})`,
           inline: true,
         },
-        { name: "Razón", value: reason, inline: false },
+        { name: "Reason", value: reason, inline: false },
       ],
       footer: {
         text: `${ctx.author.username} (${ctx.author.id})`,

@@ -7,7 +7,10 @@
  */
 import { ModalCommand, type ModalContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { applyEmbedModalUpdate, getEmbedDesignerSession } from "@/modules/prefabs/embedDesigner";
+import {
+  applyEmbedModalUpdate,
+  getEmbedDesignerSession,
+} from "@/modules/prefabs/embedDesigner";
 
 export default class EmbedDesignerModalHandler extends ModalCommand {
   filter(ctx: ModalContext) {
@@ -31,7 +34,8 @@ export default class EmbedDesignerModalHandler extends ModalCommand {
     }
 
     const fields =
-      ctx.interaction.components?.flatMap((row: any) => row.components ?? []) ?? [];
+      ctx.interaction.components?.flatMap((row: any) => row.components ?? []) ??
+      [];
     const payload: Record<string, string | undefined> = {};
     for (const comp of fields) {
       if (comp?.customId) {

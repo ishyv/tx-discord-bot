@@ -13,15 +13,15 @@ import { Middlewares } from "seyfert";
 
 const options = {
   enabled: createBooleanOption({
-    description: "Habilitar o deshabilitar el whitelist de dominios",
+    description: "Enable or disable domain whitelist",
     required: false,
   }),
   add: createStringOption({
-    description: "Dominio a agregar (ej: github.com)",
+    description: "Domain to add (e.g., github.com)",
     required: false,
   }),
   remove: createStringOption({
-    description: "Dominio a eliminar",
+    description: "Domain to remove",
     required: false,
   }),
 };
@@ -31,7 +31,7 @@ const DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 @Options(options)
 @Declare({
   name: "whitelist",
-  description: "Configurar whitelist de dominios para AutoMod",
+  description: "Configure domain whitelist for AutoMod",
 })
 @Guard({
   guildOnly: true,
@@ -51,8 +51,8 @@ export default class AutomodWhitelistCommand extends SubCommand {
       await ctx.write({
         content:
           `**AutoMod Domain Whitelist:**\n` +
-          `- Estado: ${config.enabled ? "✅ Habilitado" : "❌ Deshabilitado"}\n` +
-          `- Dominios: ${config.domains.length ? config.domains.join(", ") : "(vacio)"}`,
+          `- Status: ${config.enabled ? "✅ Enabled" : "❌ Disabled"}\n` +
+          `- Domains: ${config.domains.length ? config.domains.join(", ") : "(empty)"}`,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -71,7 +71,7 @@ export default class AutomodWhitelistCommand extends SubCommand {
       const domain = add.toLowerCase().trim();
       if (!DOMAIN_PATTERN.test(domain)) {
         await ctx.write({
-          content: "Dominio invalido. Usa formato como `github.com`.",
+          content: "Invalid domain. Use a format like `github.com`.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -102,9 +102,9 @@ export default class AutomodWhitelistCommand extends SubCommand {
 
     await ctx.write({
       content:
-        `**AutoMod Domain Whitelist actualizado:**\n` +
-        `- Estado: ${updated.enabled ? "✅ Habilitado" : "❌ Deshabilitado"}\n` +
-        `- Dominios: ${updated.domains.length ? updated.domains.join(", ") : "(vacio)"}`,
+        `**AutoMod Domain Whitelist updated:**\n` +
+        `- Status: ${updated.enabled ? "✅ Enabled" : "❌ Disabled"}\n` +
+        `- Domains: ${updated.domains.length ? updated.domains.join(", ") : "(empty)"}`,
       flags: MessageFlags.Ephemeral,
     });
   }

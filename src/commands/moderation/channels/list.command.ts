@@ -39,19 +39,29 @@ export default class ChannelListCommand extends SubCommand {
 
     const guild_channels_record = await getGuildChannels(guildId);
 
-    const coreLines = Object.entries(CORE_CHANNEL_DEFINITIONS).map(([name, label]) => {
-      const entry = guild_channels_record.core?.[name] as { channelId: string } | null | undefined;
-      if (!entry) {
-        return `**${name}** (${label}) -> Sin canal`;
-      }
-      return `**${name}** (${label}) -> ${formatChannelMention(entry.channelId)}`;
-    }).join("\n\n");
+    const coreLines = Object.entries(CORE_CHANNEL_DEFINITIONS)
+      .map(([name, label]) => {
+        const entry = guild_channels_record.core?.[name] as
+          | { channelId: string }
+          | null
+          | undefined;
+        if (!entry) {
+          return `**${name}** (${label}) -> Sin canal`;
+        }
+        return `**${name}** (${label}) -> ${formatChannelMention(entry.channelId)}`;
+      })
+      .join("\n\n");
 
-    const managedEntries = Object.values(guild_channels_record.managed ?? {}) as any[];
+    const managedEntries = Object.values(
+      guild_channels_record.managed ?? {},
+    ) as any[];
     const managedLines = managedEntries.length
       ? managedEntries
-        .map((entry) => `**${entry.id}** (${entry.label}) -> ${formatChannelMention(entry.channelId)}`)
-        .join("\n")
+          .map(
+            (entry) =>
+              `**${entry.id}** (${entry.label}) -> ${formatChannelMention(entry.channelId)}`,
+          )
+          .join("\n")
       : "Sin canales opcionales configurados.";
 
     const embed = new Embed({
@@ -72,4 +82,3 @@ export default class ChannelListCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

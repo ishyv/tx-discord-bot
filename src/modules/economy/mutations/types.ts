@@ -54,6 +54,8 @@ export interface TransferCurrencyInput {
   readonly amount: number;
   /** Optional reason for the transfer. */
   readonly reason?: string;
+  /** Optional correlation ID to link with other operations. */
+  readonly correlationId?: string;
 }
 
 /** Result of a currency transfer operation. */

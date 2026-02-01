@@ -6,7 +6,13 @@
  * Alcance: actualiza provider y modelo en la configuracion por guild.
  */
 import type { GuildCommandContext } from "seyfert";
-import { Declare, Options, SubCommand, createStringOption, Middlewares } from "seyfert";
+import {
+  Declare,
+  Options,
+  SubCommand,
+  createStringOption,
+  Middlewares,
+} from "seyfert";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import {
@@ -47,7 +53,9 @@ export default class AiSetProviderCommand extends SubCommand {
     }
 
     if (!isProviderAvailable(providerId)) {
-      const available = listProviders().map((entry) => `\`${entry.id}\``).join(", ");
+      const available = listProviders()
+        .map((entry) => `\`${entry.id}\``)
+        .join(", ");
       await ctx.write({
         content: `Proveedor no reconocido. Disponibles: ${available}`,
       });

@@ -44,21 +44,27 @@ export function sanitizeItemId(rawId: string): ItemId | null {
  */
 export function validateItemIdDetailed(
   rawId: string,
-): { valid: true; canonicalId: ItemId; definition: ItemDefinitionWithUse } | { valid: false; reason: string } {
+):
+  | { valid: true; canonicalId: ItemId; definition: ItemDefinitionWithUse }
+  | { valid: false; reason: string } {
   if (!rawId || typeof rawId !== "string") {
     return { valid: false, reason: "Item ID is required" };
   }
 
   for (const char of DANGEROUS_CHARS) {
     if (rawId.includes(char)) {
-      return { valid: false, reason: `Item ID cannot contain '${char}' character` };
+      return {
+        valid: false,
+        reason: `Item ID cannot contain '${char}' character`,
+      };
     }
   }
 
   if (!SAFE_ITEM_ID_PATTERN.test(rawId)) {
     return {
       valid: false,
-      reason: "Item ID can only contain letters, numbers, hyphens, and underscores",
+      reason:
+        "Item ID can only contain letters, numbers, hyphens, and underscores",
     };
   }
 

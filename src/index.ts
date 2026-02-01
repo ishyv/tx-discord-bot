@@ -25,6 +25,13 @@ import { middlewares } from "./middlewares";
 import "./events/handlers"; // ! Registers base event handlers.
 import "./events/listeners"; // ! Registers listeners for custom event flows.
 
+import {
+	validateCommandPayload,
+	printIssues,
+	hasCriticalIssues,
+} from "@/dev/commandPreflight";
+import { prettyPrintDiscord50035 } from "@/dev/prettyCommandRegistrationError";
+
 /**
  * Extend the interaction context with helpers that are used across commands.
  *
@@ -65,7 +72,47 @@ async function bootstrap(): Promise<void> {
   console.log("[bootstrap] Starting bot...");
   await getDb(); // initialize Mongo connection once at startup
   await client.start();
-  await client.uploadCommands({ cachePath: "./commands.json" });
+
+  // Preflight validation before uploading commands
+  console.log("[bootstrap] Running command preflight validation...");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const commands = (client.commands as any)?.values ?? [];
+  console.log(`[bootstrap] Total commands loaded: ${commands.length}`);
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const commandArray: any[] = commands.map((cmd: any, idx: number) => {
+    // Debug: log command structure
+    console.log(`[bootstrap] Command ${idx}: ${cmd.name} (${cmd.constructor?.name ?? 'unknown'})`);
+    console.log(`[bootstrap]   - options type: ${typeof cmd.options}`);
+    console.log(`[bootstrap]   - options keys: ${cmd.options ? Object.keys(cmd.options).join(', ') : 'none'}`);
+    
+    return {
+      name: cmd.name,
+      description: cmd.description,
+      options: (cmd.options ?? {}) as Record<string, unknown>,
+    };
+  });
+
+  const issues = validateCommandPayload(commandArray);
+  if (hasCriticalIssues(issues)) {
+    console.error(printIssues(issues, commandArray));
+    console.error("[bootstrap] Command validation failed. Aborting startup.");
+    process.exit(1);
+  }
+  console.log("[bootstrap] Command preflight validation passed.");
+
+  // Upload commands with pretty error handling
+  try {
+    await client.uploadCommands({ cachePath: "./commands.json" });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    if (err.message?.includes("50035") || err.message?.includes("Invalid Form Body")) {
+      console.error(prettyPrintDiscord50035(err, commandArray));
+      console.error("[bootstrap] Command registration failed. Aborting startup.");
+      process.exit(1);
+    }
+    throw error;
+  }
 }
 
 bootstrap().catch((error) => {

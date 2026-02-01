@@ -1,4 +1,7 @@
-import { enqueueRoleGrant, enqueueRoleRevoke } from "../../src/modules/autorole/engine/roleOps";
+import {
+  enqueueRoleGrant,
+  enqueueRoleRevoke,
+} from "../../src/modules/autorole/engine/roleOps";
 import { assertEqual, ops, type Suite } from "./_utils";
 
 type CallLog = { add: number; remove: number };

@@ -84,7 +84,11 @@ function buildPageOptions(
   current: number,
   windowSize: number,
 ): StringSelectOption[] {
-  const size = Math.min(Math.max(1, windowSize), MAX_SELECT_OPTIONS, totalPages);
+  const size = Math.min(
+    Math.max(1, windowSize),
+    MAX_SELECT_OPTIONS,
+    totalPages,
+  );
   const half = Math.floor(size / 2);
   let start = Math.max(0, current - half);
   if (start + size > totalPages) {
@@ -128,7 +132,14 @@ export function createPaginationUI(
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(currentPage <= 0)
           .onClick("pagination_prev", async (buttonCtx) => {
-            if (!(await ensureOwner(options.ownerId, buttonCtx.author.id, buttonCtx))) return;
+            if (
+              !(await ensureOwner(
+                options.ownerId,
+                buttonCtx.author.id,
+                buttonCtx,
+              ))
+            )
+              return;
             state.page = clampPage(currentPage - 1, totalPages);
           });
 
@@ -136,7 +147,14 @@ export function createPaginationUI(
           .setLabel(labels.select)
           .setStyle(ButtonStyle.Primary)
           .onClick("pagination_pick", async (buttonCtx) => {
-            if (!(await ensureOwner(options.ownerId, buttonCtx.author.id, buttonCtx))) return;
+            if (
+              !(await ensureOwner(
+                options.ownerId,
+                buttonCtx.author.id,
+                buttonCtx,
+              ))
+            )
+              return;
             state.showPicker = !state.showPicker;
           });
 
@@ -145,7 +163,14 @@ export function createPaginationUI(
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(currentPage >= totalPages - 1)
           .onClick("pagination_next", async (buttonCtx) => {
-            if (!(await ensureOwner(options.ownerId, buttonCtx.author.id, buttonCtx))) return;
+            if (
+              !(await ensureOwner(
+                options.ownerId,
+                buttonCtx.author.id,
+                buttonCtx,
+              ))
+            )
+              return;
             state.page = clampPage(currentPage + 1, totalPages);
           });
 
@@ -157,10 +182,20 @@ export function createPaginationUI(
             .setValuesLength({ min: 1, max: 1 })
             .setOptions(buildPageOptions(totalPages, currentPage, pageWindow))
             .onSelect("pagination_select", async (menuCtx) => {
-              if (!(await ensureOwner(options.ownerId, menuCtx.author.id, menuCtx))) return;
+              if (
+                !(await ensureOwner(
+                  options.ownerId,
+                  menuCtx.author.id,
+                  menuCtx,
+                ))
+              )
+                return;
               await menuCtx.deferUpdate();
               const value = menuCtx.interaction.values?.[0];
-              const target = clampPage(Number.parseInt(value ?? "1", 10) - 1, totalPages);
+              const target = clampPage(
+                Number.parseInt(value ?? "1", 10) - 1,
+                totalPages,
+              );
               state.page = target;
               state.showPicker = false;
             });

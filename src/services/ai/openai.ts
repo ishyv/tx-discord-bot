@@ -35,7 +35,9 @@ import { FinishReason } from "@google/genai";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
-  console.warn("[ai-service] OPENAI_API_KEY not set - OpenAI provider will return default responses");
+  console.warn(
+    "[ai-service] OPENAI_API_KEY not set - OpenAI provider will return default responses",
+  );
 }
 
 const openaiClient = OPENAI_API_KEY
@@ -63,7 +65,9 @@ function mapOpenAIRole(role: string): OpenAIRole {
   return "user";
 }
 
-function mapOpenAIFinishReason(value?: string | null): FinishReason | undefined {
+function mapOpenAIFinishReason(
+  value?: string | null,
+): FinishReason | undefined {
   switch (value) {
     case "stop":
       return FinishReason.STOP;

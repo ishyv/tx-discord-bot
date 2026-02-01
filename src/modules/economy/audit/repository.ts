@@ -26,8 +26,14 @@ const EconomyAuditEntrySchema = z.object({
     "item_remove",
     "item_purchase",
     "item_sell",
+    "item_equip",
+    "item_unequip",
     "config_update",
     "daily_claim",
+    "work_claim",
+    "perk_purchase",
+    "xp_grant",
+    "rollback",
   ]),
   actorId: z.string(),
   targetId: z.string(),
@@ -69,19 +75,42 @@ export async function ensureAuditIndexes(): Promise<void> {
     const col = await AuditStore.collection();
 
     // Index for querying by target (e.g., "show me my audit history")
-    await col.createIndex({ targetId: 1, timestamp: -1 }, { name: "target_time_idx" });
+    await col.createIndex(
+      { targetId: 1, timestamp: -1 },
+      { name: "target_time_idx" },
+    );
 
     // Index for querying by actor (e.g., "show what this mod did")
-    await col.createIndex({ actorId: 1, timestamp: -1 }, { name: "actor_time_idx" });
+    await col.createIndex(
+      { actorId: 1, timestamp: -1 },
+      { name: "actor_time_idx" },
+    );
 
     // Index for guild-scoped queries
-    await col.createIndex({ guildId: 1, timestamp: -1 }, { name: "guild_time_idx" });
+    await col.createIndex(
+      { guildId: 1, timestamp: -1 },
+      { name: "guild_time_idx" },
+    );
 
     // Index for operation type queries (e.g., "show all transfers")
-    await col.createIndex({ operationType: 1, timestamp: -1 }, { name: "optype_time_idx" });
+    await col.createIndex(
+      { operationType: 1, timestamp: -1 },
+      { name: "optype_time_idx" },
+    );
 
     // Index for correlation ID (e.g., config update, transfer pair)
-    await col.createIndex({ "metadata.correlationId": 1, timestamp: -1 }, { name: "correlation_time_idx" });
+    await col.createIndex(
+      { "metadata.correlationId": 1, timestamp: -1 },
+      { name: "correlation_time_idx" },
+    );
+    await col.createIndex(
+      { "metadata.transferId": 1, timestamp: -1 },
+      { name: "transfer_time_idx" },
+    );
+    await col.createIndex(
+      { "metadata.transactionId": 1, timestamp: -1 },
+      { name: "transaction_time_idx" },
+    );
 
     // TTL index: auto-delete entries older than 2 years (optional, adjust as needed)
     // Uncomment if you want automatic cleanup:
@@ -107,7 +136,10 @@ export interface EconomyAuditRepo {
    * Create a new audit entry.
    * Returns the created entry on success.
    */
-  create(entry: CreateAuditEntryInput): Promise<Result<EconomyAuditEntry, Error>>;
+  create(
+    entry: CreateAuditEntryInput,
+    options?: { session?: any },
+  ): Promise<Result<EconomyAuditEntry, Error>>;
 
   /**
    * Query audit logs with filters.
@@ -118,11 +150,42 @@ export interface EconomyAuditRepo {
    * Get a single audit entry by ID.
    */
   getById(id: string): Promise<Result<EconomyAuditEntry | null, Error>>;
+
+  /**
+   * Find audit entries by correlation key (matches correlationId, transferId, or transactionId).
+   */
+  findByCorrelationKey(
+    correlationId: string,
+  ): Promise<Result<EconomyAuditEntry[], Error>>;
+
+  /**
+   * Summarize recent audit activity for a guild.
+   */
+  summarizeRecent(
+    guildId: string,
+    since: Date,
+  ): Promise<
+    Result<
+      {
+        counts: Record<string, number>;
+        netByCurrency: Record<string, number>;
+      },
+      Error
+    >
+  >;
+
+  /**
+   * Check if a rollback already exists for a correlation key.
+   */
+  hasRollbackForCorrelation(
+    correlationId: string,
+  ): Promise<Result<boolean, Error>>;
 }
 
 class EconomyAuditRepoImpl implements EconomyAuditRepo {
   async create(
     entry: CreateAuditEntryInput,
+    options?: { session?: any },
   ): Promise<Result<EconomyAuditEntry, Error>> {
     const auditEntry: EconomyAuditEntry = {
       _id: generateAuditId(),
@@ -140,7 +203,7 @@ class EconomyAuditRepoImpl implements EconomyAuditRepo {
 
     try {
       const col = await AuditStore.collection();
-      await col.insertOne(auditEntry as any, {});
+      await col.insertOne(auditEntry as any, { session: options?.session });
       return OkResult(auditEntry);
     } catch (error) {
       console.error("[EconomyAuditRepo] Failed to create audit entry:", error);
@@ -212,6 +275,106 @@ class EconomyAuditRepoImpl implements EconomyAuditRepo {
       return OkResult(entry as EconomyAuditEntry | null);
     } catch (error) {
       console.error("[EconomyAuditRepo] Failed to get audit entry:", error);
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  async findByCorrelationKey(
+    correlationId: string,
+  ): Promise<Result<EconomyAuditEntry[], Error>> {
+    try {
+      const col = await AuditStore.collection();
+      const entries = await col
+        .find({
+          $or: [
+            { "metadata.correlationId": correlationId },
+            { "metadata.transferId": correlationId },
+            { "metadata.transactionId": correlationId },
+          ],
+        } as any)
+        .sort({ timestamp: 1 })
+        .toArray();
+      return OkResult(entries as EconomyAuditEntry[]);
+    } catch (error) {
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  async summarizeRecent(
+    guildId: string,
+    since: Date,
+  ): Promise<
+    Result<
+      { counts: Record<string, number>; netByCurrency: Record<string, number> },
+      Error
+    >
+  > {
+    try {
+      const col = await AuditStore.collection();
+
+      const [countsRaw, netRaw] = await Promise.all([
+        col
+          .aggregate([
+            { $match: { guildId, timestamp: { $gte: since } } },
+            { $group: { _id: "$operationType", count: { $sum: 1 } } },
+          ])
+          .toArray(),
+        col
+          .aggregate([
+            {
+              $match: {
+                guildId,
+                timestamp: { $gte: since },
+                "currencyData.delta": { $exists: true },
+              },
+            },
+            {
+              $group: {
+                _id: "$currencyData.currencyId",
+                net: { $sum: "$currencyData.delta" },
+              },
+            },
+          ])
+          .toArray(),
+      ]);
+
+      const counts: Record<string, number> = {};
+      for (const row of countsRaw as any[]) {
+        if (row?._id) counts[String(row._id)] = Number(row.count ?? 0);
+      }
+
+      const netByCurrency: Record<string, number> = {};
+      for (const row of netRaw as any[]) {
+        if (row?._id) netByCurrency[String(row._id)] = Number(row.net ?? 0);
+      }
+
+      return OkResult({ counts, netByCurrency });
+    } catch (error) {
+      console.error(
+        "[EconomyAuditRepo] Failed to summarize recent audit entries:",
+        error,
+      );
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  async hasRollbackForCorrelation(
+    correlationId: string,
+  ): Promise<Result<boolean, Error>> {
+    try {
+      const col = await AuditStore.collection();
+      const count = await col.countDocuments({
+        operationType: "rollback",
+        "metadata.originalCorrelationId": correlationId,
+      } as any);
+      return OkResult(count > 0);
+    } catch (error) {
       return ErrResult(
         error instanceof Error ? error : new Error(String(error)),
       );

@@ -45,7 +45,9 @@ export async function requireRepContext(
     }
   }
 
-  const enabled = await import("@/modules/features").then(m => m.isFeatureEnabled(ctx.guildId!, Features.Reputation));
+  const enabled = await import("@/modules/features").then((m) =>
+    m.isFeatureEnabled(ctx.guildId!, Features.Reputation),
+  );
   if (!enabled) {
     await ctx.write({
       content: "El sistema de reputacion esta deshabilitado en este servidor.",
@@ -69,8 +71,6 @@ export function normalizeRepAmount(
 }
 
 type RepChangeAction = "add" | "remove";
-
-
 
 export function buildRepChangeMessage(
   action: RepChangeAction,
@@ -98,7 +98,7 @@ export async function sendReputationRequest(
   channel: TextGuildChannel,
   targetMessage: Message,
   requester: User,
-  isAutoDetected: boolean = false
+  isAutoDetected: boolean = false,
 ) {
   const embed = new Embed()
     .setColor(Colors.info)
@@ -136,7 +136,7 @@ export async function sendReputationRequest(
     new Button()
       .setCustomId(`rep:deny:${requester.id}`)
       .setLabel("Rechazar (-1)")
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Danger),
   );
 
   const row2 = new ActionRow<Button>().addComponents(
@@ -147,7 +147,7 @@ export async function sendReputationRequest(
     new Button()
       .setCustomId(`rep:penalize:${requester.id}`)
       .setLabel("Penalizar")
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Danger),
   );
 
   await channel.messages.write({

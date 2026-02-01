@@ -14,8 +14,15 @@ import { CONTINUE_PROMPT } from "@/constants/ai";
 import { onMessageCreate } from "@/events/hooks/messageCreate";
 import { configStore, ConfigurableModule } from "@/configuration";
 import { generateForGuild } from "@/services/ai";
-import { AI_GENERATED_MESSAGE_SUFFIX, markAIMessage } from "@/services/ai/messageTracker";
-import { paginateText, sendPaginatedByReference, sendPaginatedMessages } from "@/utils/messages";
+import {
+  AI_GENERATED_MESSAGE_SUFFIX,
+  markAIMessage,
+} from "@/services/ai/messageTracker";
+import {
+  paginateText,
+  sendPaginatedByReference,
+  sendPaginatedMessages,
+} from "@/utils/messages";
 import { Cache } from "@/utils/cache";
 import type { Message as AIMessage } from "@/utils/userMemory";
 
@@ -75,7 +82,9 @@ onMessageCreate(async (message, client) => {
 
   if (!isThreadStarterMessage(message)) return;
 
-  const thread = await client.channels.fetch(message.channelId).catch(() => null);
+  const thread = await client.channels
+    .fetch(message.channelId)
+    .catch(() => null);
   if (!thread || typeof thread.isThread !== "function" || !thread.isThread()) {
     return;
   }
@@ -179,15 +188,17 @@ onMessageCreate(async (message, client) => {
     const hasRawText = rawText.trim().length > 0;
     const continuationMessages = buildContinuationMessages(aiMessages, rawText);
     const components =
-      response.meta?.finishReason === FinishReason.MAX_TOKENS && authorId && hasRawText
+      response.meta?.finishReason === FinishReason.MAX_TOKENS &&
+      authorId &&
+      hasRawText
         ? [
-          buildContinueRow({
-            authorId,
-            guildId: message.guildId,
-            threadId,
-            messages: continuationMessages,
-          }),
-        ]
+            buildContinueRow({
+              authorId,
+              guildId: message.guildId,
+              threadId,
+              messages: continuationMessages,
+            }),
+          ]
         : undefined;
 
     let sent = false;
@@ -248,9 +259,14 @@ onMessageCreate(async (message, client) => {
   }
 });
 
-function isThreadStarterMessage(message: { type?: number; id?: string; channelId?: string }) {
+function isThreadStarterMessage(message: {
+  type?: number;
+  id?: string;
+  channelId?: string;
+}) {
   if (message.type === MessageType.ThreadStarterMessage) return true;
-  if (message.id && message.channelId && message.id === message.channelId) return true;
+  if (message.id && message.channelId && message.id === message.channelId)
+    return true;
   return false;
 }
 
@@ -485,13 +501,13 @@ async function handleForumContinuation(
   const components =
     response.meta?.finishReason === FinishReason.MAX_TOKENS && hasRawText
       ? [
-        buildContinueRow({
-          authorId: options.authorId,
-          guildId: options.guildId,
-          threadId: options.threadId,
-          messages: nextMessages,
-        }),
-      ]
+          buildContinueRow({
+            authorId: options.authorId,
+            guildId: options.guildId,
+            threadId: options.threadId,
+            messages: nextMessages,
+          }),
+        ]
       : undefined;
 
   const channelId = ctx.channelId ?? options.threadId;
@@ -522,12 +538,18 @@ async function handleForumContinuation(
   }
 }
 
-function logInfo(client: { logger?: any }, reason: string, context: Record<string, unknown>) {
+function logInfo(
+  client: { logger?: any },
+  reason: string,
+  context: Record<string, unknown>,
+) {
   client.logger?.info?.(`[forum-auto-reply] ${reason}`, context);
 }
 
-function logWarn(client: { logger?: any }, reason: string, context: Record<string, unknown>) {
+function logWarn(
+  client: { logger?: any },
+  reason: string,
+  context: Record<string, unknown>,
+) {
   client.logger?.warn?.(`[forum-auto-reply] ${reason}`, context);
 }
-
-

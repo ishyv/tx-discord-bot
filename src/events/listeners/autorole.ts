@@ -1,6 +1,6 @@
 /**
  * Autorole Listener
- * 
+ *
  * Orquestra el flujo de eventos de Discord y los mapea a lógica de Autorole.
  */
 
@@ -54,8 +54,10 @@ interface ReactionRemoveAllPayload {
   messageId: string;
 }
 
-const THRESHOLD_REASON = (ruleName: string) => `autorole:${ruleName}:reacted_threshold`;
-const SPECIFIC_REASON = (ruleName: string) => `autorole:${ruleName}:react_specific`;
+const THRESHOLD_REASON = (ruleName: string) =>
+  `autorole:${ruleName}:reacted_threshold`;
+const SPECIFIC_REASON = (ruleName: string) =>
+  `autorole:${ruleName}:react_specific`;
 const ANY_REASON = (ruleName: string) => `autorole:${ruleName}:react_any`;
 
 onBotReady(async (_user, client) => {
@@ -120,11 +122,14 @@ onMessageReactionAdd(async (payload: ReactionPayload, client: UsingClient) => {
       const authorId = await resolveMessageAuthorId(payload, client);
       if (!authorId) return;
 
-      const tally = await AutoroleService.incrementReactionTally({
-        guildId,
-        messageId: payload.messageId,
-        emojiKey,
-      }, authorId);
+      const tally = await AutoroleService.incrementReactionTally(
+        {
+          guildId,
+          messageId: payload.messageId,
+          emojiKey,
+        },
+        authorId,
+      );
 
       const next = tally.count;
 
@@ -146,80 +151,89 @@ onMessageReactionAdd(async (payload: ReactionPayload, client: UsingClient) => {
   }
 });
 
-onMessageReactionRemove(async (payload: ReactionPayload, client: UsingClient) => {
-  try {
-    const guildId = payload.guildId;
-    if (!guildId) return;
+onMessageReactionRemove(
+  async (payload: ReactionPayload, client: UsingClient) => {
+    try {
+      const guildId = payload.guildId;
+      if (!guildId) return;
 
-    if (!(await isFeatureEnabled(guildId, Features.Autoroles))) return;
+      if (!(await isFeatureEnabled(guildId, Features.Autoroles))) return;
 
-    const userId = payload.userId;
-    if (!userId) return;
+      const userId = payload.userId;
+      if (!userId) return;
 
-    const emojiKey = normalizeEmojiKey(payload.emoji);
-    if (!emojiKey) return;
+      const emojiKey = normalizeEmojiKey(payload.emoji);
+      if (!emojiKey) return;
 
-    const cache = getGuildRules(guildId);
+      const cache = getGuildRules(guildId);
 
-    // REACT_SPECIFIC
-    const specificKey = `${payload.messageId}:${emojiKey}`;
-    const specificRules = cache.reactSpecific.get(specificKey) ?? [];
-    if (specificRules.length) {
-      clearTrackedPresence({
-        guildId,
-        messageId: payload.messageId,
-        emojiKey,
-        userId,
-      });
-
-      for (const rule of specificRules) {
-        if (!isLiveRule(rule.durationMs)) continue;
-        await AutoroleService.revokeByRule({
-          client,
-          rule,
+      // REACT_SPECIFIC
+      const specificKey = `${payload.messageId}:${emojiKey}`;
+      const specificRules = cache.reactSpecific.get(specificKey) ?? [];
+      if (specificRules.length) {
+        clearTrackedPresence({
+          guildId,
+          messageId: payload.messageId,
+          emojiKey,
           userId,
-          reason: `${SPECIFIC_REASON(rule.name)}:remove`,
-          grantType: "LIVE",
         });
-      }
-    }
 
-    // REACTED_THRESHOLD
-    const thresholdRules = cache.reactedByEmoji.get(emojiKey) ?? [];
-    if (thresholdRules.length) {
-      const tally = await AutoroleService.decrementReactionTally({
-        guildId,
-        messageId: payload.messageId,
-        emojiKey,
-      });
-      if (!tally) return;
-
-      const next = tally.count;
-      const previous = next + 1;
-
-      for (const rule of thresholdRules) {
-        if (rule.trigger.type !== "REACTED_THRESHOLD") continue;
-        if (!isLiveRule(rule.durationMs)) continue;
-        const target = rule.trigger.args.count;
-        if (previous >= target && next === target - 1) {
+        for (const rule of specificRules) {
+          if (!isLiveRule(rule.durationMs)) continue;
           await AutoroleService.revokeByRule({
             client,
             rule,
-            userId: tally.authorId,
-            reason: `${THRESHOLD_REASON(rule.name)}:remove`,
+            userId,
+            reason: `${SPECIFIC_REASON(rule.name)}:remove`,
             grantType: "LIVE",
           });
         }
       }
-    }
-  } catch (error: unknown) {
-    client.logger?.error?.("[autorole] reaction remove failed", { error });
-  }
-});
 
-onMessageReactionRemoveAll(async (payload: ReactionRemoveAllPayload, client: UsingClient) => {
-  await handleMessageStateReset(client, payload.guildId, payload.messageId, "removeAll");
-});
+      // REACTED_THRESHOLD
+      const thresholdRules = cache.reactedByEmoji.get(emojiKey) ?? [];
+      if (thresholdRules.length) {
+        const tally = await AutoroleService.decrementReactionTally({
+          guildId,
+          messageId: payload.messageId,
+          emojiKey,
+        });
+        if (!tally) return;
+
+        const next = tally.count;
+        const previous = next + 1;
+
+        for (const rule of thresholdRules) {
+          if (rule.trigger.type !== "REACTED_THRESHOLD") continue;
+          if (!isLiveRule(rule.durationMs)) continue;
+          const target = rule.trigger.args.count;
+          if (previous >= target && next === target - 1) {
+            await AutoroleService.revokeByRule({
+              client,
+              rule,
+              userId: tally.authorId,
+              reason: `${THRESHOLD_REASON(rule.name)}:remove`,
+              grantType: "LIVE",
+            });
+          }
+        }
+      }
+    } catch (error: unknown) {
+      client.logger?.error?.("[autorole] reaction remove failed", { error });
+    }
+  },
+);
+
+onMessageReactionRemoveAll(
+  async (payload: ReactionRemoveAllPayload, client: UsingClient) => {
+    await handleMessageStateReset(
+      client,
+      payload.guildId,
+      payload.messageId,
+      "removeAll",
+    );
+  },
+);
 
 onMessageDelete(async (payload, client: UsingClient) => {
   const raw = payload as { guildId?: string; guild_id?: string };
@@ -228,7 +242,11 @@ onMessageDelete(async (payload, client: UsingClient) => {
 });
 
 onMessageDeleteBulk(async (payload, client: UsingClient) => {
-  const raw = payload as { guildId?: string; guild_id?: string; ids?: string[] };
+  const raw = payload as {
+    guildId?: string;
+    guild_id?: string;
+    ids?: string[];
+  };
   const guildId = raw.guildId ?? raw.guild_id;
   if (!guildId) return;
 
@@ -241,7 +259,13 @@ onMessageDeleteBulk(async (payload, client: UsingClient) => {
 });
 
 onGuildRoleDelete(async (payload, client: UsingClient) => {
-  const raw = payload as { guildId?: string; guild_id?: string; roleId?: string; role_id?: string; role?: { id?: string } };
+  const raw = payload as {
+    guildId?: string;
+    guild_id?: string;
+    roleId?: string;
+    role_id?: string;
+    role?: { id?: string };
+  };
   const guildId = raw.guildId ?? raw.guild_id;
   const roleId = raw.roleId ?? raw.role_id ?? raw.role?.id;
   if (!guildId || !roleId) return;
@@ -252,10 +276,15 @@ onGuildRoleDelete(async (payload, client: UsingClient) => {
     const rulesRes = await AutoRoleRulesStore.find({ guildId });
     if (rulesRes.isErr()) return;
 
-    const affected = rulesRes.unwrap().filter((rule) => rule.enabled && rule.roleId === roleId);
+    const affected = rulesRes
+      .unwrap()
+      .filter((rule) => rule.enabled && rule.roleId === roleId);
     for (const rule of affected) {
       // Logic to disable rule should be in service or store
-      await AutoRoleRulesStore.updatePaths(autoroleKeys.rule(guildId, rule.name), { enabled: false });
+      await AutoRoleRulesStore.updatePaths(
+        autoroleKeys.rule(guildId, rule.name),
+        { enabled: false },
+      );
       client.logger?.info?.("[autorole] disabled rule after role deletion", {
         guildId,
         roleName: rule.name,
@@ -263,7 +292,10 @@ onGuildRoleDelete(async (payload, client: UsingClient) => {
       });
     }
   } catch (error: unknown) {
-    client.logger?.error?.("[autorole] failed to disable rules after role delete", { error, guildId, roleId });
+    client.logger?.error?.(
+      "[autorole] failed to disable rules after role delete",
+      { error, guildId, roleId },
+    );
   }
 });
 
@@ -278,7 +310,10 @@ async function handleMessageStateReset(
 
   try {
     const cache = getGuildRules(guildId);
-    const { presence, tallies } = await AutoroleService.drainMessageState(guildId, messageId);
+    const { presence, tallies } = await AutoroleService.drainMessageState(
+      guildId,
+      messageId,
+    );
 
     const rulesRes = await AutoRoleRulesStore.find({ guildId });
     if (rulesRes.isErr()) return;
@@ -287,11 +322,14 @@ async function handleMessageStateReset(
     // reactSpecific live revocations
     for (const entry of presence) {
       const key = `${entry.messageId}:${entry.emojiKey}`;
-      const rules = cache.reactSpecific.get(key) ?? allRules.filter(r =>
-        r.trigger.type === "REACT_SPECIFIC" &&
-        r.trigger.args.messageId === entry.messageId &&
-        r.trigger.args.emojiKey === entry.emojiKey
-      );
+      const rules =
+        cache.reactSpecific.get(key) ??
+        allRules.filter(
+          (r) =>
+            r.trigger.type === "REACT_SPECIFIC" &&
+            r.trigger.args.messageId === entry.messageId &&
+            r.trigger.args.emojiKey === entry.emojiKey,
+        );
 
       for (const rule of rules) {
         if (!isLiveRule(rule.durationMs)) continue;
@@ -307,10 +345,13 @@ async function handleMessageStateReset(
 
     // reacted threshold live revocations
     for (const tally of tallies) {
-      const rules = cache.reactedByEmoji.get(tally.emojiKey) ?? allRules.filter(r =>
-        r.trigger.type === "REACTED_THRESHOLD" &&
-        r.trigger.args.emojiKey === tally.emojiKey
-      );
+      const rules =
+        cache.reactedByEmoji.get(tally.emojiKey) ??
+        allRules.filter(
+          (r) =>
+            r.trigger.type === "REACTED_THRESHOLD" &&
+            r.trigger.args.emojiKey === tally.emojiKey,
+        );
 
       for (const rule of rules) {
         if (!isLiveRule(rule.durationMs)) continue;
@@ -332,10 +373,16 @@ async function handleMessageStateReset(
     );
 
     for (const rule of messageRules) {
-      await AutoRoleRulesStore.updatePaths(autoroleKeys.rule(guildId, rule.name), { enabled: false });
+      await AutoRoleRulesStore.updatePaths(
+        autoroleKeys.rule(guildId, rule.name),
+        { enabled: false },
+      );
 
       if (isLiveRule(rule.durationMs)) {
-        const grantsRes = await AutoRoleGrantsStore.find({ guildId, ruleName: rule.name });
+        const grantsRes = await AutoRoleGrantsStore.find({
+          guildId,
+          ruleName: rule.name,
+        });
         if (grantsRes.isOk()) {
           for (const grant of grantsRes.unwrap()) {
             if (grant.type !== "LIVE") continue;
@@ -368,7 +415,10 @@ async function resolveMessageAuthorId(
 ): Promise<string | null> {
   if (payload.messageAuthorId) return payload.messageAuthorId;
   try {
-    const message = await client.messages.fetch(payload.messageId, payload.channelId);
+    const message = await client.messages.fetch(
+      payload.messageId,
+      payload.channelId,
+    );
     return message?.author?.id ?? null;
   } catch {
     return null;

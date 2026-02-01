@@ -16,7 +16,10 @@ import {
   Middlewares,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import { addManagedChannel, removeInvalidChannels } from "@/modules/guild-channels";
+import {
+  addManagedChannel,
+  removeInvalidChannels,
+} from "@/modules/guild-channels";
 import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
@@ -69,5 +72,3 @@ export default class ChannelAddCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-
-

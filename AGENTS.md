@@ -18,6 +18,7 @@ PyEBot es un bot de Discord de código abierto construido con TypeScript y el fr
 - Starboard
 - Sugerencias
 - Sistema de economía e inventario
+- **Tablón de Misiones (Quest Board 2.0)**: Misiones diarias/semanales con recompensas
 - Auto-respuestas en foros basadas en IA
 - Ejecución de código en varios lenguajes de programación
 - Sistema de autoroles con reglas configurables
@@ -254,16 +255,71 @@ docker-compose up -d
 
 | Entidad | Archivo | Descripción |
 |---------|---------|-------------|
-| User | `src/db/schemas/user.ts` | Usuarios (reputación, warns, tickets, economía, inventario) |
+| User | `src/db/schemas/user.ts` | Usuarios (reputación, warns, tickets, economía, inventario, misiones) |
 | Guild | `src/db/schemas/guild.ts` | Configuración por servidor (canales, roles, features, IA) |
 | Offers | `src/db/schemas/offers.ts` | Ofertas de comunidad |
 | Tops | `src/db/schemas/tops.ts` | Estadísticas de actividad |
+| Quest Templates | `src/modules/economy/quests/repository.ts` | Plantillas de misiones (MongoDB) |
+| Quest Rotations | `src/modules/economy/quests/repository.ts` | Rotaciones diarias/semanales (MongoDB) |
+| Quest Progress | `src/modules/economy/quests/repository.ts` | Progreso de usuarios por misión (MongoDB) |
 
 ### Features Disponibles (Guild)
 
 Ver enum `Features` en `src/db/schemas/guild.ts`:
 - `tickets`, `automod`, `autoroles`, `warns`, `roles`
 - `reputation`, `reputationDetection`, `tops`, `suggest`, `economy`, `game`
+
+---
+
+## Sistema de Misiones (Quest Board 2.0)
+
+### Arquitectura
+
+Ubicación: `src/modules/economy/quests/`
+
+| Componente | Archivo | Responsabilidad |
+|------------|---------|-----------------|
+| Types | `types.ts` | Definiciones, constantes, errores |
+| Repository | `repository.ts` | Acceso a datos (templates, rotations, progress) |
+| Service | `service.ts` | Lógica de negocio, progreso, reclamos |
+| Rotation | `rotation.ts` | Generación de rotaciones diarias/semanales |
+| Hooks | `hooks.ts` | Integración con otros sistemas |
+| UI | `ui.ts` | Builders de embeds y componentes |
+
+### Tipos de Requisitos Soportados
+
+- `do_command` - Usar comando N veces
+- `spend_currency` - Gastar moneda
+- `craft_recipe` - Craftear receta N veces
+- `win_minigame` - Ganar minijuego N veces (coinflip, trivia)
+- `vote_cast` - Emitir voto N veces (love/hate)
+
+### Comandos
+
+- `/quests [tab]` - Tablón interactivo
+- `/quest view <id>` - Ver misión
+- `/quest claim <id>` - Reclamar recompensas
+- `/quest progress` - Progreso general
+- `/quest list` - Listar misiones
+
+### Integración
+
+Para registrar progreso desde otros sistemas:
+
+```typescript
+import { trackCommandUsage, trackCrafting, trackMinigameWin, trackVoteCast } from "@/modules/economy/quests";
+
+// En servicio de Work
+await trackCommandUsage(userId, guildId, "work");
+
+// En servicio de Crafting
+await trackCrafting(userId, guildId, recipeId, quantity);
+
+// En servicio de Minijuegos
+await trackMinigameWin(userId, guildId, "coinflip");
+```
+
+Ver documentación completa en `docs/sistema-misiones.md`.
 
 ---
 
@@ -358,6 +414,7 @@ Ver `seyfert.config.mjs`:
 | `docs/sistema-ia.md` | Sistema de inteligencia artificial |
 | `docs/moderacion.md` | Sistema de moderación |
 | `docs/economia-e-inventario.md` | Sistema de economía |
+| `docs/sistema-misiones.md` | Sistema de misiones (Quest Board 2.0) |
 | `docs/event-bus.md` | Sistema de eventos |
 | `docs/sistema-ui-reactivo.md` | Sistema de UI |
 | `docs/configuracion-servidores.md` | Configuración por servidor |

@@ -2,7 +2,7 @@
  * Economy Account Formatting Utilities.
  *
  * Purpose: Centralize embed/message formatting for economy outputs.
- * Encaje: Used by commands to render consistent, localized economy UI.
+ * Context: Used by commands to render consistent, localized economy UI.
  * Dependencies: Seyfert Embed, economy view types.
  *
  * Invariants:
@@ -36,14 +36,14 @@ import {
 
 /** Format a number with locale separators. */
 export function formatNumber(n: number): string {
-  return Math.trunc(n).toLocaleString("es-ES");
+  return Math.trunc(n).toLocaleString("en-US");
 }
 
 /** Format a relative time (days ago). */
 export function formatDaysAgo(days: number): string {
-  if (days === 0) return "Hoy";
-  if (days === 1) return "Ayer";
-  return `Hace ${days} días`;
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return `${days} days ago`;
 }
 
 /** Format percentage with 1 decimal place. */
@@ -73,7 +73,7 @@ export function renderProgressBar(
  * Safe for public display.
  */
 export function getStatusDisplay(status: EconomyAccountView["status"]): string {
-  return ACCOUNT_STATUS_DISPLAY[status] ?? "❓ Desconocido";
+  return ACCOUNT_STATUS_DISPLAY[status] ?? "❓ Unknown";
 }
 
 /**
@@ -95,7 +95,9 @@ export function getStatusColor(status: EconomyAccountView["status"]): number {
 /**
  * Check if account can access economy features.
  */
-export function canAccessEconomy(status: EconomyAccountView["status"]): boolean {
+export function canAccessEconomy(
+  status: EconomyAccountView["status"],
+): boolean {
   return status === "ok";
 }
 
@@ -103,14 +105,16 @@ export function canAccessEconomy(status: EconomyAccountView["status"]): boolean 
  * Get user-facing message for blocked/banned accounts.
  * Intentionally vague to avoid leaking moderation details.
  */
-export function getAccessDeniedMessage(status: EconomyAccountView["status"]): string {
+export function getAccessDeniedMessage(
+  status: EconomyAccountView["status"],
+): string {
   switch (status) {
     case "blocked":
-      return "⛅ Tu cuenta tiene restricciones temporales. Contacta al staff para más información.";
+      return "⛅ Your account has temporary restrictions. Contact staff for more information.";
     case "banned":
-      return "🚫 Tu cuenta tiene restricciones permanentes. Contacta al staff si crees que es un error.";
+      return "🚫 Your account has permanent restrictions. Contact staff if you think this is an error.";
     default:
-      return "❌ No puedes acceder a la economía en este momento.";
+      return "❌ You cannot access the economy at this time.";
   }
 }
 
@@ -134,8 +138,8 @@ export function buildBalanceFields(view: BalanceView): APIEmbedField[] {
   // Show "and X more" if currencies are hidden
   if (view.hiddenCount > 0) {
     fields.push({
-      name: "💎 Más monedas",
-      value: `Y ${view.hiddenCount} moneda(s) más. Usa \`/balance detallado\` para ver todas.`,
+      name: "💎 More currencies",
+      value: `And ${view.hiddenCount} more currency(ies). Use \`/balance detailed\` to see all.`,
       inline: false,
     });
   }
@@ -144,7 +148,7 @@ export function buildBalanceFields(view: BalanceView): APIEmbedField[] {
   if (fields.length === 0) {
     fields.push({
       name: "💰 Balance",
-      value: "No tienes monedas registradas.",
+      value: "You have no registered currencies.",
       inline: false,
     });
   }
@@ -160,7 +164,7 @@ export function buildBalanceEmbed(
 ): Embed {
   const embed = new Embed()
     .setColor(EmbedColors.Blurple)
-    .setTitle("💰 Tu Balance")
+    .setTitle("💰 Your Balance")
     .setFields(buildBalanceFields(view));
 
   if (avatarUrl) {
@@ -186,8 +190,8 @@ export function buildBankFields(view: BankBreakdownView): APIEmbedField[] {
   if (view.isEmpty) {
     return [
       {
-        name: "💳 Banco",
-        value: "No tienes coins guardados.",
+        name: "💳 Bank",
+        value: "You have no coins saved.",
         inline: false,
       },
     ];
@@ -197,12 +201,12 @@ export function buildBankFields(view: BankBreakdownView): APIEmbedField[] {
 
   return [
     {
-      name: "🫴 En Mano",
+      name: "🫴 In Hand",
       value: `${formatNumber(view.hand)} coins`,
       inline: true,
     },
     {
-      name: "💳 En Banco",
+      name: "💳 In Bank",
       value: `${formatNumber(view.bank)} coins`,
       inline: true,
     },
@@ -212,8 +216,8 @@ export function buildBankFields(view: BankBreakdownView): APIEmbedField[] {
       inline: true,
     },
     {
-      name: "📊 Distribución",
-      value: `${bar} ${formatPercent(view.percentInBank)} en banco`,
+      name: "📊 Distribution",
+      value: `${bar} ${formatPercent(view.percentInBank)} in bank`,
       inline: false,
     },
   ];
@@ -227,7 +231,7 @@ export function buildBankEmbed(
 ): Embed {
   const embed = new Embed()
     .setColor(view.isEmpty ? EmbedColors.Grey : EmbedColors.Gold)
-    .setTitle("🏦 Desglose Bancario")
+    .setTitle("🏦 Bank Breakdown")
     .setFields(buildBankFields(view));
 
   if (avatarUrl) {
@@ -237,7 +241,9 @@ export function buildBankEmbed(
   }
 
   if (!view.isEmpty) {
-    embed.setFooter({ text: `Seguridad bancaria: ${formatPercent(view.percentInBank)}` });
+    embed.setFooter({
+      text: `Bank security: ${formatPercent(view.percentInBank)}`,
+    });
   }
 
   return embed;
@@ -269,7 +275,7 @@ export function buildInventoryPageEmbed(
 ): Embed {
   const embed = new Embed()
     .setColor(EmbedColors.Purple)
-    .setTitle("🎒 Inventario");
+    .setTitle("🎒 Inventory");
 
   if (avatarUrl) {
     embed.setAuthor({ name: username, iconUrl: avatarUrl });
@@ -278,14 +284,16 @@ export function buildInventoryPageEmbed(
   }
 
   if (pageView.items.length === 0) {
-    embed.setDescription("*Inventario vacío*");
+    embed.setDescription("*Empty inventory*");
   } else {
-    const lines = pageView.items.map((item) => buildInventoryItemLine(item, false));
+    const lines = pageView.items.map((item) =>
+      buildInventoryItemLine(item, false),
+    );
     embed.setDescription(lines.join("\n"));
   }
 
   embed.setFooter({
-    text: `Página ${pageView.page + 1} de ${pageView.totalPages} • ${formatNumber(pageView.totalItems)} objetos`,
+    text: `Page ${pageView.page + 1} of ${pageView.totalPages} • ${formatNumber(pageView.totalItems)} items`,
   });
 
   return embed;
@@ -298,15 +306,15 @@ export function buildInventorySummaryEmbed(
 ): Embed {
   const embed = new Embed()
     .setColor(view.isEmpty ? EmbedColors.Grey : EmbedColors.Purple)
-    .setTitle("🎒 Resumen de Inventario")
+    .setTitle("🎒 Inventory Summary")
     .setAuthor({ name: username });
 
   if (view.isEmpty) {
-    embed.setDescription("No tienes objetos en tu inventario.");
+    embed.setDescription("You have no items in your inventory.");
   } else {
     const lines: string[] = [
-      `**Objetos únicos:** ${formatNumber(view.uniqueItems)}`,
-      `**Total de items:** ${formatNumber(view.totalItems)}`,
+      `**Unique items:** ${formatNumber(view.uniqueItems)}`,
+      `**Total items:** ${formatNumber(view.totalItems)}`,
       "",
       "**Top items:**",
     ];
@@ -326,16 +334,31 @@ export function buildInventorySummaryEmbed(
 // Profile Formatters
 // ============================================================================
 
+/** Profile achievements data for embed display. */
+export interface ProfileAchievementsData {
+  equippedTitle?: {
+    displayName: string;
+    prefix?: string;
+    suffix?: string;
+  };
+  equippedBadges: { emoji: string; name: string }[];
+  unlockedCount: number;
+  totalCount: number;
+}
+
 /** Build a profile summary embed. */
 export function buildProfileEmbed(
   view: ProfileSummaryView,
   username: string,
   avatarUrl?: string,
+  achievementsData?: ProfileAchievementsData,
 ): Embed {
   const embed = new Embed()
     .setColor(getStatusColor(view.account.status))
-    .setTitle("👤 Perfil Económico")
-    .setDescription(`Cuenta ${getStatusDisplay(view.account.status).toLowerCase()}`);
+    .setTitle("👤 Economy Profile")
+    .setDescription(
+      `Account ${getStatusDisplay(view.account.status).toLowerCase()}`,
+    );
 
   if (avatarUrl) {
     embed.setAuthor({ name: username, iconUrl: avatarUrl });
@@ -347,28 +370,87 @@ export function buildProfileEmbed(
 
   // Account info
   fields.push({
-    name: "📅 Cuenta creada",
+    name: "📅 Account created",
     value: formatDaysAgo(view.account.daysSinceCreated),
     inline: true,
   });
 
   fields.push({
-    name: "⏰ Última actividad",
+    name: "⏰ Last activity",
     value: formatDaysAgo(view.account.daysSinceActivity),
     inline: true,
   });
 
   // Reputation
   fields.push({
-    name: "⭐ Reputación",
+    name: "⭐ Reputation",
     value: formatNumber(view.reputation),
     inline: true,
   });
 
+  // Equipped Title
+  if (achievementsData?.equippedTitle) {
+    let titleDisplay = achievementsData.equippedTitle.displayName;
+    if (achievementsData.equippedTitle.prefix) {
+      titleDisplay = `${achievementsData.equippedTitle.prefix}${titleDisplay}`;
+    }
+    if (achievementsData.equippedTitle.suffix) {
+      titleDisplay = `${titleDisplay}${achievementsData.equippedTitle.suffix}`;
+    }
+    fields.push({
+      name: "🏷️ Title",
+      value: titleDisplay,
+      inline: false,
+    });
+  }
+
+  // Equipped Badges (1-3)
+  if (achievementsData && achievementsData.equippedBadges.length > 0) {
+    const badgeDisplay = achievementsData.equippedBadges
+      .map((b) => `${b.emoji} ${b.name}`)
+      .join("\n");
+    fields.push({
+      name: "🎖️ Badges",
+      value: badgeDisplay,
+      inline: true,
+    });
+  }
+
+  // Achievements summary
+  if (achievementsData) {
+    const percent = Math.round(
+      (achievementsData.unlockedCount / achievementsData.totalCount) * 100,
+    );
+    fields.push({
+      name: "🏆 Achievements",
+      value: `${achievementsData.unlockedCount}/${achievementsData.totalCount} (${percent}%)\nUse /achievements to see more`,
+      inline: true,
+    });
+  }
+
+  if (view.progression) {
+    const progress = view.progression;
+    const bar = renderProgressBar(progress.progressPercent);
+    const nextStep = progress.isMaxLevel
+      ? "Nivel máximo alcanzado"
+      : `${formatNumber(progress.progressToNext)} / ${formatNumber(
+        (progress.nextLevelXP ?? 0) - progress.currentLevelXP,
+      )} XP para subir`;
+
+    fields.push({
+      name: "📈 Progress",
+      value:
+        `Level **${formatNumber(progress.level)}** • ${formatNumber(progress.totalXP)} XP\n` +
+        `${bar} ${formatPercent(progress.progressPercent)}\n` +
+        nextStep,
+      inline: false,
+    });
+  }
+
   // Primary balance (if any)
   if (view.balances.primaryCurrency) {
     fields.push({
-      name: "💰 Balance principal",
+      name: "💰 Primary balance",
       value: view.balances.primaryCurrency.display,
       inline: false,
     });
@@ -377,8 +459,8 @@ export function buildProfileEmbed(
   // Bank info (if has coins)
   if (view.bank && !view.bank.isEmpty) {
     fields.push({
-      name: "🏦 Total en banco",
-      value: `${formatNumber(view.bank.total)} coins (${formatPercent(view.bank.percentInBank)} seguro)`,
+      name: "🏦 Total in bank",
+      value: `${formatNumber(view.bank.total)} coins (${formatPercent(view.bank.percentInBank)} safe)`,
       inline: true,
     });
   }
@@ -386,8 +468,8 @@ export function buildProfileEmbed(
   // Inventory summary
   if (!view.inventory.isEmpty) {
     fields.push({
-      name: "🎒 Inventario",
-      value: `${formatNumber(view.inventory.uniqueItems)} objetos únicos`,
+      name: "🎒 Inventory",
+      value: `${formatNumber(view.inventory.uniqueItems)} unique items`,
       inline: true,
     });
   }
@@ -395,10 +477,57 @@ export function buildProfileEmbed(
   embed.setFields(fields);
 
   const footerText = view.balances.hasMultipleCurrencies
-    ? `Usa /balance para ver todas tus ${view.balances.currencies.length} monedas`
-    : "Economía PyE";
+    ? `Use /balance to see all your ${view.balances.currencies.length} currencies`
+    : "PyE Economy";
 
   embed.setFooter({ text: footerText });
+
+  return embed;
+}
+
+/** Build a progression embed. */
+export function buildProgressEmbed(
+  view: ProfileSummaryView["progression"],
+  username: string,
+  avatarUrl?: string,
+  streak?: { currentStreak: number; bestStreak: number } | null,
+): Embed {
+  const embed = new Embed()
+    .setColor(EmbedColors.Blurple)
+    .setTitle("🏆 Progress");
+
+  if (avatarUrl) {
+    embed.setAuthor({ name: username, iconUrl: avatarUrl });
+  } else {
+    embed.setAuthor({ name: username });
+  }
+
+  const streakLine = streak
+    ? `\n\n🔥 Daily streak: **${formatNumber(streak.currentStreak)}** (best ${formatNumber(
+      streak.bestStreak,
+    )})`
+    : "";
+
+  if (!view) {
+    embed.setDescription(
+      `No progress recorded on this server.${streakLine}`,
+    );
+    return embed;
+  }
+
+  const bar = renderProgressBar(view.progressPercent);
+  const nextStep = view.isMaxLevel
+    ? "Max level reached"
+    : `${formatNumber(view.progressToNext)} / ${formatNumber(
+      (view.nextLevelXP ?? 0) - view.currentLevelXP,
+    )} XP to level up`;
+
+  embed.setDescription(
+    `Nivel **${formatNumber(view.level)}** • ${formatNumber(view.totalXP)} XP\n` +
+    `${bar} ${formatPercent(view.progressPercent)}\n` +
+    nextStep +
+    streakLine,
+  );
 
   return embed;
 }
@@ -408,10 +537,12 @@ export function buildProfileEmbed(
 // ============================================================================
 
 /** Build an embed for account access denied. */
-export function buildAccessDeniedEmbed(status: EconomyAccountView["status"]): Embed {
+export function buildAccessDeniedEmbed(
+  status: EconomyAccountView["status"],
+): Embed {
   return new Embed()
     .setColor(getStatusColor(status))
-    .setTitle("⛔ Acceso Restringido")
+    .setTitle("⛔ Access Restricted")
     .setDescription(getAccessDeniedMessage(status));
 }
 
@@ -419,18 +550,15 @@ export function buildAccessDeniedEmbed(status: EconomyAccountView["status"]): Em
 export function buildAccountCreatedEmbed(username: string): Embed {
   return new Embed()
     .setColor(EmbedColors.Green)
-    .setTitle("✅ Cuenta Creada")
+    .setTitle("✅ Account Created")
     .setDescription(
-      `¡Bienvenido al sistema capitalista del bot, ${username}!\n\n` +
-      "Tu cuenta ha sido creada automáticamente. Ahora puedes empezar a ganar y gastar monedas.",
+      `Welcome to the bot's capitalist system, ${username}!\n\n` +
+      "Your account has been automatically created. Now you can start earning and spending coins.",
     );
 }
 
 /** Build an embed for generic error (without leaking details). */
-export function buildErrorEmbed(
-  publicMessage: string,
-  logId?: string,
-): Embed {
+export function buildErrorEmbed(publicMessage: string, logId?: string): Embed {
   const embed = new Embed()
     .setColor(EmbedColors.Red)
     .setTitle("❌ Error")
@@ -444,14 +572,12 @@ export function buildErrorEmbed(
 }
 
 /** Build an embed for data corruption warning (admin only). */
-export function buildCorruptionWarningEmbed(
-  repairedFields: string[],
-): Embed {
+export function buildCorruptionWarningEmbed(repairedFields: string[]): Embed {
   return new Embed()
     .setColor(EmbedColors.Yellow)
-    .setTitle("⚠️ Datos Reparados")
+    .setTitle("⚠️ Data Repaired")
     .setDescription(
-      "Se detectaron datos corruptos en tu cuenta económica y fueron reparados automáticamente.\n\n" +
-      `Campos afectados: ${repairedFields.join(", ")}`,
+      "Corrupt data was detected in your economy account and was automatically repaired.\n\n" +
+      `Affected fields: ${repairedFields.join(", ")}`,
     );
 }

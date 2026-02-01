@@ -5,6 +5,7 @@
  */
 
 import type { ItemId } from "@/modules/inventory/definitions";
+import type { CapacityStats as InventoryCapacityStats } from "@/modules/inventory/capacity";
 import type { UserId } from "@/db/types";
 
 /** Input for adjusting item quantity. */
@@ -37,20 +38,7 @@ export interface AdjustItemQuantityResult {
 }
 
 /** Capacity statistics. */
-export interface CapacityStats {
-  /** Current total weight. */
-  readonly currentWeight: number;
-  /** Maximum weight capacity. */
-  readonly maxWeight: number;
-  /** Current slot usage. */
-  readonly currentSlots: number;
-  /** Maximum slot capacity. */
-  readonly maxSlots: number;
-  /** Whether weight limit is exceeded. */
-  readonly weightExceeded: boolean;
-  /** Whether slot limit is exceeded. */
-  readonly slotsExceeded: boolean;
-}
+export type CapacityStats = InventoryCapacityStats;
 
 /** Error codes for item mutations. */
 export type ItemMutationErrorCode =

@@ -23,22 +23,22 @@ import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   user: createUserOption({
-    description: "Usuario a silenciar",
+    description: "User to mute",
     required: true,
   }),
   time: createStringOption({
-    description: "¿Cuánto tiempo de mute querés? (ej. 10min)",
+    description: "How long do you want the mute to last? (e.g. 10min)",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón del mute",
+    description: "Reason for the mute",
     required: false,
   }),
 };
 
 @Declare({
   name: "mute",
-  description: "Silencia a un usuario",
+  description: "Mute a user (timeout)",
   defaultMemberPermissions: ["MuteMembers"],
   botPermissions: ["MuteMembers"],
   contexts: ["Guild"],
@@ -47,12 +47,12 @@ const options = {
 @Options(options)
 export default class MuteCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const { user, time, reason = "Razón no especificada" } = ctx.options;
+    const { user, time, reason = "No reason specified" } = ctx.options;
     const GuildLogger = await ctx.getGuildLogger();
 
     if (!ctx.guildId || !isSnowflake(ctx.guildId) || !isSnowflake(user.id)) {
       return ctx.write({
-        content: "❌ IDs invalidos. Intenta nuevamente.",
+        content: "❌ Invalid IDs. Try again.",
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -60,13 +60,13 @@ export default class MuteCommand extends Command {
     if (!isValid(time))
       return await ctx.write({
         content:
-          "❌ Formato de tiempo inválido.\nEjemplos válidos: `10min`, `1h`, `3d`, `2m`, `5s`.",
+          "❌ Invalid time format.\nValid examples: `10min`, `1h`, `3d`, `2m`, `5s`.",
         flags: MessageFlags.Ephemeral,
       });
 
     if (ctx.author.id === user.id)
       return ctx.write({
-        content: "❌ No podés silenciarte a vos mismo.",
+        content: "❌ You cannot mute yourself.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -76,33 +76,33 @@ export default class MuteCommand extends Command {
     if (!targetMember)
       return ctx.write({
         content:
-          "❌ No se pudo encontrar al miembro a silenciar en el servidor.",
+          "❌ Could not find the member to mute in the server.",
         flags: MessageFlags.Ephemeral,
       });
 
     if (!(await targetMember.moderatable()))
       return ctx.write({
         content:
-          "❌ No podés silenciar a un usuario con un rol igual o superior al tuyo.",
+          "❌ You cannot mute a user with a role equal to or higher than yours.",
         flags: MessageFlags.Ephemeral,
       });
 
-    const text = `${reason} | Silenciado por ${ctx.author.username}`;
+    const text = `${reason} | Muted by ${ctx.author.username}`;
 
     const milliseconds = parse(time) || 0;
     await targetMember.timeout(milliseconds, text);
 
     const successEmbed = new Embed({
-      title: "🔇 Usuario silenciado correctamente",
+      title: "🔇 User muted correctly",
       description: `
-        El usuario **${ctx.options.user.username}** fue silenciado exitosamente.
+        The user **${ctx.options.user.username}** was successfully muted.
 
-        **Razón:** ${reason}  
-        **Duración:** ${time}
+        **Reason:** ${reason}  
+        **Duration:** ${time}
       `,
       color: EmbedColors.Green,
       footer: {
-        text: `Silenciado por ${ctx.author.username}`,
+        text: `Muted by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL(),
       },
     });
@@ -115,17 +115,17 @@ export default class MuteCommand extends Command {
     await registerCase(user.id, ctx.guildId!, "TIMEOUT", reason);
 
     await GuildLogger.banSanctionLog({
-      title: "Usuario silenciado",
+      title: "User muted",
       color: EmbedColors.Orange,
       thumbnail: await user.avatarURL(),
       fields: [
         {
-          name: "Usuario",
+          name: "User",
           value: `${user.username} (${user.id})`,
           inline: true,
         },
-        { name: "Razón", value: reason, inline: false },
-        { name: "Duración", value: time, inline: true },
+        { name: "Reason", value: reason, inline: false },
+        { name: "Duration", value: time, inline: true },
       ],
       footer: {
         text: `${ctx.author.username} (${ctx.author.id})`,

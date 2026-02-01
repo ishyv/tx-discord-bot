@@ -73,8 +73,8 @@ async function ensureOffersIndexes(): Promise<void> {
     if (conflicting) {
       console.error(
         `[offers] Índice conflictivo detectado: '${conflicting.name}'. ` +
-        "Se requiere un índice UNIQUE con partialFilterExpression por estado para garantizar 1 oferta activa por autor. " +
-        `Solución: eliminar el índice '${conflicting.name}' y reiniciar el bot para que se regenere.`,
+          "Se requiere un índice UNIQUE con partialFilterExpression por estado para garantizar 1 oferta activa por autor. " +
+          `Solución: eliminar el índice '${conflicting.name}' y reiniciar el bot para que se regenere.`,
       );
       return;
     }
@@ -107,7 +107,10 @@ const mapError = (error: unknown): Error => {
   const message = String((error as any)?.message ?? "");
   if (code === 11000) {
     // Prefer domain error for the unique index that prevents multiple active offers.
-    if (message.includes(ACTIVE_OFFER_INDEX_NAME) || message.toLowerCase().includes("duplicate key")) {
+    if (
+      message.includes(ACTIVE_OFFER_INDEX_NAME) ||
+      message.toLowerCase().includes("duplicate key")
+    ) {
       return new Error("ACTIVE_OFFER_EXISTS");
     }
     return new Error("ACTIVE_OFFER_EXISTS");
@@ -131,7 +134,9 @@ export interface CreateOfferInput {
 /**
  * Crea una nueva oferta en la base de datos.
  */
-export async function createOffer(input: CreateOfferInput): Promise<Result<Offer>> {
+export async function createOffer(
+  input: CreateOfferInput,
+): Promise<Result<Offer>> {
   try {
     await offersCollection();
     const now = new Date();
@@ -211,7 +216,7 @@ export async function updateOffer(
 
     // Using MongoStore's internal safeDoc mapping would be nice but it's private.
     // However, OfferStore.get(id) will do the same after update.
-    // For efficiency we can just parse it here if we had access, 
+    // For efficiency we can just parse it here if we had access,
     // but findOneAndUpdate result needs to be parsed by OfferSchema.
 
     if (!updated) return OkResult(null);

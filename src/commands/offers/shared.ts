@@ -4,12 +4,28 @@ import type { OfferDetails } from "@/modules/offers";
 import type { EmbedFieldDefinition } from "@/modules/prefabs/embedDesigner";
 
 export const OFFER_FIELD_DEFINITIONS: EmbedFieldDefinition[] = [
-  { key: "requirements", label: "Requisitos", placeholder: "Tecnologías, experiencia, stack" },
-  { key: "workMode", label: "Modalidad", placeholder: "Remoto, híbrido, presencial" },
+  {
+    key: "requirements",
+    label: "Requisitos",
+    placeholder: "Tecnologías, experiencia, stack",
+  },
+  {
+    key: "workMode",
+    label: "Modalidad",
+    placeholder: "Remoto, híbrido, presencial",
+  },
   { key: "salary", label: "Rango salarial", placeholder: "Ej: USD 2000-3000" },
   { key: "contact", label: "Contacto", placeholder: "DM, email, formulario" },
-  { key: "labels", label: "Etiquetas", placeholder: "#junior #backend #devops" },
-  { key: "location", label: "Ubicación / zona horaria", placeholder: "Argentina (GMT-3)" },
+  {
+    key: "labels",
+    label: "Etiquetas",
+    placeholder: "#junior #backend #devops",
+  },
+  {
+    key: "location",
+    label: "Ubicación / zona horaria",
+    placeholder: "Argentina (GMT-3)",
+  },
 ];
 
 const MIN_DESCRIPTION_LENGTH = 8;

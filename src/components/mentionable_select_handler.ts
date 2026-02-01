@@ -10,19 +10,19 @@ import { ComponentCommand, type ComponentContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 
 export default class UIMentionableSelectHandler extends ComponentCommand {
-    componentType = "MentionableSelect" as const;
+  componentType = "MentionableSelect" as const;
 
-    filter(ctx: ComponentContext<"MentionableSelect">) {
-        return id_exists(ctx.customId);
-    }
+  filter(ctx: ComponentContext<"MentionableSelect">) {
+    return id_exists(ctx.customId);
+  }
 
-    async run(ctx: ComponentContext<"MentionableSelect">) {
-        const ok = await resolveAndInvoke(ctx.customId, ctx);
-        if (!ok) {
-            await ctx.write({
-                content: "Este menú de selección de menciones ya no está activo.",
-                flags: MessageFlags.Ephemeral,
-            });
-        }
+  async run(ctx: ComponentContext<"MentionableSelect">) {
+    const ok = await resolveAndInvoke(ctx.customId, ctx);
+    if (!ok) {
+      await ctx.write({
+        content: "Este menú de selección de menciones ya no está activo.",
+        flags: MessageFlags.Ephemeral,
+      });
     }
+  }
 }

@@ -2,29 +2,55 @@
  * Autorole Preset Command
  */
 import type { GuildCommandContext } from "seyfert";
-import {
-  createRoleOption,
-  Declare,
-  Embed,
-  Options,
-  SubCommand,
-} from "seyfert";
+import { createRoleOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
 import { applyReputationPreset } from "@/modules/autorole";
-import {
-  botCanManageRole,
-  requireAutoroleContext,
-} from "./shared";
+import { botCanManageRole, requireAutoroleContext } from "./shared";
 
 const PRESET_RANKS = [
-  { optionKey: "novatorole", label: "novato [1]", minRep: 0, slug: "rep-novato" },
-  { optionKey: "iniciaterole", label: "iniciante [2]", minRep: 1, slug: "rep-iniciante" },
-  { optionKey: "regularrole", label: "regular [3]", minRep: 16, slug: "rep-regular" },
-  { optionKey: "avanzadorole", label: "avanzado [4]", minRep: 40, slug: "rep-avanzado" },
-  { optionKey: "veteranorole", label: "veterano [5]", minRep: 80, slug: "rep-veterano" },
-  { optionKey: "sabiorole", label: "sabio [6]", minRep: 100, slug: "rep-sabio" },
-  { optionKey: "expertorole", label: "experto [7]", minRep: 150, slug: "rep-experto" },
+  {
+    optionKey: "novatorole",
+    label: "novato [1]",
+    minRep: 0,
+    slug: "rep-novato",
+  },
+  {
+    optionKey: "iniciaterole",
+    label: "iniciante [2]",
+    minRep: 1,
+    slug: "rep-iniciante",
+  },
+  {
+    optionKey: "regularrole",
+    label: "regular [3]",
+    minRep: 16,
+    slug: "rep-regular",
+  },
+  {
+    optionKey: "avanzadorole",
+    label: "avanzado [4]",
+    minRep: 40,
+    slug: "rep-avanzado",
+  },
+  {
+    optionKey: "veteranorole",
+    label: "veterano [5]",
+    minRep: 80,
+    slug: "rep-veterano",
+  },
+  {
+    optionKey: "sabiorole",
+    label: "sabio [6]",
+    minRep: 100,
+    slug: "rep-sabio",
+  },
+  {
+    optionKey: "expertorole",
+    label: "experto [7]",
+    minRep: 150,
+    slug: "rep-experto",
+  },
 ] as const;
 
 const options = {

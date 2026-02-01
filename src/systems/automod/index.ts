@@ -1,35 +1,35 @@
 /**
- * AutoMod System: Detección de contenido malicioso en mensajes y adjuntos.
+ * AutoMod System: Detection of malicious content in messages and attachments.
  *
- * Propósito: Orquestar el pipeline completo de moderación automática para un guild,
- * coordinando detección de spam de links, filtros de texto y análisis de imágenes con OCR.
+ * Purpose: Orchestrate the complete automatic moderation pipeline for a guild,
+ * coordinating link spam detection, text filters, and image analysis with OCR.
  *
- * Encaje en el sistema: Capa de orquestación principal que consume:
- *   - Filtros de spam/links (constants/automod)
- *   - Servicio OCR (services/ocr)
- *   - Caché persistente (utils/cache)
- *   - Logging de moderación (utils/moderationLogger)
+ * System Context: Main orchestration layer that consumes:
+ *   - Spam/link filters (`constants/automod`)
+ *   - OCR service (`services/ocr`)
+ *   - Persistent cache (`utils/cache`)
+ *   - Moderation logging (`utils/moderationLogger`)
  *
- * Invariantes clave:
- *   - Singleton por instancia de cliente (comparte caché y worker OCR)
- *   - Pipeline ordenado: links → texto → imágenes (se detiene al primer match)
- *   - Solo imágenes con contentType "image/*" son procesadas
- *   - Resultados "unsafe" se cachean por 7 días para evitar reprocesamiento
+ * Key Invariants:
+ *   - Singleton per client instance (shares cache and OCR worker)
+ *   - Ordered pipeline: links → text → images (stops at the first match)
+ *   - Only images with contentType "image/*" are processed
+ *   - "unsafe" results are cached for 7 days to avoid reprocessing
  *
- * Tradeoffs y decisiones:
- *   - Staff-only moderation: Notifica pero no actúa automáticamente para evitar falsos positivos
- *   - Fixed OCR preprocessing: Threshold(150) es rápido pero frágil a condiciones de iluminación
- *   - Long cache duration: 7 días reduce carga pero arrastra falsos positivos
+ * Tradeoffs and Decisions:
+ *   - Staff-only moderation: Notifies but does not act automatically to avoid false positives
+ *   - Fixed OCR preprocessing: Threshold(150) is fast but fragile to lighting conditions
+ *   - Long cache duration: 7 days reduces load but carries false positives
  *
- * Riesgos conocidos:
- *   - OCR puede fallar en imágenes con iluminación variable o texto manuscrito
- *   - Cache largo puede propagar falsos positivos por una semana
- *   - Sin reintentos: Fallos de OCR se marcan como "no detectado" permanentemente
+ * Known Risks:
+ *   - OCR can fail on images with variable lighting or handwritten text
+ *   - Long cache can propagate false positives for a week
+ *   - No retries: OCR failures are marked as "not detected" permanently
  *
  * Gotchas:
- *   - El sistema se llama "scan detection" pero solo detecta texto de estafas, no clasifica tipos de imágenes
- *   - Las imágenes se descargan completamente en memoria (límite 8MB)
- *   - El servicio OCR puede volverse "unavailable" permanentemente si falla la inicialización
+ *   - The system is called "scan detection" but only detects scam text, it does not classify image types
+ *   - Images are downloaded entirely into memory (8MB limit)
+ *   - The OCR service can become permanently "unavailable" if initialization fails
  */
 import type { Message, UsingClient } from "seyfert";
 import { scamFilterList, spamFilterList } from "@/constants/automod";
@@ -38,7 +38,10 @@ import type { CoreChannelRecord } from "@/db/schemas/guild";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { recognizeText } from "@/services/ocr";
 import { Cache } from "@/utils/cache";
-import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
+import {
+  fetchStoredChannel,
+  isUnknownChannelError,
+} from "@/utils/channelGuard";
 import { phash } from "@/utils/phash";
 import { configStore, ConfigurableModule } from "@/configuration";
 import { logModerationAction } from "@/utils/moderationLogger";
@@ -54,18 +57,18 @@ const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
 const ATTACHMENT_FETCH_TIMEOUT_MS = 15_000;
 const MAX_AUTOMOD_IMAGE_BYTES = 8 * 1024 * 1024;
 /**
- * Núcleo del AutoMod del servidor: revisa texto rápido y luego analiza adjuntos según haga falta.
+ * Server AutoMod core: quickly checks text and then analyzes attachments as needed.
  */
 export class AutoModSystem {
   private client: UsingClient;
   private static instance: AutoModSystem | null = null;
   private linkSpamState = new Map<string, Map<string, number[]>>();
   private linkSpamCooldown = new Map<string, number>();
-  // La caché evita rehacer hashes y nos deja recordar imágenes marcadas un tiempo.
+  // The cache avoids re-hashing and lets us remember flagged images for a while.
   private tempStorage = new Cache({
     persistPath: "./cache_automod.json",
-    persistIntervalMs: 5 * 60 * 1000, // cada 5 minutos
-    cleanupIntervalMs: 60 * 60 * 1000, // cada hora
+    persistIntervalMs: 5 * 60 * 1000, // every 5 minutes
+    cleanupIntervalMs: 60 * 60 * 1000, // every hour
   });
   constructor(client: UsingClient) {
     this.client = client;
@@ -102,14 +105,19 @@ export class AutoModSystem {
   private isShortener(hostname: string, allowed: string[]): boolean {
     if (!hostname) return false;
     const host = hostname.toLowerCase();
-    return allowed.some((entry) => host === entry || host.endsWith(`.${entry}`));
+    return allowed.some(
+      (entry) => host === entry || host.endsWith(`.${entry}`),
+    );
   }
 
   private async resolveFinalUrl(rawUrl: string): Promise<string | null> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const res = await fetch(rawUrl, { signal: controller.signal, redirect: "follow" });
+      const res = await fetch(rawUrl, {
+        signal: controller.signal,
+        redirect: "follow",
+      });
       return res.url ?? null;
     } catch {
       return null;
@@ -122,14 +130,18 @@ export class AutoModSystem {
     const guildId = (message as any).guildId ?? message.member?.guildId;
     if (!guildId) return false;
 
-    const config = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+    const config = await configStore.get(
+      guildId,
+      ConfigurableModule.AutomodLinkSpam,
+    );
     if (!config.enabled) return false;
 
     const whitelistConfig = await configStore.get(
       guildId,
       ConfigurableModule.AutomodDomainWhitelist,
     );
-    const whitelistEnabled = whitelistConfig.enabled && whitelistConfig.domains.length > 0;
+    const whitelistEnabled =
+      whitelistConfig.enabled && whitelistConfig.domains.length > 0;
 
     const shortenersConfig = await configStore.get(
       guildId,
@@ -152,7 +164,9 @@ export class AutoModSystem {
     if (!links.length) return false;
 
     const allowedDomains = whitelistEnabled
-      ? whitelistConfig.domains.map((d: string) => d.toLowerCase().trim()).filter(Boolean)
+      ? whitelistConfig.domains
+        .map((d: string) => d.toLowerCase().trim())
+        .filter(Boolean)
       : [];
     const filteredLinks: string[] = [];
     for (const link of links) {
@@ -162,7 +176,10 @@ export class AutoModSystem {
           const resolved = await this.resolveFinalUrl(link);
           if (resolved) {
             const resolvedHost = this.extractHostname(resolved);
-            if (whitelistEnabled && this.isWhitelisted(resolvedHost, allowedDomains)) {
+            if (
+              whitelistEnabled &&
+              this.isWhitelisted(resolvedHost, allowedDomains)
+            ) {
               continue;
             }
           }
@@ -205,7 +222,7 @@ export class AutoModSystem {
     this.linkSpamCooldown.set(cooldownKey, now + windowMs);
 
     const channelId = (message as any).channelId ?? (message as any).channel_id;
-    const channelLabel = channelId ? `<#${channelId}>` : "Canal desconocido";
+    const channelLabel = channelId ? `<#${channelId}>` : "Unknown channel";
     const messageUrl = (message as any).url ?? "";
 
     await logModerationAction(
@@ -218,11 +235,30 @@ export class AutoModSystem {
           `Usuario: <@${userId}>`,
           `Canal: ${channelLabel}`,
           messageUrl ? `Mensaje: ${messageUrl}` : "",
-        ].filter(Boolean).join("\n"),
+        ]
+          .filter(Boolean)
+          .join("\n"),
         fields: [
-          { name: "Links (mensaje)", value: filteredLinks.map((l) => `\`${l}\``).join("\n").slice(0, 1024) || "-" },
-          { name: "Conteo (ventana)", value: `${filtered.length}/${maxLinks} en ${Math.round(windowMs / 1000)}s`, inline: true },
-          { name: "Whitelist", value: whitelistEnabled ? `${filteredCount} filtrados` : "desactivado", inline: true },
+          {
+            name: "Links (mensaje)",
+            value:
+              filteredLinks
+                .map((l) => `\`${l}\``)
+                .join("\n")
+                .slice(0, 1024) || "-",
+          },
+          {
+            name: "Conteo (ventana)",
+            value: `${filtered.length}/${maxLinks} en ${Math.round(windowMs / 1000)}s`,
+            inline: true,
+          },
+          {
+            name: "Whitelist",
+            value: whitelistEnabled
+              ? `${filteredCount} filtered`
+              : "disabled",
+            inline: true,
+          },
         ],
         actorId: null,
       },
@@ -238,7 +274,7 @@ export class AutoModSystem {
       if (reportChannelId && isSnowflake(reportChannelId)) {
         await this.client.messages
           .write(reportChannelId, {
-            content: `AutoMod LinkSpam: <@${userId}> en ${channelId ? `<#${channelId}>` : "canal desconocido"}`,
+            content: `AutoMod LinkSpam: <@${userId}> in ${channelId ? `<#${channelId}>` : "unknown channel"}`,
             embeds: [
               {
                 title: "AutoMod LinkSpam",
@@ -246,11 +282,17 @@ export class AutoModSystem {
                   `Usuario: <@${userId}>`,
                   channelId ? `Canal: <#${channelId}>` : "Canal: desconocido",
                   messageUrl ? `Mensaje: ${messageUrl}` : "",
-                ].filter(Boolean).join("\n"),
+                ]
+                  .filter(Boolean)
+                  .join("\n"),
                 fields: [
                   {
                     name: "Links (mensaje)",
-                    value: filteredLinks.map((l) => `\`${l}\``).join("\n").slice(0, 1024) || "-",
+                    value:
+                      filteredLinks
+                        .map((l) => `\`${l}\``)
+                        .join("\n")
+                        .slice(0, 1024) || "-",
                   },
                   {
                     name: "Conteo (ventana)",
@@ -259,7 +301,9 @@ export class AutoModSystem {
                   },
                   {
                     name: "Whitelist",
-                    value: whitelistEnabled ? `${filteredCount} filtrados` : "desactivado",
+                    value: whitelistEnabled
+                      ? `${filteredCount} filtered`
+                      : "disabled",
                     inline: true,
                   },
                 ],
@@ -278,7 +322,7 @@ export class AutoModSystem {
     return true;
   }
   /**
-   * Patrón singleton: una instancia por cliente porque guardamos caché y worker OCR.
+   * Singleton pattern: one instance per client as we store cache and OCR worker.
    */
   public static getInstance(client: UsingClient): AutoModSystem {
     if (!AutoModSystem.instance) {
@@ -287,32 +331,32 @@ export class AutoModSystem {
     return AutoModSystem.instance;
   }
   /**
-   * Pipeline principal de moderación. Evalúa un mensaje en orden específico.
+   * Main moderation pipeline. Evaluates a message in a specific order.
    *
-   * Propósito: Coordinar la detección de contenido malicioso siguiendo un pipeline
-   * determinista para evitar procesamiento innecesario y race conditions.
+   * Purpose: Coordinate the detection of malicious content following a 
+   * deterministic pipeline to avoid unnecessary processing and race conditions.
    *
-   * Orden de evaluación (crítico):
-   *   1. Link spam detection - Más rápido, menos recursos
-   *   2. Text spam filters - Regex simple, sin I/O pesado
-   *   3. Image analysis - OCR costoso, solo si no hay match previo
+   * Evaluation order (critical):
+   *   1. Link spam detection - Fastest, fewer resources
+   *   2. Text spam filters - Simple regex, no heavy I/O
+   *   3. Image analysis - Costly OCR, only if no previous match
    *
-   * @param message Mensaje de Discord a analizar
-   * @returns true si se actuó sobre el mensaje (mute, timeout, notificación), false si no se detectó nada
+   * @param message Discord message to analyze
+   * @returns true if action was taken (mute, timeout, notification), false if nothing detected
    *
    * Side effects:
-   *   - Puede aplicar timeout al usuario (spam filters)
-   *   - Puede enviar notificaciones al staff (imágenes sospechosas)
-   *   - Escribe en caché persistente (resultados de análisis de imágenes)
-   *   - Logging de acciones de moderación
+   *   - May apply timeout to the user (spam filters)
+   *   - May send notifications to staff (suspicious images)
+   *   - Writes to persistent cache (image analysis results)
+   *   - Moderation action logging
    *
-   * Invariantes:
-   *   - El procesamiento se detiene al primer match para evitar acciones múltiples
-   *   - Siempre retorna boolean, nunca lanza (errores se loguean y retornan false)
-   *   - Solo procesa adjuntos si no hay match en texto/links
+   * Invariants:
+   *   - Processing stops at the first match to avoid multiple actions
+   *   - Always returns boolean, never throws (errors are logged and return false)
+   *   - Only processes attachments if no match in text/links
    *
-   * RISK: Cambiar el orden de evaluación puede impactar performance y detección.
-   *   Las imágenes son costosas, por eso van al final del pipeline.
+   * RISK: Changing the evaluation order can impact performance and detection.
+   *   Images are costly, so they go at the end of the pipeline.
    */
   public async analyzeUserMessage(message: Message): Promise<boolean> {
     try {
@@ -340,34 +384,34 @@ export class AutoModSystem {
     }
   }
   /**
-   * Aplica filtros de spam basados en regex al contenido del mensaje.
+   * Applies regex-based spam filters to the message content.
    *
-   * Propósito: Detectar patrones de spam/estafa mediante expresiones regulares
-   * predefinidas, aplicando acciones configuradas según el tipo de infracción.
+   * Purpose: Detect spam/scam patterns using predefined regular expressions,
+   * applying configured actions based on the violation type.
    *
-   * Comportamiento:
-   *   - Itera todos los filtros en orden (no hay cortocircuito)
-   *   - Aplica timeout (5 min) para filtros con mute=true
-   *   - Envía advertencia al staff si el filtro tiene warnMessage
-   *   - Retorna al primer match (no acumula acciones)
+   * Behavior:
+   *   - Iterates through all filters in order (no short-circuit)
+   *   - Applies timeout (5 min) for filters with mute=true
+   *   - Sends staff warning if the filter has a warnMessage
+   *   - Returns at the first match (does not accumulate actions)
    *
-   * @param message Mensaje a analizar
-   * @param normalizedContent Contenido ya normalizado a lowercase
-   * @returns true si se aplicó alguna acción, false si no hubo match
+   * @param message Message to analyze
+   * @param normalizedContent Already lowercased content
+   * @returns true if an action was applied, false if no match
    *
    * Side effects:
-   *   - Puede aplicar timeout al usuario vía Discord API
-   *   - Puede enviar notificaciones al staff
-   *   - Logging de acciones de moderación
+   *   - May apply timeout via Discord API
+   *   - May send staff notifications
+   *   - Moderation action logging
    *
-   * Invariantes:
-   *   - Solo un filtro puede accionar por mensaje (primero que matchea)
-   *   - Timeout es de 5 minutos fijo (configuración hardcoded)
-   *   - Los filtros sin mute solo notifican, no sancionan
+   * Invariants:
+   *   - Only one filter can act per message (first one that matches)
+   *   - Timeout is fixed at 5 minutes (hardcoded config)
+   *   - Filters without mute only notify, they don't sanction
    *
-   * TODO: Implementar filtros sin mute que solo advierten sin sancionar.
-   *   Actualmente los filtros con mute=false solo envían warnMessage pero no tienen
-   *   otro comportamiento específico definido.
+   * TODO: Implement filters without mute that only warn without sanctioning.
+   *   Currently, filters with mute=false only send warnMessage but have no
+   *   other specific defined behavior.
    */
   private async runSpamFilters(
     message: Message,
@@ -378,11 +422,11 @@ export class AutoModSystem {
       if (spamFilter.mute) {
         await message.member?.timeout?.(
           FIVE_MINUTES,
-          "Contenido malisioso detectado",
+          "Malicious content detected",
         );
       } else {
-        // TODO: filtros sin mute
-        // ? Se podria avisar al staff o similar
+        // TODO: filters without mute
+        // ? We could notify staff or similar
       }
       if (spamFilter.warnMessage) {
         await this.notifySuspiciousActivity(spamFilter.warnMessage, message);
@@ -392,27 +436,27 @@ export class AutoModSystem {
     return false;
   }
   /**
-   * Decide si los adjuntos de un mensaje deben ser analizados.
+   * Decides if a message's attachments should be analyzed.
    *
-   * Propósito: Filtrar rápidamente mensajes que no requieren análisis de imágenes
-   * para evitar procesamiento OCR innecesario (costoso).
+   * Purpose: Quickly filter messages that don't require image analysis 
+   * to avoid unnecessary (costly) OCR processing.
    *
-   * Criterios de evaluación:
-   *   - Debe tener al menos un adjunto
-   *   - Al menos un adjunto debe ser imagen (contentType starts with "image/")
-   *   - No se valida tamaño aquí (se hace en fetchAttachmentBuffer)
+   * Evaluation criteria:
+   *   - Must have at least one attachment
+   *   - At least one attachment must be an image (contentType starts with "image/")
+   *   - Size is not validated here (it's done in fetchAttachmentBuffer)
    *
-   * @param _message Mensaje (no usado, mantenido para firma consistente)
-   * @param attachments Array de adjuntos del mensaje
-   * @returns true si se debe proceder con análisis de imágenes
+   * @param _message Message (not used, kept for consistent signature)
+   * @param attachments Array of message attachments
+   * @returns true if image analysis should proceed
    *
-   * Invariantes:
-   *   - Solo se procesan adjuntos con contentType "image/*"
-   *   - No hay límite de cantidad de adjuntos aquí
-   *   - Mensajes sin adjuntos o sin imágenes retornan false inmediatamente
+   * Invariants:
+   *   - Only attachments with contentType "image/*" are processed
+   *   - No limit on attachment count here
+   *   - Messages without attachments or images return false immediately
    *
-   * WHY: Esta separación permite shortcut temprano en el pipeline principal
-   *   sin tener que descargar o procesar archivos innecesariamente.
+   * WHY: This separation allows for an early shortcut in the main pipeline
+   *   without having to download or process unnecessary files.
    */
   private shouldScanAttachments(
     _message: Message,
@@ -425,7 +469,7 @@ export class AutoModSystem {
       attachment.contentType?.startsWith("image"),
     );
     if (!hasImageAttachment) {
-      // Sólo nos interesan adjuntos que realmente sean imágenes.
+      // We are only interested in attachments that are actually images.
       return false;
     }
     return true;
@@ -490,37 +534,39 @@ export class AutoModSystem {
     return false;
   }
   /**
-   * Descarga el contenido de un adjunto desde URL de Discord.
+   * Downloads attachment content from Discord URL.
    *
-   * Propósito: Obtener el ArrayBuffer de una imagen con validaciones de seguridad
-   * y límites de recursos para evitar DoS o agotamiento de memoria.
+   * Purpose: Retrieve image ArrayBuffer with security validations 
+   * and resource limits to avoid DoS or memory exhaustion.
    *
-   * Validaciones aplicadas:
-   *   - Timeout de 15 segundos para descarga
-   *   - Límite de 8MB (MAX_AUTOMOD_IMAGE_BYTES)
-   *   - Verificación de content-length header cuando está disponible
-   *   - Abort temprano si se excede el tamaño durante streaming
+   * Applied validations:
+   *   - 15-second download timeout
+   *   - 8MB limit (MAX_AUTOMOD_IMAGE_BYTES)
+   *   - content-length header verification when available
+   *   - Early abort if size is exceeded during streaming
    *
-   * @param url URL del adjunto de Discord
-   * @returns ArrayBuffer con los datos de la imagen o null si falla
+   * @param url Discord attachment URL
+   * @returns ArrayBuffer with image data or null if it fails
    *
    * Side effects:
-   *   - Petición HTTP a servidores de Discord
-   *   - Potencial allocation grande de memoria (hasta 8MB)
-   *   - Logging de advertencias para fallos y límites excedidos
+   *   - HTTP request to Discord servers
+   *   - Potential large memory allocation (up to 8MB)
+   *   - Warning logging for failures and exceeded limits
    *
-   * Invariantes:
-   *   - Nunca lanza: siempre retorna null en caso de error
-   *   - Respeta límites estrictos de tamaño y tiempo
-   *   - Soporta streaming para detener descargas grandes temprano
+   * Invariants:
+   *   - Never throws: always returns null on error
+   *   - Strictly respects size and time limits
+   *   - Supports streaming to stop large downloads early
    *
-   * RISK: El límite de 8MB puede ser insuficiente para imágenes de alta resolución
-   *   modernas. Considerar aumentar o implementar resizing antes de OCR.
+   * RISK: The 8MB limit may be insufficient for modern high-resolution images. 
+   *   Consider increasing or implementing resizing before OCR.
    *
-   * WHY: Streaming en lugar de descargar todo el buffer previene agotamiento
-   *   de memoria con adjuntos maliciosos o muy grandes.
+   * WHY: Streaming instead of downloading the whole buffer prevents 
+   *   memory exhaustion with malicious or very large attachments.
    */
-  private async fetchAttachmentBuffer(url: string): Promise<ArrayBuffer | null> {
+  private async fetchAttachmentBuffer(
+    url: string,
+  ): Promise<ArrayBuffer | null> {
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(),
@@ -530,7 +576,7 @@ export class AutoModSystem {
     try {
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) {
-        console.warn("AutoModSystem: no se pudo descargar la imagen", {
+        console.warn("AutoModSystem: could not download image", {
           url,
           status: response.status,
         });
@@ -554,7 +600,7 @@ export class AutoModSystem {
       if (!body) {
         const buffer = await response.arrayBuffer();
         if (buffer.byteLength > MAX_AUTOMOD_IMAGE_BYTES) {
-          console.warn("AutoModSystem: imagen demasiado grande para analizar", {
+          console.warn("AutoModSystem: image too large to analyze", {
             url,
             byteLength: buffer.byteLength,
           });
@@ -575,7 +621,7 @@ export class AutoModSystem {
         total += value.byteLength;
         if (total > MAX_AUTOMOD_IMAGE_BYTES) {
           controller.abort();
-          console.warn("AutoModSystem: imagen demasiado grande para analizar", {
+          console.warn("AutoModSystem: image too large to analyze", {
             url,
             total,
           });
@@ -594,7 +640,7 @@ export class AutoModSystem {
 
       return merged.buffer;
     } catch (error) {
-      console.warn("AutoModSystem: fallo descargando imagen", { url, error });
+      console.warn("AutoModSystem: image download failed", { url, error });
       return null;
     } finally {
       clearTimeout(timeout);
@@ -602,35 +648,35 @@ export class AutoModSystem {
   }
 
   /**
-   * Analiza una imagen adjunto usando OCR para detectar texto de estafas.
+   * Analyzes an attachment image using OCR to detect scam text.
    *
-   * Propósito: Extraer texto de imágenes mediante PaddleOCR y verificar si coincide
-   * con patrones conocidos de estafas (crypto, nitro gratis, etc).
+   * Purpose: Extract text from images using PaddleOCR and check if it matches
+   * known scam patterns (crypto, free nitro, etc).
    *
-   * Flujo:
-   *   1. Extrae texto usando OCR (con preprocessing agresivo)
-   *   2. Normaliza a lowercase
-   *   3. Verifica contra scamFilterList (regex patterns)
-   *   4. Retorna primer pattern que matchea (si existe)
+   * Flow:
+   *   1. Extract text using OCR (with aggressive preprocessing)
+   *   2. Normalize to lowercase
+   *   3. Check against scamFilterList (regex patterns)
+   *   4. Return first pattern that matches (if any)
    *
-   * @param buffer ArrayBuffer de la imagen (ya validada y descargada)
-   * @returns RegExp del pattern matcheado o undefined si no hay coincidencia
+   * @param buffer ArrayBuffer of the image (already validated and downloaded)
+   * @returns RegExp of the matched pattern or undefined if no match
    *
    * Side effects:
-   *   - Inicializa servicio OCR si no está disponible (lazy loading)
-   *   - Procesamiento intensivo de CPU (OCR + preprocessing)
-   *   - Serializa tareas en cola para evitar sobrecarga
+   *   - Initializes OCR service if unavailable (lazy loading)
+   *   - CPU intensive processing (OCR + preprocessing)
+   *   - Serializes tasks in queue to avoid overload
    *
-   * Invariantes:
-   *   - Siempre retorna RegExp o undefined, nunca lanza
-   *   - OCR puede retornar string vacío si no detecta texto
-   *   - Solo detecta scams basados en texto, no análisis visual
+   * Invariants:
+   *   - Always returns RegExp or undefined, never throws
+   *   - OCR can return empty string if no text detected
+   *   - Only detects text-based scams, not visual analysis
    *
-   * RISK: El preprocessing usa threshold(150) fijo que puede fallar en imágenes
-   *   con iluminación variable o bajo contraste. Esto puede causar falsos negativos.
+   * RISK: Preprocessing uses a fixed threshold(150) that may fail on images
+   *   with variable lighting or low contrast. This can cause false negatives.
    *
-   * ALT: Se consideró usar threshold adaptivo o múltiples umbrales, pero
-   *   impacta significativamente la performance y el uso de memoria.
+   * ALT: adaptive thresholding or multiple thresholds were considered, but
+   *   significantly impact performance and memory usage.
    */
   private async analyzeImage(buffer: ArrayBuffer) {
     const text = await recognizeText(buffer);
@@ -639,23 +685,23 @@ export class AutoModSystem {
   }
 
   /**
-   * Notifica al staff sobre una imagen sospechosa.
+   * Notifies staff about a suspicious image.
    */
   private async flagSuspiciousImage(message: Message, attachmentUrl: string) {
     await this.notifySuspiciousActivity(
-      `Imagen sospechosa. ${message.author.tag}: ${attachmentUrl}`,
+      `Suspicious image. ${message.author.tag}: ${attachmentUrl}`,
       message,
     );
   }
   /**
-   * Aviso al equipo de moderación. Si falla, no frenamos el flujo porque quizá el mensaje ya no está.
+   * Warning to the moderation team. If it fails, we don't stop the flow because the message might already be gone.
    */
   private async notifySuspiciousActivity(warning: string, message: Message) {
     // Obtener canal de staff desde la base de datos
     const guildId = message.member?.guildId;
     if (!guildId) {
       console.error(
-        "AutoModSystem: no se pudo obtener ID de la guild del mensaje al tratar de notificar al staff.",
+        "AutoModSystem: could not obtain guild ID from message when trying to notify staff.",
       );
       return;
     }
@@ -665,7 +711,7 @@ export class AutoModSystem {
     ).staff;
     if (!staffChannel) {
       console.error(
-        "AutoModSystem: no se pudo obtener canal de staff de la guild al tratar de notificar al staff.",
+        "AutoModSystem: could not obtain staff channel for the guild when trying to notify staff.",
       );
       return;
     }
@@ -679,20 +725,20 @@ export class AutoModSystem {
     );
     if (!fetched.channel || !fetched.channelId) {
       console.error(
-        "AutoModSystem: el canal de staff configurado no existe o es invalido.",
+        "AutoModSystem: the configured staff channel does not exist or is invalid.",
       );
       return;
     }
     if (!fetched.channel.isTextGuild()) {
       console.error(
-        "AutoModSystem: el canal de staff configurado no es un canal de texto.",
+        "AutoModSystem: the configured staff channel is not a text channel.",
       );
       return;
     }
-    // TODO: botones para borrar el mensaje directamente y saltar al mensaje
+    // TODO: buttons to delete message directly and jump to message
     await this.client.messages
       .write(fetched.channelId, {
-        content: `**Advertencia:** ${warning}. ${message.url ?? ""}`,
+        content: `**Warning:** ${warning}. ${message.url ?? ""}`,
       })
       .catch(async (err: Error) => {
         if (isUnknownChannelError(err)) {
@@ -700,7 +746,7 @@ export class AutoModSystem {
             "channels.core.staff": null,
           });
         }
-        console.error("AutoModSystem: Error al advertir al staff:", err);
+        console.error("AutoModSystem: Error warning staff:", err);
       });
   }
 }

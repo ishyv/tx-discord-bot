@@ -15,7 +15,10 @@ import {
   Middlewares,
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
-import { removeInvalidChannels, removeManagedChannel } from "@/modules/guild-channels";
+import {
+  removeInvalidChannels,
+  removeManagedChannel,
+} from "@/modules/guild-channels";
 import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
@@ -43,7 +46,9 @@ export default class ChannelRemoveCommand extends SubCommand {
 
     const identifier = ctx.options.id.trim();
     if (!identifier) {
-      await ctx.write({ content: "[!] Debes indicar un identificador valido." });
+      await ctx.write({
+        content: "[!] Debes indicar un identificador valido.",
+      });
       return;
     }
 
@@ -53,7 +58,9 @@ export default class ChannelRemoveCommand extends SubCommand {
     const removed = await removeManagedChannel(guildId, identifier);
 
     if (!removed) {
-      await ctx.write({ content: "[!] No se encontro un canal con ese identificador." });
+      await ctx.write({
+        content: "[!] No se encontro un canal con ese identificador.",
+      });
       return;
     }
 
@@ -66,4 +73,3 @@ export default class ChannelRemoveCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

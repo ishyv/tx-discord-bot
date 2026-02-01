@@ -21,7 +21,11 @@ export interface ConsumeResult {
 
 const MILLISECONDS_IN_SECOND = 1000;
 
-function isSameConfig(state: BucketState, uses: number, windowMs: number): boolean {
+function isSameConfig(
+  state: BucketState,
+  uses: number,
+  windowMs: number,
+): boolean {
   return state.maxUses === uses && state.windowMs === windowMs;
 }
 
@@ -50,7 +54,11 @@ export class RoleRateLimiter {
     const existing = this.buckets.get(key);
     let state: BucketState | undefined;
 
-    if (existing && now < existing.resetAt && isSameConfig(existing, uses, windowMs)) {
+    if (
+      existing &&
+      now < existing.resetAt &&
+      isSameConfig(existing, uses, windowMs)
+    ) {
       state = existing;
     }
 

@@ -36,6 +36,10 @@ export class Reputation implements Currency<number> {
   }
 
   isValid(value: number): boolean {
-    return typeof value === "number" && Number.isFinite(value) && Math.trunc(value) >= 0;
+    return (
+      typeof value === "number" &&
+      Number.isFinite(value) &&
+      Math.trunc(value) >= 0
+    );
   }
 }

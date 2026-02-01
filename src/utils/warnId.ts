@@ -55,4 +55,3 @@ export function isValidWarnId(id: string): boolean {
   }
   return true;
 }
-

@@ -1,16 +1,16 @@
 /**
- * Motivación: compartir utilidades específicas de la capa de datos sin replicarlas en cada repositorio.
+ * Motivation: Share data layer specific utilities without replicating them in every repository.
  *
- * Idea/concepto: funciones puras que ayudan a manipular documentos, defaults o clones en operaciones de base de datos.
+ * Concept: Pure functions that help manipulate documents, defaults, or clones in database operations.
  *
- * Alcance: soporte complementario; no abre conexiones ni realiza queries por su cuenta.
+ * Scope: Complementary support; does not open connections or perform queries on its own.
  */
 import type { UpdateFilter } from "mongodb";
 
 type StructuredCloneFn = <T>(value: T) => T;
 const nativeStructuredClone =
-  typeof (globalThis as { structuredClone?: StructuredCloneFn }).structuredClone ===
-  "function"
+  typeof (globalThis as { structuredClone?: StructuredCloneFn })
+    .structuredClone === "function"
     ? (globalThis as { structuredClone: StructuredCloneFn }).structuredClone
     : undefined;
 
@@ -98,7 +98,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * Collect the paths touched by update operators (excludes $setOnInsert).
  */
-export function collectTouchedPaths(update: UpdateFilter<unknown>): Set<string> {
+export function collectTouchedPaths(
+  update: UpdateFilter<unknown>,
+): Set<string> {
   const touched = new Set<string>();
   if (!update || typeof update !== "object") return touched;
 
@@ -174,13 +176,20 @@ export function buildSafeUpsertUpdate<TSchema>(
   const updateDoc = update as Record<string, unknown>;
   if (!isOperatorUpdate(updateDoc)) return update;
 
-  const existingSet = (updateDoc.$set as Record<string, unknown> | undefined) ?? {};
+  const existingSet =
+    (updateDoc.$set as Record<string, unknown> | undefined) ?? {};
   const existingSetOnInsert =
     (updateDoc.$setOnInsert as Record<string, unknown> | undefined) ?? {};
 
   const touched = collectTouchedPaths(update);
-  const mergedSetOnInsert = { ...(defaults ?? {}), ...(existingSetOnInsert ?? {}) };
-  const prunedSetOnInsert = pruneConflictsFromSetOnInsert(mergedSetOnInsert, touched);
+  const mergedSetOnInsert = {
+    ...(defaults ?? {}),
+    ...(existingSetOnInsert ?? {}),
+  };
+  const prunedSetOnInsert = pruneConflictsFromSetOnInsert(
+    mergedSetOnInsert,
+    touched,
+  );
 
   const nextSet = { ...existingSet };
   const shouldSetUpdatedAt = options.setUpdatedAt !== false;

@@ -44,8 +44,7 @@ const DETECTION_MODEL_FILE =
   process.env.OCR_DETECTION_MODEL ?? "PP-OCRv5_mobile_det_infer.onnx";
 const RECOGNITION_MODEL_FILE =
   process.env.OCR_RECOGNITION_MODEL ?? "PP-OCRv5_mobile_rec_infer.onnx";
-const DICTIONARY_FILE =
-  process.env.OCR_DICTIONARY ?? "ppocrv5_dict.txt";
+const DICTIONARY_FILE = process.env.OCR_DICTIONARY ?? "ppocrv5_dict.txt";
 
 let ocrServicePromise: Promise<PaddleOcrServiceClass | null> | undefined;
 let ocrQueue: Promise<void> = Promise.resolve();
@@ -139,11 +138,13 @@ function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
 async function createOcrService(): Promise<PaddleOcrServiceClass | null> {
   try {
     const baseDir = OCR_ASSETS_DIR;
-    const [detectionModel, recognitionModel, dictionaryRaw] = await Promise.all([
-      readFile(path.join(baseDir, DETECTION_MODEL_FILE)),
-      readFile(path.join(baseDir, RECOGNITION_MODEL_FILE)),
-      readFile(path.join(baseDir, DICTIONARY_FILE), "utf8"),
-    ]);
+    const [detectionModel, recognitionModel, dictionaryRaw] = await Promise.all(
+      [
+        readFile(path.join(baseDir, DETECTION_MODEL_FILE)),
+        readFile(path.join(baseDir, RECOGNITION_MODEL_FILE)),
+        readFile(path.join(baseDir, DICTIONARY_FILE), "utf8"),
+      ],
+    );
 
     const module = await import("paddleocr");
     const PaddleOcrService =
@@ -157,9 +158,7 @@ async function createOcrService(): Promise<PaddleOcrServiceClass | null> {
       return null;
     }
 
-    const dictionary = dictionaryRaw
-      .split(/\r?\n/)
-      .map((line) => line.trim());
+    const dictionary = dictionaryRaw.split(/\r?\n/).map((line) => line.trim());
 
     if (dictionary.length > 0 && dictionary[dictionary.length - 1] === "") {
       dictionary.pop();
@@ -211,7 +210,9 @@ function getOcrService(): Promise<PaddleOcrServiceClass | null> {
   if (!ocrServicePromise) {
     ocrServicePromise = createOcrService();
   }
-  return (ocrServicePromise as unknown as Promise<PaddleOcrServiceClass | null>).then(
+  return (
+    ocrServicePromise as unknown as Promise<PaddleOcrServiceClass | null>
+  ).then(
     (service) => {
       if (!service) ocrUnavailable = true;
       return service;

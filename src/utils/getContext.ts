@@ -1,15 +1,15 @@
 /**
- * Motivación: recuperar mensajes de contexto alrededor de un texto citado para alimentar respuestas contextualizadas.
+ * Motivation: Retrieve context messages around a quoted text to fuel contextualized responses.
  *
- * Idea/concepto: usa búsqueda por término y límites configurables para extraer partes relevantes del historial.
+ * Idea/concept: Uses term-based search and configurable limits to extract relevant parts of history.
  *
- * Alcance: provee contexto inmediato; no intenta recuperar hilos completos ni persistencia a largo plazo.
+ * Scope: Provides immediate context; does not attempt to retrieve full threads or long-term persistence.
  */
 import type { Message } from "@/utils/userMemory";
 
 /**
- * Procesa un texto citado para intentar reconstruir parte del contexto.
- * Aquí podrías extender esto para buscar por ID de mensaje o thread si lo deseas.
+ * Processes a quoted text to try and reconstruct part of the context.
+ * You could extend this here to search by message ID or thread if desired.
  */
 export const getContextMessages = async (
   quotedText: string,
@@ -18,7 +18,7 @@ export const getContextMessages = async (
     return [];
   }
 
-  // todo: extraer información de mensajes previos
+  // TODO: extract information from previous messages
 
   const contextMessage: Message = {
     role: "user",

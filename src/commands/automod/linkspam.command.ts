@@ -15,26 +15,26 @@ import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
   enabled: createBooleanOption({
-    description: "Habilitar o deshabilitar el automod de linkspam",
+    description: "Enable or disable linkspam automod",
     required: false,
   }),
-  maxLinks: createIntegerOption({
-    description: "Maximo de links permitidos dentro de la ventana",
-    required: false,
-    min_value: 1,
-  }),
-  windowSeconds: createIntegerOption({
-    description: "Ventana de tiempo en segundos",
+  max_links: createIntegerOption({
+    description: "Maximum links allowed within the window",
     required: false,
     min_value: 1,
   }),
-  timeoutSeconds: createIntegerOption({
-    description: "Timeout en segundos al disparar (si el bot puede)",
+  window_seconds: createIntegerOption({
+    description: "Time window in seconds",
+    required: false,
+    min_value: 1,
+  }),
+  timeout_seconds: createIntegerOption({
+    description: "Timeout in seconds when triggered (if bot can)",
     required: false,
     min_value: 1,
   }),
   action: createStringOption({
-    description: "Accion al detectar spam (timeout, mute, delete, report)",
+    description: "Action when spam is detected (timeout, mute, delete, report)",
     required: false,
     choices: [
       { name: "timeout", value: "timeout" },
@@ -44,7 +44,7 @@ const options = {
     ],
   }),
   report_channel: createChannelOption({
-    description: "Canal para reportes cuando action=report",
+    description: "Channel for reports when action=report",
     required: false,
     channel_types: [ChannelType.GuildText],
   }),
@@ -52,7 +52,7 @@ const options = {
 
 @Declare({
   name: "linkspam",
-  description: "Configurar el filtro de spam de links",
+  description: "Configure link spam filter",
 })
 @Options(options)
 @Guard({
@@ -64,52 +64,69 @@ export default class AutomodLinkSpamCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
 
-    const { enabled, maxLinks, windowSeconds, timeoutSeconds, action, report_channel } = ctx.options;
+    const {
+      enabled,
+      max_links,
+      window_seconds,
+      timeout_seconds,
+      action,
+      report_channel,
+    } = ctx.options;
 
     if (
       enabled === undefined &&
-      maxLinks === undefined &&
-      windowSeconds === undefined &&
-      timeoutSeconds === undefined &&
+      max_links === undefined &&
+      window_seconds === undefined &&
+      timeout_seconds === undefined &&
       action === undefined &&
       report_channel === undefined
     ) {
-      const config = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+      const config = await configStore.get(
+        guildId,
+        ConfigurableModule.AutomodLinkSpam,
+      );
       await ctx.write({
         content:
           `**AutoMod LinkSpam:**\n` +
-          `- Estado: ${config.enabled ? "✅ Habilitado" : "❌ Deshabilitado"}\n` +
+          `- Status: ${config.enabled ? "✅ Enabled" : "❌ Disabled"}\n` +
           `- Max links: \`${config.maxLinks}\`\n` +
-          `- Ventana: \`${config.windowSeconds}\`s\n` +
+          `- Window: \`${config.windowSeconds}\`s\n` +
           `- Timeout: \`${config.timeoutSeconds}\`s\n` +
-          `- Accion: \`${config.action}\`\n` +
-          `- Canal reporte: ${config.reportChannelId ? `<#${config.reportChannelId}>` : "(no configurado)"}`,
+          `- Action: \`${config.action}\`\n` +
+          `- Report channel: ${config.reportChannelId ? `<#${config.reportChannelId}>` : "(not configured)"}`,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const current = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+    const current = await configStore.get(
+      guildId,
+      ConfigurableModule.AutomodLinkSpam,
+    );
     const updates: Partial<typeof current> = {};
     if (enabled !== undefined) updates.enabled = enabled;
-    if (maxLinks !== undefined) updates.maxLinks = maxLinks;
-    if (windowSeconds !== undefined) updates.windowSeconds = windowSeconds;
-    if (timeoutSeconds !== undefined) updates.timeoutSeconds = timeoutSeconds;
+    if (max_links !== undefined) updates.maxLinks = max_links;
+    if (window_seconds !== undefined) updates.windowSeconds = window_seconds;
+    if (timeout_seconds !== undefined) updates.timeoutSeconds = timeout_seconds;
     if (action !== undefined) updates.action = action as typeof current.action;
-    if (report_channel !== undefined) updates.reportChannelId = report_channel.id;
+    if (report_channel !== undefined)
+      updates.reportChannelId = report_channel.id;
 
     await configStore.set(guildId, ConfigurableModule.AutomodLinkSpam, updates);
-    const updated = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+    const updated = await configStore.get(
+      guildId,
+      ConfigurableModule.AutomodLinkSpam,
+    );
 
     await ctx.write({
       content:
-        `**AutoMod LinkSpam actualizado:**\n` +
-        `- Estado: ${updated.enabled ? "✅ Habilitado" : "❌ Deshabilitado"}\n` +
+        `**AutoMod LinkSpam updated:**\n` +
+        `- Status: ${updated.enabled ? "✅ Enabled" : "❌ Disabled"}\n` +
         `- Max links: \`${updated.maxLinks}\`\n` +
-        `- Ventana: \`${updated.windowSeconds}\`s\n` +
+        `- Window: \`${updated.windowSeconds}\`s\n` +
         `- Timeout: \`${updated.timeoutSeconds}\`s\n` +
-        `- Accion: \`${updated.action}\`\n` +
-        `- Canal reporte: ${updated.reportChannelId ? `<#${updated.reportChannelId}>` : "(no configurado)"}`,
+        `- Action: \`${updated.action}\`\n` +
+        `- Report channel: ${updated.reportChannelId ? `<#${updated.reportChannelId}>` : "(not configured)"}`,
       flags: MessageFlags.Ephemeral,
     });
   }

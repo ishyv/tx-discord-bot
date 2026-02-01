@@ -42,7 +42,10 @@ import {
   type Suite,
 } from "./_utils";
 
-const cleanupGuild = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupGuild = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     await deleteGuild(id);
   });
@@ -96,8 +99,12 @@ export const suite: Suite = {
         });
 
         await Promise.all([
-          updateGuildPaths(guildId, { "channels.core.reports": { channelId: "rep-1" } }),
-          updateGuildPaths(guildId, { "channels.core.suggestions": { channelId: "sug-1" } }),
+          updateGuildPaths(guildId, {
+            "channels.core.reports": { channelId: "rep-1" },
+          }),
+          updateGuildPaths(guildId, {
+            "channels.core.suggestions": { channelId: "sug-1" },
+          }),
         ]);
 
         const afterPaths = await getGuild(guildId);
@@ -118,7 +125,11 @@ export const suite: Suite = {
           "updateGuildPaths should set feature",
         );
 
-        await updateGuildPaths(guildId, {}, { unset: ["channels.ticketCategoryId"] });
+        await updateGuildPaths(
+          guildId,
+          {},
+          { unset: ["channels.ticketCategoryId"] },
+        );
         const afterUnset = await getGuild(guildId);
         assertEqual(
           afterUnset?.channels.ticketCategoryId ?? null,
@@ -142,7 +153,11 @@ export const suite: Suite = {
         );
 
         const toggled = await setFeature(guildId, Features.Tickets, false);
-        assertEqual(toggled[Features.Tickets], false, "setFeature should toggle flag");
+        assertEqual(
+          toggled[Features.Tickets],
+          false,
+          "setFeature should toggle flag",
+        );
 
         const allEnabled = await setAllFeatures(guildId, true);
         assert(
@@ -160,7 +175,10 @@ export const suite: Suite = {
         await ensureGuild(guildId);
 
         const channels = await readChannels(guildId);
-        assert(channels.core !== undefined, "readChannels should return core map");
+        assert(
+          channels.core !== undefined,
+          "readChannels should return core map",
+        );
 
         const written = await writeChannels(guildId, (current) => ({
           ...current,
@@ -232,9 +250,15 @@ export const suite: Suite = {
 
         await updateManagedChannel(guildId, "Announcements", { label: "News" });
         const afterUpdate = await listManagedChannels(guildId);
-        assertEqual(afterUpdate[0].label, "News", "updateManagedChannel should update label");
+        assertEqual(
+          afterUpdate[0].label,
+          "News",
+          "updateManagedChannel should update label",
+        );
 
-        await updateManagedChannel(guildId, managedKey, { channelId: "chan-2" });
+        await updateManagedChannel(guildId, managedKey, {
+          channelId: "chan-2",
+        });
         const afterUpdateById = await listManagedChannels(guildId);
         assertEqual(
           afterUpdateById[0].channelId,
@@ -244,7 +268,11 @@ export const suite: Suite = {
 
         await removeManagedChannel(guildId, managedKey);
         const afterRemove = await listManagedChannels(guildId);
-        assertEqual(afterRemove.length, 0, "removeManagedChannel should remove entry");
+        assertEqual(
+          afterRemove.length,
+          0,
+          "removeManagedChannel should remove entry",
+        );
       },
     },
     {
@@ -256,12 +284,20 @@ export const suite: Suite = {
         await ensureGuild(guildId);
 
         const pending = await getPendingTickets(guildId);
-        assertEqual(pending.length, 0, "getPendingTickets should default empty");
+        assertEqual(
+          pending.length,
+          0,
+          "getPendingTickets should default empty",
+        );
 
         const updatedPending = await setPendingTickets(guildId, (tickets) =>
           tickets.concat(["a", "a", "b", 123 as unknown as string]),
         );
-        assertDeepEqual(updatedPending, ["a", "b"], "setPendingTickets should sanitize");
+        assertDeepEqual(
+          updatedPending,
+          ["a", "b"],
+          "setPendingTickets should sanitize",
+        );
       },
     },
     {
@@ -273,7 +309,11 @@ export const suite: Suite = {
         await ensureGuild(guildId);
 
         const roles = await readRoles(guildId);
-        assertEqual(Object.keys(roles).length, 0, "readRoles should start empty");
+        assertEqual(
+          Object.keys(roles).length,
+          0,
+          "readRoles should start empty",
+        );
 
         const record = {
           label: "Mod",
@@ -288,7 +328,10 @@ export const suite: Suite = {
           ...current,
           mod: record,
         }));
-        assert(afterWrite.mod?.label === "Mod", "writeRoles should persist role");
+        assert(
+          afterWrite.mod?.label === "Mod",
+          "writeRoles should persist role",
+        );
 
         const gotRole = await getRole(guildId, "mod");
         assert(gotRole?.label === "Mod", "getRole should return role");
@@ -297,7 +340,11 @@ export const suite: Suite = {
           label: "Moderator",
           updatedBy: "admin",
         });
-        assertEqual(afterUpdate.mod.label, "Moderator", "updateRole should patch role");
+        assertEqual(
+          afterUpdate.mod.label,
+          "Moderator",
+          "updateRole should patch role",
+        );
         assert(
           typeof afterUpdate.mod.updatedAt === "string",
           "updateRole should set updatedAt",
@@ -318,12 +365,20 @@ export const suite: Suite = {
           "setRoleOverride should normalize key",
         );
 
-        const overrideRemoved = await clearRoleOverride(guildId, "helper", "Kick User");
+        const overrideRemoved = await clearRoleOverride(
+          guildId,
+          "helper",
+          "Kick User",
+        );
         assertEqual(overrideRemoved, true, "clearRoleOverride should remove");
 
         await resetRoleOverrides(guildId, "helper");
         const overridesAfterReset = await getRoleOverrides(guildId, "helper");
-        assertDeepEqual(overridesAfterReset, {}, "resetRoleOverrides should clear map");
+        assertDeepEqual(
+          overridesAfterReset,
+          {},
+          "resetRoleOverrides should clear map",
+        );
 
         await setRoleLimit(guildId, "helper", "Ban User", {
           limit: 2,
@@ -337,7 +392,11 @@ export const suite: Suite = {
           "setRoleLimit should persist",
         );
 
-        const limitRemoved = await clearRoleLimit(guildId, "helper", "Ban User");
+        const limitRemoved = await clearRoleLimit(
+          guildId,
+          "helper",
+          "Ban User",
+        );
         assertEqual(limitRemoved, true, "clearRoleLimit should remove");
       },
     },

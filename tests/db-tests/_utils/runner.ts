@@ -88,9 +88,7 @@ const formatErrorDetails = (error: unknown): string[] => {
     const lines = [paint(color.red, `AssertionError: ${error.message}`)];
     if (error.expected !== undefined || error.actual !== undefined) {
       if (error.expected !== undefined) {
-        lines.push(
-          `expected: ${stableStringify(error.expected)}`,
-        );
+        lines.push(`expected: ${stableStringify(error.expected)}`);
       }
       if (error.actual !== undefined) {
         lines.push(`actual: ${stableStringify(error.actual)}`);
@@ -191,7 +189,10 @@ export const printGlobalSummary = (results: SuiteResult[]): void => {
   const failed = results.reduce((acc, r) => acc + r.failed, 0);
   const duration = results.reduce((acc, r) => acc + r.durationMs, 0);
 
-  const status = failed === 0 ? paint(color.green, "PASS") : paint(color.red, "FAIL");
+  const status =
+    failed === 0 ? paint(color.green, "PASS") : paint(color.red, "FAIL");
   console.log(paint(color.bold + color.cyan, "== DB Test Summary =="));
-  console.log(`${status} ${passed}/${total} passed | ${formatDuration(duration)}`);
+  console.log(
+    `${status} ${passed}/${total} passed | ${formatDuration(duration)}`,
+  );
 };

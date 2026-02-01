@@ -11,14 +11,22 @@ import {
   type Suite,
 } from "./_utils";
 
-const buildWarn = (factory: { warnId: () => string; userId: () => string; isoDate: () => string; sentence: (words?: number) => string; }): Warn => ({
+const buildWarn = (factory: {
+  warnId: () => string;
+  userId: () => string;
+  isoDate: () => string;
+  sentence: (words?: number) => string;
+}): Warn => ({
   reason: factory.sentence(4),
   warn_id: factory.warnId(),
   moderator: factory.userId(),
   timestamp: factory.isoDate(),
 });
 
-const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupUser = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await UsersRepo.deleteUser(id);
     if (res.isErr()) return;
@@ -57,7 +65,11 @@ export const suite: Suite = {
         assertEqual(saved.rep ?? 0, 5, "saveUser should persist rep");
 
         const coerced = assertOk(await UsersRepo.saveUser(userId, { rep: -2 }));
-        assertEqual(coerced.rep ?? 0, 0, "invalid rep should coerce to default");
+        assertEqual(
+          coerced.rep ?? 0,
+          0,
+          "invalid rep should coerce to default",
+        );
       },
     },
     {
@@ -68,12 +80,20 @@ export const suite: Suite = {
         const guildId = factory.guildId();
         cleanupUser(cleanup, userId);
 
-        assertOk(await UsersRepo.registerCase(userId, guildId, "WARN", "case A"));
-        assertOk(await UsersRepo.registerCase(userId, guildId, "KICK", "case B"));
+        assertOk(
+          await UsersRepo.registerCase(userId, guildId, "WARN", "case A"),
+        );
+        assertOk(
+          await UsersRepo.registerCase(userId, guildId, "KICK", "case B"),
+        );
 
         const current = assertOk(await UsersRepo.findUser(userId));
         const history = current?.sanction_history?.[guildId] ?? [];
-        assertEqual(history.length, 2, "registerCase should append history entries");
+        assertEqual(
+          history.length,
+          2,
+          "registerCase should append history entries",
+        );
       },
     },
     {
@@ -107,7 +127,11 @@ export const suite: Suite = {
         );
 
         const final = assertOk(await UsersRepo.getUserReputation(userId));
-        assertEqual(final, 5, "final reputation should match concurrent updates");
+        assertEqual(
+          final,
+          5,
+          "final reputation should match concurrent updates",
+        );
       },
     },
     {
@@ -154,7 +178,11 @@ export const suite: Suite = {
           } as unknown as Warn;
           const err = assertErr(await UsersRepo.addWarn(userId, invalidWarn));
           assert(err instanceof Error, "addWarn invalid should return error");
-          assertEqual(err.name, "ZodError", "addWarn invalid should be ZodError");
+          assertEqual(
+            err.name,
+            "ZodError",
+            "addWarn invalid should be ZodError",
+          );
         });
       },
     },
@@ -243,7 +271,11 @@ export const suite: Suite = {
         );
 
         const noOp = assertOk(await UsersRepo.removeOpenTicketByChannel(""));
-        assertEqual(noOp, undefined, "removeOpenTicketByChannel empty should no-op");
+        assertEqual(
+          noOp,
+          undefined,
+          "removeOpenTicketByChannel empty should no-op",
+        );
       },
     },
     {
@@ -253,7 +285,9 @@ export const suite: Suite = {
         const userId = factory.userId();
         cleanupUser(cleanup, userId);
         assertOk(await UsersRepo.ensureUser(userId));
-        assertOk(await UsersRepo.saveUser(userId, { inventory: {}, currency: {} }));
+        assertOk(
+          await UsersRepo.saveUser(userId, { inventory: {}, currency: {} }),
+        );
 
         const inventoryUpdated = assertOk(
           await UsersRepo.replaceInventoryIfMatch(userId, {}, { potion: 1 }),

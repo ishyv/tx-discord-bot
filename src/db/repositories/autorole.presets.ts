@@ -1,1 +1,4 @@
-export { applyReputationPreset, updateReputationRule } from "@/modules/autorole/domain/presets";
+export {
+  applyReputationPreset,
+  updateReputationRule,
+} from "@/modules/autorole/domain/presets";

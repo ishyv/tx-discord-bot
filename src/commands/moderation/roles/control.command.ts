@@ -16,7 +16,6 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
-
 import {
   DEFAULT_MODERATION_ACTIONS,
   type RoleCommandOverride,
@@ -31,36 +30,41 @@ import {
   type ResolvedAction,
 } from "./shared";
 
-const OVERRIDE_CHOICES: ReadonlyArray<{ name: string; value: RoleCommandOverride }> = [
-  { name: "Hereda (Discord)", value: "inherit" },
-  { name: "Permitir", value: "allow" },
-  { name: "Denegar", value: "deny" },
-];
+const OVERRIDE_CHOICES: ReadonlyArray<{
+  name: string;
+  value: RoleCommandOverride;
+}> = [
+    { name: "Inherit (Discord)", value: "inherit" },
+    { name: "Allow", value: "allow" },
+    { name: "Deny", value: "deny" },
+  ];
 
 const OPTIONS_FOOTER =
-  "inherit respeta Discord, allow fuerza permiso, deny bloquea la accion";
+  "inherit respects Discord, allow forces permission, deny blocks the action";
 
 const options = {
   key: createStringOption({
-    description: "Clave del rol administrado",
+    description: "Managed role key",
     required: true,
   }),
   action: createStringOption({
-    description: "Accion de moderacion (kick, ban, warn, timeout, purge)",
+    description: "Moderation action (kick, ban, warn, timeout, purge)",
     required: false,
   }),
   override: createStringOption({
-    description: "Override a aplicar (inherit, allow, deny)",
+    description: "Override to apply (inherit, allow, deny)",
     required: false,
     choices: OVERRIDE_CHOICES.map(({ name, value }) => ({ name, value })),
   }),
   reset: createBooleanOption({
-    description: "Reiniciar todos los overrides a inherit",
+    description: "Reset all overrides to inherit",
     required: false,
   }),
 };
 
-function normalizeOverride(value: string | undefined): RoleCommandOverride | undefined {
+function normalizeOverride(
+  value: string | undefined,
+): RoleCommandOverride | undefined {
   if (!value) return undefined;
   const v = value.toLowerCase();
   return v === "allow" || v === "deny" || v === "inherit" ? v : undefined;
@@ -76,33 +80,42 @@ function extractDiscordRoleId(rec: any): string | null {
   );
 }
 
-function formatOverrideList(overrides: Record<string, RoleCommandOverride>): string {
+function formatOverrideList(
+  overrides: Record<string, RoleCommandOverride>,
+): string {
   const entries = Object.entries(overrides);
-  if (entries.length === 0) return "Todos heredan permisos de Discord.";
+  if (entries.length === 0) return "All inherit permissions from Discord.";
   return entries
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([action, ov]) => `- **${action}** -> ${ov}`)
     .join("\n");
 }
 
-function formatInheritList(overrides: Record<string, RoleCommandOverride>): string {
-  const known = DEFAULT_MODERATION_ACTIONS.map(a => a.key);
-  const inherit = known.filter(a => overrides[a] === undefined).sort();
-  return inherit.length ? inherit.map(a => `- ${a}`).join("\n") : "Sin acciones conocidas en modo inherit.";
+function formatInheritList(
+  overrides: Record<string, RoleCommandOverride>,
+): string {
+  const known = DEFAULT_MODERATION_ACTIONS.map((a) => a.key);
+  const inherit = known.filter((a) => overrides[a] === undefined).sort();
+  return inherit.length
+    ? inherit.map((a) => `- ${a}`).join("\n")
+    : "No known actions in inherit mode.";
 }
 
 function formatRoleMention(roleId: string | null): string {
-  return roleId ? `<@&${roleId}>` : "Sin asignar";
+  return roleId ? `<@&${roleId}>` : "Not assigned";
 }
 
-function buildSummaryDescription(roleId: string | null, overrides: Record<string, RoleCommandOverride>): string {
+function buildSummaryDescription(
+  roleId: string | null,
+  overrides: Record<string, RoleCommandOverride>,
+): string {
   return [
-    `Rol vinculado: ${formatRoleMention(roleId)}`,
+    `Linked role: ${formatRoleMention(roleId)}`,
     "",
-    "**Overrides configurados**",
+    "**Configured Overrides**",
     formatOverrideList(overrides),
     "",
-    "**Acciones conocidas en inherit**",
+    "**Actions in Inherit Mode**",
     formatInheritList(overrides),
   ].join("\n");
 }
@@ -129,7 +142,7 @@ function buildSummaryEmbed(
   overrides: Record<string, RoleCommandOverride>,
 ): Embed {
   return createSummaryEmbed(
-    `Politicas de moderacion - ${key}`,
+    `Moderation Policies - ${key}`,
     EmbedColors.Blurple,
     roleId,
     overrides,
@@ -144,22 +157,24 @@ function buildUpdateEmbed(
   overrides: Record<string, RoleCommandOverride>,
 ): Embed {
   const color =
-    override === "deny" ? EmbedColors.Red :
-      override === "allow" ? EmbedColors.Green :
-        EmbedColors.Yellow;
+    override === "deny"
+      ? EmbedColors.Red
+      : override === "allow"
+        ? EmbedColors.Green
+        : EmbedColors.Yellow;
 
   return createSummaryEmbed(
-    `Override actualizado - ${key}`,
+    `Override Updated - ${key}`,
     color,
     roleId,
     overrides,
-    [{ name: "Accion", value: `**${action}** -> ${override}` }],
+    [{ name: "Action", value: `**${action}** -> ${override}` }],
   );
 }
 
 @Declare({
   name: "control",
-  description: "Configurar overrides de moderacion",
+  description: "Configure moderation overrides",
 })
 @Options(options)
 export default class RoleControlCommand extends SubCommand {
@@ -169,14 +184,18 @@ export default class RoleControlCommand extends SubCommand {
 
     const key = ctx.options.key.trim();
     if (!key) {
-      await ctx.write({ content: "[!] Debes indicar la clave del rol administrado." });
+      await ctx.write({
+        content: "[!] You must provide the managed role key.",
+      });
       return;
     }
 
     // Read role once to check existence and show metadata later
     const roleRec = await getManagedRole(context.guildId, key);
     if (!roleRec) {
-      await ctx.write({ content: "[!] No existe una configuracion con esa clave." });
+      await ctx.write({
+        content: "[!] No configuration found with that key.",
+      });
       return;
     }
     const roleId = extractDiscordRoleId(roleRec);
@@ -190,7 +209,7 @@ export default class RoleControlCommand extends SubCommand {
       const res = resolveActionInput(actionInput);
       if ("error" in res) {
         const embed = new Embed({
-          title: "Accion invalida",
+          title: "Invalid action",
           description: res.error,
           color: EmbedColors.Red,
         });
@@ -205,7 +224,7 @@ export default class RoleControlCommand extends SubCommand {
         await resetRoleOverrides(context.guildId, key);
         const overrides = await getRoleOverrides(context.guildId, key);
         const embed = createSummaryEmbed(
-          "Overrides reiniciados",
+          "Overrides reset",
           EmbedColors.Green,
           roleId,
           overrides,
@@ -218,12 +237,19 @@ export default class RoleControlCommand extends SubCommand {
         if (!resolvedAction) return;
 
         if (ctx.options.override !== undefined && overrideInput === undefined) {
-          await ctx.write({ content: "[!] Override invalido. Usa inherit, allow o deny." });
+          await ctx.write({
+            content: "[!] Invalid override. Use inherit, allow, or deny.",
+          });
           return;
         }
 
         if (overrideInput) {
-          await setRoleOverride(context.guildId, key, resolvedAction.key, overrideInput);
+          await setRoleOverride(
+            context.guildId,
+            key,
+            resolvedAction.key,
+            overrideInput,
+          );
           const overrides = await getRoleOverrides(context.guildId, key);
           const embed = buildUpdateEmbed(
             key,
@@ -240,10 +266,10 @@ export default class RoleControlCommand extends SubCommand {
         const overrides = await getRoleOverrides(context.guildId, key);
         const current = overrides[resolvedAction.key] ?? "inherit";
         const embed = new Embed({
-          title: `Override actual - ${resolvedAction.definition.label}`,
-          description: `El override para **${resolvedAction.key}** es **${current}**.`,
+          title: `Current Override - ${resolvedAction.definition.label}`,
+          description: `The override for **${resolvedAction.key}** is **${current}**.`,
           color: EmbedColors.Blurple,
-          fields: [{ name: "Resumen", value: formatOverrideList(overrides) }],
+          fields: [{ name: "Summary", value: formatOverrideList(overrides) }],
           footer: { text: OPTIONS_FOOTER },
         });
         await ctx.write({ embeds: [embed] });
@@ -257,7 +283,7 @@ export default class RoleControlCommand extends SubCommand {
     } catch (error) {
       console.error("RoleControlCommand:", error);
       const embed = new Embed({
-        title: "Error al actualizar overrides",
+        title: "Error updating overrides",
         description: error instanceof Error ? error.message : String(error),
         color: EmbedColors.Red,
       });

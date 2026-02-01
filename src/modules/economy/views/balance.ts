@@ -21,13 +21,19 @@ import {
 } from "../account/types";
 
 export interface BalanceViewBuilder {
-  build(inventory: CurrencyInventory, options?: BalanceViewOptions): BalanceView;
+  build(
+    inventory: CurrencyInventory,
+    options?: BalanceViewOptions,
+  ): BalanceView;
 }
 
 class BalanceViewBuilderImpl implements BalanceViewBuilder {
   constructor(private registry: CurrencyRegistry) {}
 
-  build(inventory: CurrencyInventory, options: BalanceViewOptions = {}): BalanceView {
+  build(
+    inventory: CurrencyInventory,
+    options: BalanceViewOptions = {},
+  ): BalanceView {
     const {
       maxVisible = DEFAULT_MAX_VISIBLE_CURRENCIES,
       showZeroBalances = false,
@@ -92,9 +98,8 @@ class BalanceViewBuilderImpl implements BalanceViewBuilder {
 }
 
 /** Default builder instance using global registry. */
-export const balanceViewBuilder: BalanceViewBuilder = new BalanceViewBuilderImpl(
-  currencyRegistry,
-);
+export const balanceViewBuilder: BalanceViewBuilder =
+  new BalanceViewBuilderImpl(currencyRegistry);
 
 /** Build a balance view with default options. */
 export function buildBalanceView(

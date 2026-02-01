@@ -10,14 +10,19 @@ import { UserStore } from "@/db/repositories/users";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 import type { ItemId } from "@/modules/inventory/definitions";
 import type { ItemInventory } from "@/modules/inventory/inventory";
-import { getItemDefinition, resolveWeight, resolveCanStack } from "@/modules/inventory/items";
-import { DEFAULT_INVENTORY_CAPACITY } from "@/modules/inventory/definitions";
+import {
+  simulateCapacityAfterAdd,
+  type CapacityLimits,
+} from "@/modules/inventory/capacity";
+import { getItemDefinition } from "@/modules/inventory/items";
 import type { GuildId } from "@/db/types";
 import { economyAuditRepo } from "../audit/repository";
 import { currencyMutationService } from "../mutations/service";
 import { itemMutationService } from "../mutations/items/service";
 import { guildEconomyService } from "../guild/service";
+import { guildEconomyRepo } from "../guild/repository";
 import type { EconomySector } from "../guild/types";
+import { perkService } from "../perks/service";
 import { storeRepo } from "./repository";
 import {
   type StoreCatalog,
@@ -33,90 +38,8 @@ import {
   calculatePriceWithTax,
   calculateSellPrice,
 } from "./types";
-
-/** Calculate current inventory capacity usage. */
-function calculateCapacity(inventory: ItemInventory): {
-  currentWeight: number;
-  currentSlots: number;
-} {
-  let currentWeight = 0;
-  let currentSlots = 0;
-
-  for (const [itemId, item] of Object.entries(inventory)) {
-    if (!item || item.quantity <= 0) continue;
-
-    const definition = getItemDefinition(itemId);
-    if (!definition) continue;
-
-    const weight = resolveWeight(definition);
-    const canStack = resolveCanStack(definition);
-
-    currentWeight += weight * item.quantity;
-
-    if (canStack) {
-      currentSlots += 1;
-    } else {
-      currentSlots += item.quantity;
-    }
-  }
-
-  return { currentWeight, currentSlots };
-}
-
-/** Simulate capacity after adding items. */
-function simulateCapacityAfterAdd(
-  inventory: ItemInventory,
-  itemId: ItemId,
-  quantity: number,
-): {
-  currentWeight: number;
-  maxWeight: number;
-  currentSlots: number;
-  maxSlots: number;
-  wouldExceedWeight: boolean;
-  wouldExceedSlots: boolean;
-} {
-  const definition = getItemDefinition(itemId);
-  if (!definition) {
-    const current = calculateCapacity(inventory);
-    return {
-      ...current,
-      maxWeight: DEFAULT_INVENTORY_CAPACITY.maxWeight,
-      maxSlots: DEFAULT_INVENTORY_CAPACITY.maxSlots,
-      wouldExceedWeight: false,
-      wouldExceedSlots: false,
-    };
-  }
-
-  const weight = resolveWeight(definition);
-  const canStack = resolveCanStack(definition);
-  const currentItem = inventory[itemId];
-  const currentQty = currentItem?.quantity ?? 0;
-
-  let weightDelta = weight * quantity;
-  let slotsDelta = 0;
-
-  if (canStack) {
-    if (currentQty === 0 && quantity > 0) {
-      slotsDelta = 1;
-    }
-  } else {
-    slotsDelta = quantity;
-  }
-
-  const current = calculateCapacity(inventory);
-  const newWeight = current.currentWeight + weightDelta;
-  const newSlots = current.currentSlots + slotsDelta;
-
-  return {
-    currentWeight: newWeight,
-    maxWeight: DEFAULT_INVENTORY_CAPACITY.maxWeight,
-    currentSlots: newSlots,
-    maxSlots: DEFAULT_INVENTORY_CAPACITY.maxSlots,
-    wouldExceedWeight: newWeight > DEFAULT_INVENTORY_CAPACITY.maxWeight,
-    wouldExceedSlots: newSlots > DEFAULT_INVENTORY_CAPACITY.maxSlots,
-  };
-}
+import { storeRotationService } from "./rotation/service";
+import type { FeaturedItem } from "./rotation/types";
 
 export interface StoreService {
   /**
@@ -140,23 +63,19 @@ export interface StoreService {
     guildId: GuildId,
     itemId: ItemId,
     quantity: number,
-  ): Promise<Result<PriceCalculation, Error>>;
+  ): Promise<Result<PriceCalculation & { featuredItem?: FeaturedItem }, Error>>;
 
   /**
    * Buy an item from the store.
    * Coordinates: stock check, capacity check, payment, item grant, audit.
    */
-  buyItem(
-    input: BuyItemInput,
-  ): Promise<Result<BuyItemResult, Error>>;
+  buyItem(input: BuyItemInput): Promise<Result<BuyItemResult, Error>>;
 
   /**
    * Sell an item to the store.
    * Coordinates: inventory check, guild liquidity check, item removal, payment, audit.
    */
-  sellItem(
-    input: SellItemInput,
-  ): Promise<Result<SellItemResult, Error>>;
+  sellItem(input: SellItemInput): Promise<Result<SellItemResult, Error>>;
 
   /**
    * Get sell price for an item (for display).
@@ -169,9 +88,12 @@ export interface StoreService {
   /**
    * List available items in the store.
    */
-  listAvailableItems(
-    guildId: GuildId,
-  ): Promise<Result<StoreItem[], Error>>;
+  listAvailableItems(guildId: GuildId): Promise<Result<StoreItem[], Error>>;
+
+  /**
+   * Get featured items with rotation check (Phase 9d).
+   */
+  getFeaturedItems(guildId: GuildId): Promise<Result<FeaturedItem[], Error>>;
 }
 
 class StoreServiceImpl implements StoreService {
@@ -195,16 +117,25 @@ class StoreServiceImpl implements StoreService {
     }
 
     if (!catalog.active) {
-      return ErrResult(new StoreError("STORE_CLOSED", "Store is currently closed"));
+      return ErrResult(
+        new StoreError("STORE_CLOSED", "Store is currently closed"),
+      );
     }
 
     const item = catalog.items[itemId];
     if (!item) {
-      return ErrResult(new StoreError("ITEM_NOT_FOUND", "Item not found in store"));
+      return ErrResult(
+        new StoreError("ITEM_NOT_FOUND", "Item not found in store"),
+      );
     }
 
     if (!item.available) {
-      return ErrResult(new StoreError("ITEM_NOT_AVAILABLE", "Item is not available for purchase"));
+      return ErrResult(
+        new StoreError(
+          "ITEM_NOT_AVAILABLE",
+          "Item is not available for purchase",
+        ),
+      );
     }
 
     return OkResult(checkStock(item.stock, quantity));
@@ -214,7 +145,7 @@ class StoreServiceImpl implements StoreService {
     guildId: GuildId,
     itemId: ItemId,
     quantity: number,
-  ): Promise<Result<PriceCalculation, Error>> {
+  ): Promise<Result<PriceCalculation & { featuredItem?: FeaturedItem }, Error>> {
     const catalogResult = await storeRepo.findByGuildId(guildId);
     if (catalogResult.isErr()) {
       return ErrResult(catalogResult.error);
@@ -227,18 +158,52 @@ class StoreServiceImpl implements StoreService {
 
     const item = catalog.items[itemId];
     if (!item) {
-      return ErrResult(new StoreError("ITEM_NOT_FOUND", "Item not found in store"));
+      return ErrResult(
+        new StoreError("ITEM_NOT_FOUND", "Item not found in store"),
+      );
     }
 
-    return OkResult(calculatePriceWithTax(item.buyPrice, quantity, catalog.taxRate));
+    // Check for featured pricing (Phase 9d)
+    const featuredResult = await storeRotationService.getFeaturedPrice(guildId, itemId);
+    let unitPrice = item.buyPrice;
+    let featuredItem: FeaturedItem | undefined;
+
+    if (featuredResult.isOk() && featuredResult.unwrap()) {
+      const featured = featuredResult.unwrap()!;
+      unitPrice = featured.price;
+      featuredItem = featured.item;
+    }
+
+    return OkResult({
+      ...calculatePriceWithTax(unitPrice, quantity, catalog.taxRate),
+      featuredItem,
+    });
   }
 
   async buyItem(input: BuyItemInput): Promise<Result<BuyItemResult, Error>> {
     const { buyerId, guildId, itemId, quantity, reason } = input;
 
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      return ErrResult(new StoreError("INVALID_QUANTITY", "Quantity must be positive"));
+      return ErrResult(
+        new StoreError("INVALID_QUANTITY", "Quantity must be positive"),
+      );
     }
+
+    // Check guild feature flag
+    const guildConfigResult = await guildEconomyRepo.findByGuildId(guildId);
+    if (guildConfigResult.isOk()) {
+      const guildConfig = guildConfigResult.unwrap();
+      if (guildConfig && !guildConfig.features.store) {
+        return ErrResult(
+          new StoreError(
+            "FEATURE_DISABLED",
+            "Store está deshabilitado en este servidor.",
+          ),
+        );
+      }
+    }
+
+    const transactionId = `store_buy_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     // Step 1: Get catalog and validate item
     const catalogResult = await storeRepo.findByGuildId(guildId);
@@ -252,41 +217,92 @@ class StoreServiceImpl implements StoreService {
     }
 
     if (!catalog.active) {
-      return ErrResult(new StoreError("STORE_CLOSED", "Store is currently closed"));
+      return ErrResult(
+        new StoreError("STORE_CLOSED", "Store is currently closed"),
+      );
     }
 
     const item = catalog.items[itemId];
     if (!item) {
-      return ErrResult(new StoreError("ITEM_NOT_FOUND", "Item not found in store"));
+      return ErrResult(
+        new StoreError("ITEM_NOT_FOUND", "Item not found in store"),
+      );
     }
 
     if (!item.available) {
-      return ErrResult(new StoreError("ITEM_NOT_AVAILABLE", "Item is not available for purchase"));
+      return ErrResult(
+        new StoreError(
+          "ITEM_NOT_AVAILABLE",
+          "Item is not available for purchase",
+        ),
+      );
     }
 
     // Step 2: Check stock
     const stockCheck = checkStock(item.stock, quantity);
     if (!stockCheck.available) {
-      return ErrResult(new StoreError("INSUFFICIENT_STOCK", `Only ${item.stock} available`));
+      return ErrResult(
+        new StoreError("INSUFFICIENT_STOCK", `Only ${item.stock} available`),
+      );
     }
 
-    // Step 3: Calculate price
-    const pricing = calculatePriceWithTax(item.buyPrice, quantity, catalog.taxRate);
+    // Step 3: Calculate price (with featured item discount if applicable - Phase 9d)
+    let unitPrice = item.buyPrice;
+    let featuredItem: FeaturedItem | undefined;
+    
+    const featuredResult = await storeRotationService.getFeaturedPrice(guildId, itemId);
+    if (featuredResult.isOk() && featuredResult.unwrap()) {
+      const featured = featuredResult.unwrap()!;
+      unitPrice = featured.price;
+      featuredItem = featured.item;
+    }
+
+    const pricing = calculatePriceWithTax(
+      unitPrice,
+      quantity,
+      catalog.taxRate,
+    );
 
     // Step 4: Check buyer's inventory capacity
     const userResult = await UserStore.get(buyerId);
     if (userResult.isErr() || !userResult.unwrap()) {
-      return ErrResult(new StoreError("TRANSACTION_FAILED", "Could not access user inventory"));
+      return ErrResult(
+        new StoreError("TRANSACTION_FAILED", "Could not access user inventory"),
+      );
     }
 
     const inventory = (userResult.unwrap()!.inventory ?? {}) as ItemInventory;
-    const capacityCheck = simulateCapacityAfterAdd(inventory, itemId, quantity);
-
-    if (capacityCheck.wouldExceedWeight) {
-      return ErrResult(new StoreError("CAPACITY_EXCEEDED", "This would exceed your inventory weight limit"));
+    let limits: CapacityLimits | undefined;
+    const limitsResult = await perkService.getCapacityLimits(guildId, buyerId);
+    if (limitsResult.isOk()) {
+      limits = limitsResult.unwrap();
     }
-    if (capacityCheck.wouldExceedSlots) {
-      return ErrResult(new StoreError("CAPACITY_EXCEEDED", "This would exceed your inventory slot limit"));
+
+    const capacityCheck = simulateCapacityAfterAdd(
+      inventory,
+      itemId,
+      quantity,
+      {
+        ignoreUnknownItem: true,
+        limits,
+      },
+    );
+
+    if (capacityCheck.weightExceeded) {
+      return ErrResult(
+        new StoreError(
+          "CAPACITY_EXCEEDED",
+          "This would exceed your inventory weight limit",
+        ),
+      );
+    }
+    if (capacityCheck.slotsExceeded) {
+      return ErrResult(
+        new StoreError(
+          "CAPACITY_EXCEEDED",
+          "This would exceed your inventory slot limit",
+        ),
+      );
     }
 
     // Step 5: Process payment (deduct from buyer)
@@ -300,12 +316,15 @@ class StoreServiceImpl implements StoreService {
       currencyId: catalog.currencyId,
       amount: pricing.total,
       reason: reason || `Buy ${quantity}x ${item.name}`,
+      correlationId: transactionId,
     });
 
     if (paymentResult.isErr()) {
       const error = paymentResult.error;
       if (error.code === "INSUFFICIENT_FUNDS") {
-        return ErrResult(new StoreError("INSUFFICIENT_FUNDS", "You don't have enough funds"));
+        return ErrResult(
+          new StoreError("INSUFFICIENT_FUNDS", "You don't have enough funds"),
+        );
       }
       return ErrResult(new StoreError("TRANSACTION_FAILED", error.message));
     }
@@ -321,13 +340,20 @@ class StoreServiceImpl implements StoreService {
 
     if (depositResult.isErr()) {
       // This shouldn't fail, but if it does, don't fail the purchase
-      console.error("[StoreService] Failed to deposit to guild sector:", depositResult.error);
+      console.error(
+        "[StoreService] Failed to deposit to guild sector:",
+        depositResult.error,
+      );
     }
 
     // Step 7: Decrement stock (if limited)
     let remainingStock = item.stock;
     if (item.stock >= 0) {
-      const stockResult = await storeRepo.decrementStock(guildId, itemId, quantity);
+      const stockResult = await storeRepo.decrementStock(
+        guildId,
+        itemId,
+        quantity,
+      );
       if (stockResult.isOk() && stockResult.unwrap()) {
         remainingStock = stockResult.unwrap()!.items[itemId]?.stock ?? 0;
       }
@@ -351,7 +377,10 @@ class StoreServiceImpl implements StoreService {
     if (itemResult.isErr()) {
       // This is bad - we took payment but couldn't grant items
       // Try to refund (best effort)
-      console.error("[StoreService] Failed to grant items, attempting refund:", itemResult.error);
+      console.error(
+        "[StoreService] Failed to grant items, attempting refund:",
+        itemResult.error,
+      );
 
       await currencyMutationService.transferCurrency({
         senderId: guildId,
@@ -362,11 +391,38 @@ class StoreServiceImpl implements StoreService {
         reason: `Refund for failed purchase: ${quantity}x ${item.name}`,
       });
 
-      return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to grant items. Refund issued."));
+      return ErrResult(
+        new StoreError(
+          "TRANSACTION_FAILED",
+          "Failed to grant items. Refund issued.",
+        ),
+      );
     }
 
-    // Step 9: Create audit entry
-    const transactionId = `store_buy_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    // Step 9: Create audit entry (with featured item metadata - Phase 9d)
+    const auditMetadata: Record<string, unknown> = {
+      transactionId,
+      correlationId: transactionId,
+      unitPrice: unitPrice,
+      originalPrice: item.buyPrice,
+      totalPrice: pricing.subtotal,
+      tax: pricing.tax,
+      totalPaid: pricing.total,
+      sector: tradeSector,
+      sectorDelta: pricing.subtotal,
+      stockDelta: item.stock >= 0 ? -quantity : 0,
+      isFeatured: !!featuredItem,
+    };
+
+    if (featuredItem) {
+      auditMetadata.featuredSlotType = featuredItem.slotType;
+      auditMetadata.featuredDiscountPct = featuredItem.discountPct;
+      auditMetadata.scarcityMarkupPct = featuredItem.scarcityMarkupPct;
+      auditMetadata.savings = (item.buyPrice - unitPrice) * quantity;
+      
+      // Record featured purchase
+      await storeRotationService.recordFeaturedPurchase(guildId, itemId);
+    }
 
     await economyAuditRepo.create({
       operationType: "item_purchase",
@@ -381,13 +437,7 @@ class StoreServiceImpl implements StoreService {
         beforeQuantity: itemResult.unwrap().beforeQuantity,
         afterQuantity: itemResult.unwrap().afterQuantity,
       },
-      metadata: {
-        transactionId,
-        unitPrice: item.buyPrice,
-        totalPrice: pricing.subtotal,
-        tax: pricing.tax,
-        totalPaid: pricing.total,
-      },
+      metadata: auditMetadata,
     });
 
     // Step 10: Return result
@@ -397,7 +447,7 @@ class StoreServiceImpl implements StoreService {
       guildId,
       itemId,
       quantity,
-      unitPrice: item.buyPrice,
+      unitPrice,
       totalPrice: pricing.subtotal,
       tax: pricing.tax,
       totalPaid: pricing.total,
@@ -416,8 +466,26 @@ class StoreServiceImpl implements StoreService {
     const { sellerId, guildId, itemId, quantity, reason } = input;
 
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      return ErrResult(new StoreError("INVALID_QUANTITY", "Quantity must be positive"));
+      return ErrResult(
+        new StoreError("INVALID_QUANTITY", "Quantity must be positive"),
+      );
     }
+
+    // Check guild feature flag
+    const guildConfigResult = await guildEconomyRepo.findByGuildId(guildId);
+    if (guildConfigResult.isOk()) {
+      const guildConfig = guildConfigResult.unwrap();
+      if (guildConfig && !guildConfig.features.store) {
+        return ErrResult(
+          new StoreError(
+            "FEATURE_DISABLED",
+            "Store está deshabilitado en este servidor.",
+          ),
+        );
+      }
+    }
+
+    const transactionId = `store_sell_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     // Step 1: Get catalog
     const catalogResult = await storeRepo.findByGuildId(guildId);
@@ -431,7 +499,9 @@ class StoreServiceImpl implements StoreService {
     }
 
     if (!catalog.active) {
-      return ErrResult(new StoreError("STORE_CLOSED", "Store is currently closed"));
+      return ErrResult(
+        new StoreError("STORE_CLOSED", "Store is currently closed"),
+      );
     }
 
     // Step 2: Get item definition
@@ -442,29 +512,42 @@ class StoreServiceImpl implements StoreService {
 
     // Step 3: Get store item (for pricing) or use default pricing
     const storeItem = catalog.items[itemId];
-    const sellPrice = storeItem?.sellPrice ?? calculateSellPrice(itemDef.value ?? 1);
+    const sellPrice =
+      storeItem?.sellPrice ?? calculateSellPrice(itemDef.value ?? 1);
 
     // Step 4: Check seller's inventory
     const userResult = await UserStore.get(sellerId);
     if (userResult.isErr() || !userResult.unwrap()) {
-      return ErrResult(new StoreError("TRANSACTION_FAILED", "Could not access user inventory"));
+      return ErrResult(
+        new StoreError("TRANSACTION_FAILED", "Could not access user inventory"),
+      );
     }
 
     const inventory = (userResult.unwrap()!.inventory ?? {}) as ItemInventory;
     const currentQty = inventory[itemId]?.quantity ?? 0;
 
     if (currentQty < quantity) {
-      return ErrResult(new StoreError("INSUFFICIENT_INVENTORY", `You only have ${currentQty} of this item`));
+      return ErrResult(
+        new StoreError(
+          "INSUFFICIENT_INVENTORY",
+          `You only have ${currentQty} of this item`,
+        ),
+      );
     }
 
     // Step 5: Calculate sale value
     const baseValue = sellPrice * quantity;
 
     // Apply tax on sale (seller pays tax)
-    const taxResult = await guildEconomyService.applyTax(guildId, "store_sell", baseValue, {
-      depositToGuild: true,
-      source: "store_sell",
-    });
+    const taxResult = await guildEconomyService.applyTax(
+      guildId,
+      "store_sell",
+      baseValue,
+      {
+        depositToGuild: true,
+        source: "store_sell",
+      },
+    );
 
     let tax = 0;
     let totalReceived = baseValue;
@@ -475,14 +558,24 @@ class StoreServiceImpl implements StoreService {
     }
 
     // Step 6: Check guild liquidity (trade sector must have enough)
-    const liquidityResult = await guildEconomyService.getSectorBalance(guildId, "trade");
+    const liquidityResult = await guildEconomyService.getSectorBalance(
+      guildId,
+      "trade",
+    );
     if (liquidityResult.isErr()) {
-      return ErrResult(new StoreError("TRANSACTION_FAILED", "Could not check guild liquidity"));
+      return ErrResult(
+        new StoreError("TRANSACTION_FAILED", "Could not check guild liquidity"),
+      );
     }
 
     const guildLiquidity = liquidityResult.unwrap();
     if (guildLiquidity < totalReceived) {
-      return ErrResult(new StoreError("GUILD_LIQUIDITY_INSUFFICIENT", "The store cannot afford to buy this item right now"));
+      return ErrResult(
+        new StoreError(
+          "GUILD_LIQUIDITY_INSUFFICIENT",
+          "The store cannot afford to buy this item right now",
+        ),
+      );
     }
 
     // Step 7: Remove items from seller
@@ -499,7 +592,12 @@ class StoreServiceImpl implements StoreService {
     );
 
     if (itemResult.isErr()) {
-      return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to remove items from inventory"));
+      return ErrResult(
+        new StoreError(
+          "TRANSACTION_FAILED",
+          "Failed to remove items from inventory",
+        ),
+      );
     }
 
     // Step 8: Withdraw from guild trade sector
@@ -514,7 +612,10 @@ class StoreServiceImpl implements StoreService {
     if (withdrawResult.isErr()) {
       // This is bad - we took items but guild doesn't have funds
       // Try to return items (best effort)
-      console.error("[StoreService] Guild liquidity insufficient, returning items:", withdrawResult.error);
+      console.error(
+        "[StoreService] Guild liquidity insufficient, returning items:",
+        withdrawResult.error,
+      );
 
       await itemMutationService.adjustItemQuantity(
         {
@@ -529,7 +630,12 @@ class StoreServiceImpl implements StoreService {
         async () => true,
       );
 
-      return ErrResult(new StoreError("GUILD_LIQUIDITY_INSUFFICIENT", "The store cannot afford to buy this item right now"));
+      return ErrResult(
+        new StoreError(
+          "GUILD_LIQUIDITY_INSUFFICIENT",
+          "The store cannot afford to buy this item right now",
+        ),
+      );
     }
 
     // Step 9: Pay seller
@@ -540,29 +646,40 @@ class StoreServiceImpl implements StoreService {
       currencyId: catalog.currencyId,
       amount: totalReceived,
       reason: reason || `Sold ${quantity}x ${itemDef.name} to store`,
+      correlationId: transactionId,
     });
 
     if (paymentResult.isErr()) {
       // This is really bad - we took items and guild funds but couldn't pay seller
       // Log for manual resolution
-      console.error("[StoreService] CRITICAL: Failed to pay seller after taking items and guild funds:", {
-        sellerId,
-        guildId,
-        itemId,
-        quantity,
-        totalReceived,
-        error: paymentResult.error,
-      });
+      console.error(
+        "[StoreService] CRITICAL: Failed to pay seller after taking items and guild funds:",
+        {
+          sellerId,
+          guildId,
+          itemId,
+          quantity,
+          totalReceived,
+          error: paymentResult.error,
+        },
+      );
 
-      return ErrResult(new StoreError("TRANSACTION_FAILED", "Transaction failed. Please contact an administrator."));
+      return ErrResult(
+        new StoreError(
+          "TRANSACTION_FAILED",
+          "Transaction failed. Please contact an administrator.",
+        ),
+      );
     }
 
     // Step 10: Increment store stock
-    await storeRepo.updateStock(guildId, itemId, (storeItem?.stock ?? 0) + quantity);
+    await storeRepo.updateStock(
+      guildId,
+      itemId,
+      (storeItem?.stock ?? 0) + quantity,
+    );
 
     // Step 11: Create audit entry
-    const transactionId = `store_sell_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
     await economyAuditRepo.create({
       operationType: "item_sell",
       actorId: sellerId,
@@ -578,10 +695,14 @@ class StoreServiceImpl implements StoreService {
       },
       metadata: {
         transactionId,
+        correlationId: transactionId,
         unitPrice: sellPrice,
         baseValue,
         tax,
         totalReceived,
+        sector: "trade",
+        sectorDelta: -totalReceived,
+        stockDelta: quantity,
       },
     });
 
@@ -601,7 +722,10 @@ class StoreServiceImpl implements StoreService {
     });
   }
 
-  async getSellPrice(guildId: GuildId, itemId: ItemId): Promise<Result<number, Error>> {
+  async getSellPrice(
+    guildId: GuildId,
+    itemId: ItemId,
+  ): Promise<Result<number, Error>> {
     const catalogResult = await storeRepo.findByGuildId(guildId);
     if (catalogResult.isErr()) {
       return ErrResult(catalogResult.error);
@@ -623,7 +747,9 @@ class StoreServiceImpl implements StoreService {
     return OkResult(calculateSellPrice(itemDef.value ?? 1));
   }
 
-  async listAvailableItems(guildId: GuildId): Promise<Result<StoreItem[], Error>> {
+  async listAvailableItems(
+    guildId: GuildId,
+  ): Promise<Result<StoreItem[], Error>> {
     const catalogResult = await storeRepo.findByGuildId(guildId);
     if (catalogResult.isErr()) {
       return ErrResult(catalogResult.error);
@@ -636,6 +762,12 @@ class StoreServiceImpl implements StoreService {
 
     const items = Object.values(catalog.items).filter((item) => item.available);
     return OkResult(items);
+  }
+
+  async getFeaturedItems(
+    guildId: GuildId,
+  ): Promise<Result<FeaturedItem[], Error>> {
+    return storeRotationService.getFeatured(guildId);
   }
 }
 

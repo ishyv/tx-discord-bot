@@ -26,7 +26,10 @@ import {
   type Suite,
 } from "./_utils";
 
-const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupUser = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await UsersRepo.deleteUser(id);
     if (res.isErr()) return;
@@ -70,7 +73,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject non-admin");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "INSUFFICIENT_PERMISSIONS", "error should be INSUFFICIENT_PERMISSIONS");
+        assertEqual(
+          error.code,
+          "INSUFFICIENT_PERMISSIONS",
+          "error should be INSUFFICIENT_PERMISSIONS",
+        );
       },
     },
     {
@@ -188,7 +195,11 @@ export const suite: Suite = {
         );
 
         const adjustment = assertOk(result);
-        assertEqual(adjustment.after, -40, "after should be -40 (debt allowed)");
+        assertEqual(
+          adjustment.after,
+          -40,
+          "after should be -40 (debt allowed)",
+        );
       },
     },
 
@@ -219,7 +230,11 @@ export const suite: Suite = {
         );
 
         const adjustment = assertOk(result);
-        assertEqual(adjustment.before, 0, "before should be 0 (no existing currency)");
+        assertEqual(
+          adjustment.before,
+          0,
+          "before should be 0 (no existing currency)",
+        );
         assertEqual(adjustment.after, 25, "after should be 25");
       },
     },
@@ -246,7 +261,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject invalid currency");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "CURRENCY_NOT_FOUND", "error should be CURRENCY_NOT_FOUND");
+        assertEqual(
+          error.code,
+          "CURRENCY_NOT_FOUND",
+          "error should be CURRENCY_NOT_FOUND",
+        );
       },
     },
 
@@ -264,7 +283,13 @@ export const suite: Suite = {
 
         // Create and block target
         const { account } = assertOk(await economyAccountRepo.ensure(targetId));
-        assertOk(await economyAccountRepo.updateStatus(targetId, "blocked", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            targetId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         const result = await currencyMutationService.adjustCurrencyBalance(
           {
@@ -278,7 +303,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject blocked account");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "TARGET_BLOCKED", "error should be TARGET_BLOCKED");
+        assertEqual(
+          error.code,
+          "TARGET_BLOCKED",
+          "error should be TARGET_BLOCKED",
+        );
       },
     },
     {
@@ -292,7 +321,13 @@ export const suite: Suite = {
 
         // Create and ban target
         const { account } = assertOk(await economyAccountRepo.ensure(targetId));
-        assertOk(await economyAccountRepo.updateStatus(targetId, "banned", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            targetId,
+            "banned",
+            account.version,
+          ),
+        );
 
         const result = await currencyMutationService.adjustCurrencyBalance(
           {
@@ -306,7 +341,11 @@ export const suite: Suite = {
 
         assertEqual(result.isErr(), true, "should reject banned account");
         const error = result.error as CurrencyMutationError;
-        assertEqual(error.code, "TARGET_BANNED", "error should be TARGET_BANNED");
+        assertEqual(
+          error.code,
+          "TARGET_BANNED",
+          "error should be TARGET_BANNED",
+        );
       },
     },
 
@@ -339,13 +378,21 @@ export const suite: Suite = {
 
         // All should succeed
         for (const result of results) {
-          assertEqual(result.isOk(), true, "all concurrent adjustments should succeed");
+          assertEqual(
+            result.isOk(),
+            true,
+            "all concurrent adjustments should succeed",
+          );
         }
 
         // Final balance should be 50 (5 x 10)
         const user = assertOk(await UsersRepo.findUser(targetId));
         const finalRep = (user!.currency as CurrencyInventory).rep ?? 0;
-        assertEqual(finalRep, 50, "final balance should be 50 (no lost updates)");
+        assertEqual(
+          finalRep,
+          50,
+          "final balance should be 50 (no lost updates)",
+        );
       },
     },
     {
@@ -382,13 +429,21 @@ export const suite: Suite = {
 
         // All should succeed
         for (const result of results) {
-          assertEqual(result.isOk(), true, "all concurrent adjustments should succeed");
+          assertEqual(
+            result.isOk(),
+            true,
+            "all concurrent adjustments should succeed",
+          );
         }
 
         // Final balance: 100 + (3 * 20) + (2 * -15) = 100 + 60 - 30 = 130
         const user = assertOk(await UsersRepo.findUser(targetId));
         const finalRep = (user!.currency as CurrencyInventory).rep ?? 0;
-        assertEqual(finalRep, 130, "final balance should be 130 (atomic operations)");
+        assertEqual(
+          finalRep,
+          130,
+          "final balance should be 130 (atomic operations)",
+        );
       },
     },
 
@@ -428,16 +483,40 @@ export const suite: Suite = {
         });
 
         const audit = assertOk(auditResult);
-        assertEqual(audit.entries.length >= 1, true, "should have at least one audit entry");
+        assertEqual(
+          audit.entries.length >= 1,
+          true,
+          "should have at least one audit entry",
+        );
 
         const entry = audit.entries[0];
         assertEqual(entry.actorId, actorId, "audit should have correct actor");
-        assertEqual(entry.targetId, targetId, "audit should have correct target");
+        assertEqual(
+          entry.targetId,
+          targetId,
+          "audit should have correct target",
+        );
         assertEqual(entry.guildId, guildId, "audit should have correct guild");
-        assertEqual(entry.currencyData?.currencyId, "rep", "audit should have correct currency");
-        assertEqual(entry.currencyData?.delta, 42, "audit should have correct delta");
-        assertEqual(entry.reason, "Test adjustment", "audit should have correct reason");
-        assertEqual(entry.source, "give-currency", "audit should have correct source");
+        assertEqual(
+          entry.currencyData?.currencyId,
+          "rep",
+          "audit should have correct currency",
+        );
+        assertEqual(
+          entry.currencyData?.delta,
+          42,
+          "audit should have correct delta",
+        );
+        assertEqual(
+          entry.reason,
+          "Test adjustment",
+          "audit should have correct reason",
+        );
+        assertEqual(
+          entry.source,
+          "give-currency",
+          "audit should have correct source",
+        );
       },
     },
     {
@@ -466,8 +545,16 @@ export const suite: Suite = {
         const audit = assertOk(auditResult);
 
         const entry = audit.entries[0];
-        assertEqual(entry.currencyData?.beforeBalance, 50, "audit should record before balance");
-        assertEqual(entry.currencyData?.afterBalance, 75, "audit should record after balance");
+        assertEqual(
+          entry.currencyData?.beforeBalance,
+          50,
+          "audit should record before balance",
+        );
+        assertEqual(
+          entry.currencyData?.afterBalance,
+          75,
+          "audit should record after balance",
+        );
       },
     },
   ],

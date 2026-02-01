@@ -24,12 +24,10 @@ import {
   buildTransferAlertMessage,
   GuildEconomyError,
 } from "./types";
+import type { ProgressionConfigUpdate } from "../progression/types";
 
 /** Calculate tax for a given amount based on guild config. */
-export function calculateTax(
-  amount: number,
-  config: TaxConfig,
-): TaxResult {
+export function calculateTax(amount: number, config: TaxConfig): TaxResult {
   // Check if tax applies
   if (!config.enabled || amount < config.minimumTaxableAmount) {
     return {
@@ -130,6 +128,14 @@ export interface GuildEconomyService {
   ): Promise<Result<GuildEconomyConfig, Error>>;
 
   /**
+   * Update progression configuration (admin only).
+   */
+  updateProgressionConfig(
+    guildId: GuildId,
+    config: ProgressionConfigUpdate,
+  ): Promise<Result<GuildEconomyConfig, Error>>;
+
+  /**
    * Transfer funds between sectors within a guild.
    */
   transferBetweenSectors(
@@ -138,11 +144,15 @@ export interface GuildEconomyService {
     to: EconomySector,
     amount: number,
     reason?: string,
-  ): Promise<Result<{ from: SectorBalanceResult; to: SectorBalanceResult }, Error>>;
+  ): Promise<
+    Result<{ from: SectorBalanceResult; to: SectorBalanceResult }, Error>
+  >;
 }
 
 class GuildEconomyServiceImpl implements GuildEconomyService {
-  async getConfig(guildId: GuildId): Promise<Result<GuildEconomyConfig, Error>> {
+  async getConfig(
+    guildId: GuildId,
+  ): Promise<Result<GuildEconomyConfig, Error>> {
     return guildEconomyRepo.ensure(guildId);
   }
 
@@ -164,7 +174,11 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
     const taxResult = calculateTax(amount, config.tax);
 
     // If tax was applied and depositToGuild is true, deposit the tax
-    if (taxResult.taxed && taxResult.tax > 0 && options?.depositToGuild !== false) {
+    if (
+      taxResult.taxed &&
+      taxResult.tax > 0 &&
+      options?.depositToGuild !== false
+    ) {
       const depositResult = await guildEconomyRepo.depositToSector(
         guildId,
         taxResult.depositedTo!,
@@ -172,7 +186,10 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
       );
 
       if (depositResult.isErr()) {
-        console.error("[GuildEconomyService] Failed to deposit tax:", depositResult.error);
+        console.error(
+          "[GuildEconomyService] Failed to deposit tax:",
+          depositResult.error,
+        );
         // Don't fail the operation, but log the error
       }
     }
@@ -199,7 +216,13 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
       return OkResult(null);
     }
 
-    const message = buildTransferAlertMessage(level, amount, currencyId, senderId, recipientId);
+    const message = buildTransferAlertMessage(
+      level,
+      amount,
+      currencyId,
+      senderId,
+      recipientId,
+    );
 
     return OkResult({
       level,
@@ -227,7 +250,11 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
     const beforeConfig = beforeResult.unwrap();
     const before = beforeConfig?.sectors[sector] ?? 0;
 
-    const result = await guildEconomyRepo.depositToSector(guildId, sector, amount);
+    const result = await guildEconomyRepo.depositToSector(
+      guildId,
+      sector,
+      amount,
+    );
     if (result.isErr()) {
       return ErrResult(result.error);
     }
@@ -259,7 +286,11 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
     const beforeConfig = beforeResult.unwrap();
     const before = beforeConfig?.sectors[sector] ?? 0;
 
-    const result = await guildEconomyRepo.withdrawFromSector(guildId, sector, amount);
+    const result = await guildEconomyRepo.withdrawFromSector(
+      guildId,
+      sector,
+      amount,
+    );
     if (result.isErr()) {
       return ErrResult(result.error);
     }
@@ -319,15 +350,29 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
     return guildEconomyRepo.updateThresholds(guildId, thresholds);
   }
 
+  async updateProgressionConfig(
+    guildId: GuildId,
+    config: ProgressionConfigUpdate,
+  ): Promise<Result<GuildEconomyConfig, Error>> {
+    return guildEconomyRepo.updateProgressionConfig(guildId, config);
+  }
+
   async transferBetweenSectors(
     guildId: GuildId,
     from: EconomySector,
     to: EconomySector,
     amount: number,
     reason?: string,
-  ): Promise<Result<{ from: SectorBalanceResult; to: SectorBalanceResult }, Error>> {
+  ): Promise<
+    Result<{ from: SectorBalanceResult; to: SectorBalanceResult }, Error>
+  > {
     if (from === to) {
-      return ErrResult(new GuildEconomyError("INVALID_SECTOR", "Cannot transfer to same sector"));
+      return ErrResult(
+        new GuildEconomyError(
+          "INVALID_SECTOR",
+          "Cannot transfer to same sector",
+        ),
+      );
     }
 
     // First, withdraw from source
@@ -367,4 +412,5 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
 }
 
 /** Singleton instance. */
-export const guildEconomyService: GuildEconomyService = new GuildEconomyServiceImpl();
+export const guildEconomyService: GuildEconomyService =
+  new GuildEconomyServiceImpl();

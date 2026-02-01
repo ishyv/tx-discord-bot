@@ -1,15 +1,15 @@
 /**
- * Servicio de tickets (dominio): orquesta canal+persistencia+limites en una sola API.
+ * Ticket service (domain): Orchestrates channel+persistence+limits in a single API.
  *
- * Encaje: usado por UI (componentes/commands) y sistemas para crear/cerrar
- * tickets sin duplicar lógica de Mongo ni manejo de canales.
- * Dependencias clave: repos `user-tickets` y `guilds` para consistencia, API de
- * canales de Discord vía Seyfert, y `Result` para política no-throw.
- * Invariantes: máximo `maxPerUser` tickets abiertos por autor/guild; si falla la
- * persistencia se revierte el canal creado; `pendingTickets` siempre se trata
- * como arreglo de strings sin duplicados.
- * Gotchas: el orden importa (crear canal -> persistir -> actualizar guild);
- * si cambian los índices o la forma de `pendingTickets`, ajustar los pipelines.
+ * Context: Used by UI (components/commands) and systems to create/close
+ * tickets without duplicating Mongo logic or channel handling.
+ * Key Dependencies: `user-tickets` and `guilds` repos for consistency, Discord 
+ * channel API via Seyfert, and `Result` for no-throw policy.
+ * Invariants: Maximum `maxPerUser` open tickets per author/guild; if 
+ * persistence fails, the created channel is reverted; `pendingTickets` is 
+ * always treated as an array of unique strings.
+ * Gotchas: Order matters (create channel -> persist -> update guild);
+ * if indexes or `pendingTickets` shape change, adjust pipelines.
  */
 import type { UsingClient } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
@@ -29,17 +29,18 @@ export interface OpenTicketResult {
 }
 
 /**
- * Abre un ticket creando canal + registrando al usuario con límite.
+ * Opens a ticket by creating a channel + registering the user with a limit.
  *
- * Parámetros: `params` (guildId, userId, parentId, channelName) y `maxPerUser`
- * (límite duro por usuario). `parentId` debe ser categoría válida.
- * Retorno: `Result<{channelId}>`; en error devuelve `ErrResult` con causa o
- * `TICKET_LIMIT_REACHED` cuando supera el límite.
- * Side effects: crea canal en Discord, escribe en repos `UserTickets` y
- * `pendingTickets` en guild; borra el canal si falla cualquiera de los pasos
- * posteriores para evitar huérfanos.
- * Invariantes: la escritura en DB ocurre después de crear el canal; si `addWithLimit`
- * devuelve falso se revierte el canal. No lanza; todo se encapsula en Result.
+ * Parameters: `params` (guildId, userId, parentId, channelName) and `maxPerUser`
+ * (hard limit per user). `parentId` must be a valid category.
+ * Returns: `Result<{channelId}>`; on error, returns `ErrResult` with cause or
+ * `TICKET_LIMIT_REACHED` when limit exceeded.
+ * Side effects: Creates Discord channel, writes to `UserTickets` and
+ * `pendingTickets` repos in guild; deletes the channel if any subsequent 
+ * steps fail to avoid orphans.
+ * Invariants: DB write occurs after channel creation; if `addWithLimit`
+ * returns false, the channel is reverted. Does not throw; everything is 
+ * encapsulated in Result.
  */
 export async function openTicket(
   client: UsingClient,
@@ -47,8 +48,8 @@ export async function openTicket(
   maxPerUser = 1,
 ): Promise<Result<OpenTicketResult>> {
   try {
-    // WHY: se crea el canal primero para obtener un id real; si el límite falla
-    // se borra el canal para no dejar huérfanos.
+    // WHY: Channel is created first to get a real ID; if the limit fails,
+    // the channel is deleted to leave no orphans.
     const channel = await client.guilds.channels.create(params.guildId, {
       name: params.channelName,
       type: ChannelType.GuildText,
@@ -98,14 +99,14 @@ export async function openTicket(
 }
 
 /**
- * Sincroniza el cierre de un ticket en guild + user stores.
+ * Synchronizes ticket closure in guild + user stores.
  *
- * Propósito: eliminar el canal de `pendingTickets` y de `openTickets` de
- * cualquier usuario que lo refiera.
- * Retorno: `Result<void>`; no lanza.
- * Side effects: escribe en `guilds` vía `updateGuildPaths` y en `user-tickets`.
- * Gotchas: no valida que el canal exista en Discord; asume que quien llama ya
- * lo cerró/borró. Usa $setDifference para mantener arrays únicos.
+ * Purpose: Remove the channel from `pendingTickets` and from `openTickets` of
+ * any user referring to it.
+ * Returns: `Result<void>`; does not throw.
+ * Side effects: Writes in `guilds` via `updateGuildPaths` and in `user-tickets`.
+ * Gotchas: Does not validate that the channel exists on Discord; assumes caller 
+ * has already closed/deleted it. Uses $setDifference to maintain unique arrays.
  */
 export async function recordTicketClosure(
   guildId: string,

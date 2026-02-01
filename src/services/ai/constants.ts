@@ -14,7 +14,10 @@ export type AIProviderId = (typeof PROVIDER_IDS)[number];
 export const DEFAULT_PROVIDER_ID: AIProviderId = "gemini";
 export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
-export const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"] as const;
+export const GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+] as const;
 export const OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o"] as const;
 
 export const DEFAULT_MAX_OUTPUT_TOKENS = 1024 * 8;
@@ -26,4 +29,5 @@ export const OPENAI_REQUEST_TIMEOUT_MS = 45_000;
 
 export const TRUNCATION_NOTICE =
   "[La respuesta se corto por limite de tokens. Puedes pedir que continue.]";
-export const SAFETY_BLOCK_MESSAGE = "La respuesta fue bloqueada por filtros de seguridad.";
+export const SAFETY_BLOCK_MESSAGE =
+  "La respuesta fue bloqueada por filtros de seguridad.";

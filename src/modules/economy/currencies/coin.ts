@@ -7,7 +7,7 @@ export type CoinValue = {
 
   // If true, when subtracting, use the total of hand + bank to determine sufficiency
   // Meanig, if true, subtraction will first deplete hand, then bank as needed
-  use_total_on_subtract: boolean;  
+  use_total_on_subtract: boolean;
 };
 
 declare module "@/modules/economy/currency" {
@@ -38,18 +38,16 @@ export class Coins implements Currency<CoinValue> {
     };
   }
 
-
   /**
-   * Subtract b from a. 
-   * If `b.use_total_on_subtract` is `true`, 
-   * will consider total of hand + bank for sufficiency. 
+   * Subtract b from a.
+   * If `b.use_total_on_subtract` is `true`,
+   * will consider total of hand + bank for sufficiency.
    * Hand will be depleted first, then bank as needed.
-   * 
+   *
    * If `b.use_total_on_subtract` is `false`,
    * will subtract hand from hand and bank from bank directly.
    */
   sub(a: CoinValue, b: CoinValue): CoinValue {
-
     if (b.use_total_on_subtract) {
       let total = (a.hand ?? 0) + (a.bank ?? 0);
       const subAmount = (b.hand ?? 0) + (b.bank ?? 0);

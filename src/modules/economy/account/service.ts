@@ -47,6 +47,7 @@ import {
   buildInventorySummary,
   buildProfileView,
 } from "../views";
+import { progressionService } from "../progression/service";
 
 /** Check if account can access economy features. */
 function canAccessEconomy(status: string): boolean {
@@ -91,13 +92,17 @@ export interface EconomyAccountService {
    * Build bank breakdown for coin currency.
    * Touches activity on success.
    */
-  getBankBreakdown(userId: UserId): Promise<Result<BankBreakdownView | null, Error>>;
+  getBankBreakdown(
+    userId: UserId,
+  ): Promise<Result<BankBreakdownView | null, Error>>;
 
   /**
    * Build inventory summary.
    * Touches activity on success.
    */
-  getInventorySummary(userId: UserId): Promise<Result<InventorySummaryView, Error>>;
+  getInventorySummary(
+    userId: UserId,
+  ): Promise<Result<InventorySummaryView, Error>>;
 
   /**
    * Build paginated inventory view.
@@ -114,14 +119,16 @@ export interface EconomyAccountService {
    */
   getProfileSummary(
     userId: UserId,
-    options?: { balanceOptions?: BalanceViewOptions },
+    options?: { balanceOptions?: BalanceViewOptions; guildId?: string },
   ): Promise<Result<ProfileSummaryView, Error>>;
 
   /**
    * Check if user can access economy features.
    * Does NOT touch activity (lightweight check).
    */
-  checkAccess(userId: UserId): Promise<Result<{ allowed: boolean; status?: string }, Error>>;
+  checkAccess(
+    userId: UserId,
+  ): Promise<Result<{ allowed: boolean; status?: string }, Error>>;
 
   /**
    * Explicitly repair corrupted account data.
@@ -133,11 +140,15 @@ export interface EconomyAccountService {
 class EconomyAccountServiceImpl implements EconomyAccountService {
   constructor(private repo: EconomyAccountRepo) {}
 
-  async ensureAccount(userId: UserId): Promise<Result<AccountEnsureResult, Error>> {
+  async ensureAccount(
+    userId: UserId,
+  ): Promise<Result<AccountEnsureResult, Error>> {
     return this.repo.ensure(userId);
   }
 
-  async getAccount(userId: UserId): Promise<Result<EconomyAccount | null, Error>> {
+  async getAccount(
+    userId: UserId,
+  ): Promise<Result<EconomyAccount | null, Error>> {
     return this.repo.findById(userId);
   }
 
@@ -177,7 +188,9 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
     return OkResult(view);
   }
 
-  async getBankBreakdown(userId: UserId): Promise<Result<BankBreakdownView | null, Error>> {
+  async getBankBreakdown(
+    userId: UserId,
+  ): Promise<Result<BankBreakdownView | null, Error>> {
     // Step 1: Ensure account exists
     const ensureResult = await this.repo.ensure(userId);
     if (ensureResult.isErr()) {
@@ -209,7 +222,9 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
     return OkResult(view);
   }
 
-  async getInventorySummary(userId: UserId): Promise<Result<InventorySummaryView, Error>> {
+  async getInventorySummary(
+    userId: UserId,
+  ): Promise<Result<InventorySummaryView, Error>> {
     // Step 1: Ensure account exists
     const ensureResult = await this.repo.ensure(userId);
     if (ensureResult.isErr()) {
@@ -278,7 +293,7 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
 
   async getProfileSummary(
     userId: UserId,
-    options?: { balanceOptions?: BalanceViewOptions },
+    options?: { balanceOptions?: BalanceViewOptions; guildId?: string },
   ): Promise<Result<ProfileSummaryView, Error>> {
     // Step 1: Ensure account exists (already did this correctly)
     const ensureResult = await this.repo.ensure(userId);
@@ -307,12 +322,24 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
 
     const currencyInventory = (user.currency ?? {}) as CurrencyInventory;
     const itemInventory = (user.inventory ?? {}) as ItemInventory;
+    let progressionView = null;
+
+    if (options?.guildId) {
+      const progressionResult = await progressionService.getProgressView(
+        options.guildId,
+        userId,
+      );
+      if (progressionResult.isOk()) {
+        progressionView = progressionResult.unwrap();
+      }
+    }
 
     const view = buildProfileView(
       userId,
       account,
       currencyInventory,
       itemInventory,
+      progressionView,
       { balanceOptions: options?.balanceOptions },
     );
 
@@ -343,7 +370,9 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
     });
   }
 
-  async repairAccount(userId: UserId): Promise<Result<AccountRepairResult, Error>> {
+  async repairAccount(
+    userId: UserId,
+  ): Promise<Result<AccountRepairResult, Error>> {
     return this.repo.repair(userId);
   }
 }

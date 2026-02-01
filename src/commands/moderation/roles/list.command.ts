@@ -10,10 +10,7 @@ import { Declare, Embed, SubCommand } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
 import { GuildStore } from "@/db/repositories/guilds";
-import {
-  buildModerationSummary,
-  fetchManagedRoles,
-} from "./shared";
+import { buildModerationSummary, fetchManagedRoles } from "./shared";
 
 @Declare({
   name: "list",
@@ -27,7 +24,8 @@ export default class RoleListCommand extends SubCommand {
         embeds: [
           new Embed({
             title: "Roles administrados",
-            description: "Este comando solo puede ejecutarse dentro de un servidor.",
+            description:
+              "Este comando solo puede ejecutarse dentro de un servidor.",
             color: EmbedColors.Red,
           }),
         ],
@@ -69,4 +67,3 @@ export default class RoleListCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

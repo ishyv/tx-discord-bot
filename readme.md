@@ -1,46 +1,120 @@
----
+<div align="center">
 
-<img src="https://github.com/somospye/.github/blob/e0ab2bf61b679d7746e5c1114baa5f37c354d778/assets/pyebanner.png" />
+# ◼️ Tx - Seeker
 
-Somos la comunidad hispana más grande de **programación** y **estudio** en Discord. [¡Siéntase bienvenido/a!](https://discord.gg/programacion) 😄
+**A Discord bot with too many features, probably. Built mostly for moderation and a questionable economy system.**
 
----
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)  
+[![Seyfert](https://img.shields.io/badge/Powered%20by-Seyfert-5865F2?logo=discord)](https://seyfert.dev)  
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)](https://www.mongodb.com/)  
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./license)
 
-Este repositorio contiene el proyecto de código abierto de **PyEBot**, nuestro bot oficial de Discord. Construido con el framework [Seyfert](https://seyfert.dev), **¡y la contribución de todo aquel que quiera formar parte!**
-
----
-
-## 🔥 Características
-
-- Comandos de moderación completos.
-- Sistema de reputación automático basado en inteligencia artificial y analisis de conversaciones.
-- Tickets.
-- Apelación de sanciones.
-- Logs.
-- Comandos de entretenimiento.
-- Sugerencias.
-- Starboard.
-- Inteligencia artificial conversacional.
-- Ejecución de código en variedad de lenguajes de programación.
-- Respuestas automáticas en foros basados en IA.
+</div>
 
 ---
 
-## ❤️ Colaborar
+## What Is This
 
-Puede leer toda la guía de contribución [aquí](./contributing.md). Debe seguir las pautas y el flujo de trabajo detallado.
+**Tx - Seeker** is a Discord bot. It moderates, it has an economy system, it plays some games, and it tries to look more complex than it is. Built in TypeScript using the [Seyfert](https://seyfert.dev) framework.
+
+Useful for people running servers who want:
+
+- A economy for some reason
+- Quests, XP, and other game-like distractions
+- AI responses if talking to real people isn’t cutting it
+- MASSIVE moderation tools
+
+## Features 
+
+### Moderation
+
+- Ban, kick, mute, warn, etc. The usual.
+- Role-based permission limits.
+- Auto-mod: fights links, shorteners, shady domains
+- Keeps logs that oneone ever reads
+
+### Economy
+- Multiple currencies. For what? dunno
+- Sectors: global, work, trade, tax—simulate capitalism badly
+- Daily rewards to keep users clicking things
+- Buy/sell/craft/trade items 
+- Transfer system with adjustable tax, like in real life 
+
+### Game / RPG-ish parts
+
+- Quests: daily/weekly/whatever—you do tasks, get stuff
+- Achievements and titles for your fake accomplishments
+- XP and leveling system 
+- Server perks  
+- Minigames: coinflip, trivia and more to come
+
+### AI (CLANKER) Features 
+
+- Chat bots using OpenAI or Gemini (or nothing)
+- Auto-replies in threads 
+- "Reputation detection"—it tries, okay?
+
+### Utility
+
+- Ticket system (One of the best ticket systems ever, allegedly)
+- Suggestions and starboard 
+- Role management with super-duper powerful rules
+- Can't remember everything, but it's real man. 
 
 ---
 
-## 📚 Documentación técnica
+## Setup 
 
-- Capa de base de datos (schemas, repositorios, flujo de conexión): [docs/database.md](./docs/database.md).
-- Sistema de IA (providers, configuración por guild, truncado/continuación): [docs/sistema-ia.md](./docs/sistema-ia.md).
+### Requirements
+- JS runtime, preferably [Bun](https://bun.sh/)
+- MongoDB instance running somewhere (local or not) 
+
+### Install It
+
+```bash
+git clone https://github.com/ishyv/tx-seeker.git
+cd tx-seeker
+bun install
+
+cp env.example .env
+# Then, yes, you have to actually edit the .env file
+
+bun run build
+bun start
+```
+
+### Environment Variables
+
+```env
+TOKEN=your_discord_bot_token
+CLIENT_ID=your_discord_client_id
+MONGO_URI=mongodb://localhost:27017
+DB_NAME=txseeker
+
+# Optional AI keys. Or don’t. That’s valid.
+GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
+```
+
+
+## 📖 Documentation (It’s There, Technically)
+
+- [Architecture Overview](./docs/arquitectura.md)
+- [Database Layer](./docs/database.md)
+- [Economy System](./docs/economia-e-inventario.md)
+- [Quest System](./docs/sistema-misiones.md)
+- [AI System](./docs/sistema-ia.md)
+- [Event Bus](./docs/event-bus.md)
+
+
+## 🗪 License
+
+MIT. Do whatever you want, basically. Just don’t blame me.
 
 ---
 
-## 📄 Licencia
+<div align="center">
 
-Este proyecto está bajo la [Licencia MIT](./license).
+Built with indifference and tons of vibe coding by the Tx - Seeker team (me).
 
----
+</div>

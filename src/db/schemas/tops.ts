@@ -15,8 +15,16 @@ export const TopWindowSchema = z.object({
   _id: z.string(),
   guildId: z.string(),
   channelId: z.string().nullable().catch(null),
-  intervalMs: z.number().int().positive().catch(() => TOP_DEFAULTS.intervalMs),
-  topSize: z.number().int().positive().catch(() => TOP_DEFAULTS.topSize),
+  intervalMs: z
+    .number()
+    .int()
+    .positive()
+    .catch(() => TOP_DEFAULTS.intervalMs),
+  topSize: z
+    .number()
+    .int()
+    .positive()
+    .catch(() => TOP_DEFAULTS.topSize),
   windowStartedAt: z.date().catch(() => new Date()),
   lastReportAt: z.date().nullable().catch(null),
   emojiCounts: NumberMapSchema.catch(() => ({})),
@@ -44,4 +52,3 @@ export const TopReportSchema = z.object({
 
 export type TopWindow = z.infer<typeof TopWindowSchema>;
 export type TopReport = z.infer<typeof TopReportSchema>;
-

@@ -1,18 +1,18 @@
 /**
- * Propósito: encapsular operaciones CRUD y CAS sobre colecciones Mongo usando
- * validación Zod en cada lectura/escritura para evitar datos corruptos.
- * Encaje: capa base de repositorios (`UserStore`, `GuildStore`, etc.) que
- * aplica timestamps y defaults sin que cada feature duplique lógica de
- * upsert/normalización.
- * Dependencias relevantes: `buildSafeUpsertUpdate` (asegura `updatedAt` y
- * paths de timestamps), `unwrapFindOneAndUpdateResult` (maneja las variaciones
- * del driver) y `ZodSchema` provisto por cada repositorio.
- * Invariantes: todos los documentos tienen `_id: string`; las operaciones que
- * usan `buildSafeUpsertUpdate` siempre escriben `updatedAt`; `parse` nunca lanza
- * y devuelve defaults si el documento es inválido.
- * Gotchas: `updatePaths` con `pipeline` no actualiza `updatedAt` (el pipeline
- * decide); `parse` puede esconder problemas si no se monitorean los logs de
- * fallos de validación.
+ * Purpose: Encapsulate CRUD and CAS operations on Mongo collections using
+ * Zod validation on every read/write to prevent data corruption.
+ * Context: Base repository layer (`UserStore`, `GuildStore`, etc.) that
+ * applies timestamps and defaults, preventing features from duplicating 
+ * upsert and normalization logic.
+ * Key Dependencies: `buildSafeUpsertUpdate` (ensures `updatedAt` and 
+ * timestamp paths), `unwrapFindOneAndUpdateResult` (handles driver variations),
+ * and `ZodSchema` provided by each repository.
+ * Invariants: All documents have `_id: string`; operations using 
+ * `buildSafeUpsertUpdate` always write `updatedAt`; `parse` never throws 
+ * and returns defaults if the document is invalid.
+ * Gotchas: `updatePaths` with `pipeline` does not update `updatedAt` (the 
+ * pipeline decides); `parse` may hide issues if validation failure logs 
+ * are not monitored.
  */
 import type {
   Collection,
@@ -27,29 +27,28 @@ import { buildSafeUpsertUpdate, unwrapFindOneAndUpdateResult } from "./helpers";
 import { getDb } from "./mongo";
 
 /**
- * Store genérico con validación defensiva.
+ * Generic Store with defensive validation.
  *
- * Invariantes:
- * - El esquema Zod se aplica en toda lectura y fallback a defaults si falla.
- * - Los upsert via `buildSafeUpsertUpdate` garantizan `updatedAt` salvo que el
- *   caller lo desactive explícitamente.
- * - No lanza: devuelve `Result` para que el caller decida sobre reintentos.
- * RISK: abusar de los defaults puede ocultar documentos rotos; vigilar logs de
- * `invalid document`.
+ * Invariants:
+ * - The Zod schema is applied on every read and falls back to defaults if it fails.
+ * - Upserts via `buildSafeUpsertUpdate` guarantee `updatedAt` unless the
+ *   caller explicitly disables it.
+ * - No-throw: returns `Result` so the caller can decide on retries.
+ * RISK: Abusing defaults can hide broken documents; monitor `invalid document` logs.
  */
 export class MongoStore<T extends Document & { _id: string }> {
   constructor(
     private readonly collectionName: string,
     private readonly schema: ZodSchema<T>,
-  ) {}
+  ) { }
 
   /**
-   * Obtiene la colección Mongo.
+   * Gets the Mongo collection.
    *
-   * Propósito: desacoplar el resto de métodos del mecanismo de conexión y
-   * permitir mocks en tests.
-   * RISK: no cachea la instancia; depende de que `getDb` maneje el singleton
-   * del cliente.
+   * Purpose: Decouple the rest of the methods from the connection mechanism and
+   * allow mocks in tests.
+   * RISK: Does not cache the instance; depends on `getDb` managing the
+   * client singleton.
    */
   public async collection(): Promise<Collection<T>> {
     return (await getDb()).collection<T>(this.collectionName);
@@ -61,11 +60,11 @@ export class MongoStore<T extends Document & { _id: string }> {
 
   private getDefault(id: string): T {
     const raw = { _id: id };
-    
+
     // Check if schema expects guildId field and set it if needed
     try {
       const schemaDef = (this.schema as any)._def;
-      if (schemaDef && schemaDef.typeName === 'ZodObject' && schemaDef.shape) {
+      if (schemaDef && schemaDef.typeName === "ZodObject" && schemaDef.shape) {
         const shape = schemaDef.shape();
         if (shape && shape.guildId) {
           (raw as any).guildId = id;
@@ -75,7 +74,7 @@ export class MongoStore<T extends Document & { _id: string }> {
       // If we can't determine the schema shape, continue without guildId
       // This maintains backward compatibility
     }
-    
+
     const parsed = this.schema.safeParse(raw);
     if (parsed.success) return parsed.data;
 
@@ -102,11 +101,11 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Lee un documento por `_id` y lo valida.
+   * Reads a document by `_id` and validates it.
    *
-   * Retorna `null` si no existe; nunca lanza, encapsula el error. Siempre
-   * pasa por `parse` para normalizar valores inesperados y registrar logs si
-   * el esquema falla.
+   * Returns `null` if it does not exist; never throws, encapsulates the error. 
+   * Always passes through `parse` to normalize unexpected values and log 
+   * failures if the schema fails.
    */
   async get(id: string): Promise<Result<T | null>> {
     try {
@@ -119,14 +118,14 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Garantiza la existencia de un documento.
+   * Guarantees the existence of a document.
    *
-   * Propósito: inicializar documentos con defaults (derivados del esquema)
-   * cuando aún no existen. Usa `$setOnInsert` para no pisar datos reales.
-   * Invariantes: no actualiza `updatedAt` al insertar porque no hay cambio de
-   * negocio previo; `initial` se mezcla con defaults en el insert.
-   * RISK: si el esquema no provee defaults suficientes, `getDefault` puede
-   * rellenar con valores vacíos y ocultar errores de shape.
+   * Purpose: Initialize documents with defaults (derived from the schema)
+   * when they don't exist yet. Uses `$setOnInsert` to avoid overwriting real data.
+   * Invariants: Does not update `updatedAt` on insert because there is no prior
+   * business change; `initial` is merged with defaults in the insert.
+   * RISK: If the schema does not provide sufficient defaults, `getDefault`
+   * may fill with empty values and hide shape errors.
    */
   async ensure(id: string, initial?: Partial<T>): Promise<Result<T>> {
     try {
@@ -154,12 +153,12 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Realiza un patch parcial sobre un documento.
+   * Performs a partial patch on a document.
    *
-   * Propósito: aplicar cambios puntuales sin reemplazar el documento completo.
-   * Side effects: upsert implícito con `updatedAt` actualizado.
-   * RISK: se mezclan defaults si el documento no existe; puede ocultar
-   * discrepancias de esquema previas.
+   * Purpose: Apply point changes without replacing the full document.
+   * Side effects: Implicit upsert with `updatedAt` applied.
+   * RISK: Defaults are merged if the document does not exist; can hide
+   * previous schema discrepancies.
    */
   async patch(id: string, patch: Partial<T>): Promise<Result<T>> {
     try {
@@ -186,11 +185,11 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Reemplaza o inserta el documento completo.
+   * Replaces or inserts the full document.
    *
-   * Propósito: casos donde ya se tiene el objeto final serializable. No toca
-   * `updatedAt`; el caller debe haberlo calculado si es relevante.
-   * RISK: sobrescribe todo el documento; no usar para parches incrementales.
+   * Purpose: Cases where the final serializable object is already available. 
+   * Does not touch `updatedAt`; the caller must have calculated it if relevant.
+   * RISK: Overwrites the entire document; do not use for incremental patches.
    */
   async set(id: string, data: T): Promise<Result<T>> {
     try {
@@ -234,10 +233,10 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Elimina por `_id`.
+   * Deletes by `_id`.
    *
-   * Propósito: remociones puntuales. No limpia relaciones dependientes; el
-   * caller debe encargarse de invariantes de integridad referencial.
+   * Purpose: Point removals. Does not clean up dependent relationships; the
+   * caller must handle referential integrity invariants.
    */
   async delete(id: string): Promise<Result<boolean>> {
     try {
@@ -250,13 +249,13 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Actualiza campos puntuales por ruta (dot-notation) o pipeline.
+   * Updates specific fields by path (dot-notation) or pipeline.
    *
-   * Propósito: mutaciones parciales sin reconstruir el documento completo.
-   * Side effects: cuando no hay `pipeline`, escribe `updatedAt`; con `pipeline`
-   * se delega al caller (no se aplica timestamp automáticamente).
-   * RISK: combinar `upsert` + `paths` parciales puede generar defaults
-   * inesperados; validar en los callers críticos.
+   * Purpose: Partial mutations without rebuilding the full document.
+   * Side effects: When there is no `pipeline`, writes `updatedAt`; with `pipeline`
+   * is delegated to the caller (timestamp is not auto-applied).
+   * RISK: Combining `upsert` + `paths` partials can generate unexpected 
+   * defaults; validate in critical callers.
    */
   async updatePaths(
     id: string,
@@ -286,11 +285,11 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   /**
-   * Busca múltiples documentos y los normaliza con el esquema.
+   * Finds multiple documents and normalizes them with the schema.
    *
-   * Propósito: lecturas en bloque para listados o migraciones ligeras.
-   * RISK: parseo leniente puede ocultar documentos inválidos; revisar logs si
-   * el dataset es crítico.
+   * Purpose: Batch reads for listings or light migrations.
+   * RISK: Lenient parsing can hide invalid documents; check logs if the
+   * dataset is critical.
    */
   async find(
     filter: Filter<T>,

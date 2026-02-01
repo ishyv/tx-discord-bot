@@ -10,11 +10,11 @@ import type { InteractionGuildMember } from "seyfert";
 import { resolveRoleActionPermission } from "@/modules/guild-roles";
 
 const DEFAULT_GUILD_ONLY_MESSAGE =
-  "[!] Este comando solo puede ejecutarse dentro de un servidor.";
+  "[!] This command can only be executed within a server.";
 const DEFAULT_PERMISSION_DENIED_MESSAGE =
-  "[!] No tienes permisos suficientes para ejecutar este comando.";
+  "[!] You do not have sufficient permissions to execute this command.";
 const DEFAULT_OVERRIDE_DENIED_MESSAGE =
-  "[!] Un override configurado en el bot bloquea este comando.";
+  "[!] A configured override in the bot blocks this command.";
 
 type GuildAwareContext = {
   guildId?: string | null;
@@ -79,12 +79,15 @@ export async function collectMemberRoleIds(
     }
 
     if (roles && typeof roles === "object") {
-      const cacheValues = (roles as { cache?: { values?: () => Iterable<unknown> } })
-        .cache?.values;
+      const cacheValues = (
+        roles as { cache?: { values?: () => Iterable<unknown> } }
+      ).cache?.values;
       if (typeof cacheValues === "function") {
-        iterate(cacheValues.call(
-          (roles as { cache: { values: () => Iterable<unknown> } }).cache,
-        ));
+        iterate(
+          cacheValues.call(
+            (roles as { cache: { values: () => Iterable<unknown> } }).cache,
+          ),
+        );
         return ids;
       }
 
@@ -100,7 +103,10 @@ export async function collectMemberRoleIds(
       }
     }
   } catch (error) {
-    console.warn("[commandGuards] No se pudieron obtener los roles del miembro", error);
+    console.warn(
+      "[commandGuards] Failed to obtain member roles",
+      error,
+    );
   }
 
   return ids;
@@ -129,7 +135,7 @@ export async function memberHasDiscordPermission(
       }
     } catch (error) {
       console.warn(
-        "[commandGuards] No se pudieron obtener los permisos del miembro",
+        "[commandGuards] Failed to obtain member permissions",
         error,
       );
     }
@@ -140,14 +146,16 @@ export async function memberHasDiscordPermission(
 
 /**
  * Extracts the guild ID from a context object.
- * 
+ *
  * Use this for synchronous checks (e.g., in middlewares) where you don't need
  * to send a message on failure.
- * 
+ *
  * @param ctx Context with optional guildId.
  * @returns The guild ID or null if not in a guild.
  */
-export function extractGuildId(ctx: GuildAwareContext | null | undefined): string | null {
+export function extractGuildId(
+  ctx: GuildAwareContext | null | undefined,
+): string | null {
   return ctx?.guildId ?? null;
 }
 
@@ -165,12 +173,12 @@ export interface RequireGuildIdOptions {
  * @param ctx Command or component context with a `guildId`.
  * @param options Configuration for the check.
  * @returns Resolved guild identifier or null when unavailable.
- * 
+ *
  * @example
  * // In a command handler (sends message on failure):
  * const guildId = await requireGuildId(ctx);
  * if (!guildId) return;
- * 
+ *
  * @example
  * // In a middleware (silent check):
  * const guildId = await requireGuildId(ctx, { silent: true });
@@ -206,10 +214,12 @@ export interface RequireGuildPermissionOptions {
  * Validates whether the invoking member can run the command either by
  * Discord permissions or by an explicit override stored in guild-roles.
  */
-export async function requireGuildPermission<T extends GuildAwareContext & {
-  member?: InteractionGuildMember | null;
-  fullCommandName?: string | null;
-}>(
+export async function requireGuildPermission<
+  T extends GuildAwareContext & {
+    member?: InteractionGuildMember | null;
+    fullCommandName?: string | null;
+  },
+>(
   ctx: T,
   {
     guildId,
@@ -242,7 +252,7 @@ export async function requireGuildPermission<T extends GuildAwareContext & {
 
   if (!normalisedAction) {
     console.warn(
-      "[commandGuards] No se pudo resolver la accion para validar permisos.",
+      "[commandGuards] Failed to resolve action for permission validation.",
     );
     await ctx.write({ content: missingPermissionMessage });
     return false;

@@ -1,12 +1,12 @@
 {
-  "name": "pyebot",
+  "name": "tx-seeker",
   "version": "1.0.0",
-  "description": "Bot del Discord oficial de la comunidad Programadores y Estudiantes (PyE)",
+  "description": "Tx - Seeker: A general-purpose Discord bot focused on advanced moderation tools and deep economy & game-like systems",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "build:dev": "tsc --watch",
-    "start": "tsc && tsc-alias && node dist/index.js",
+    "start": "rimraf dist && tsc && tsc-alias && node dist/index.js",
     "dev": "tsc-watch --onSuccess \"node .\"",
     "fmt": "biome format --write",
     "fmt:check": "biome format",
@@ -15,6 +15,7 @@
     "check": "biome check",
     "check:fix": "biome check --write",
     "test-db": "bun tests/db-tests/run.ts",
+    "test-unit": "bun tests/unit-tests/run.ts",
     "clean": "rimraf dist commands.json"
   },
   "author": "Comunidad PyE",

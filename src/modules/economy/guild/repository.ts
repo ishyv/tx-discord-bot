@@ -16,42 +16,113 @@ import {
   type EconomySector,
   type SectorBalances,
   type DailyConfig,
+  type WorkConfig,
+  type EconomyFeatureFlags,
   DEFAULT_SECTOR_BALANCES,
   DEFAULT_TAX_CONFIG,
   DEFAULT_TRANSFER_THRESHOLDS,
   DEFAULT_DAILY_CONFIG,
+  DEFAULT_WORK_CONFIG,
+  DEFAULT_PROGRESSION_CONFIG,
+  DEFAULT_FEATURE_FLAGS,
   GuildEconomyError,
 } from "./types";
+import type {
+  ProgressionConfig,
+  ProgressionConfigUpdate,
+} from "../progression/types";
 
 /** Zod schema for guild economy data (stored as subdocument in guild). */
 export const GuildEconomyDataSchema = z.object({
-  sectors: z.object({
-    global: z.number().catch(0),
-    works: z.number().catch(0),
-    trade: z.number().catch(0),
-    tax: z.number().catch(0),
-  }),
-  tax: z.object({
-    rate: z.number().min(0).max(1).catch(0.05),
-    enabled: z.boolean().catch(true),
-    minimumTaxableAmount: z.number().min(0).catch(0),
-    taxSector: z.enum(["global", "works", "trade", "tax"]).catch("tax"),
-  }),
-  thresholds: z.object({
-    warning: z.number().catch(100_000),
-    alert: z.number().catch(1_000_000),
-    critical: z.number().catch(10_000_000),
-  }),
+  features: z
+    .object({
+      coinflip: z.boolean().catch(true),
+      trivia: z.boolean().catch(true),
+      rob: z.boolean().catch(true),
+      voting: z.boolean().catch(true),
+      crafting: z.boolean().catch(true),
+      store: z.boolean().catch(true),
+    })
+    .catch(() => ({ ...DEFAULT_FEATURE_FLAGS })),
+  sectors: z
+    .object({
+      global: z.number().catch(0),
+      works: z.number().catch(0),
+      trade: z.number().catch(0),
+      tax: z.number().catch(0),
+    })
+    .optional()
+    .catch(() => ({ ...DEFAULT_SECTOR_BALANCES })),
+  tax: z
+    .object({
+      rate: z.number().min(0).max(1).catch(0.05),
+      enabled: z.boolean().catch(true),
+      minimumTaxableAmount: z.number().min(0).catch(0),
+      taxSector: z.enum(["global", "works", "trade", "tax"]).catch("tax"),
+    })
+    .optional()
+    .catch(() => ({ ...DEFAULT_TAX_CONFIG })),
+  thresholds: z
+    .object({
+      warning: z.number().catch(100_000),
+      alert: z.number().catch(1_000_000),
+      critical: z.number().catch(10_000_000),
+    })
+    .optional()
+    .catch(() => ({ ...DEFAULT_TRANSFER_THRESHOLDS })),
   daily: z
     .object({
       dailyReward: z.number().min(0).catch(250),
       dailyCooldownHours: z.number().min(0).max(168).catch(24),
       dailyCurrencyId: z.string().catch("coins"),
+      dailyFeeRate: z.number().min(0).max(0.2).catch(0.0),
+      dailyFeeSector: z.enum(["global", "works", "trade", "tax"]).catch("tax"),
+      dailyStreakBonus: z.number().int().min(0).catch(5),
+      dailyStreakCap: z.number().int().min(0).catch(10),
     })
+    .optional()
+    .catch(() => ({ ...DEFAULT_DAILY_CONFIG })),
+  work: z
+    .object({
+      workRewardBase: z.number().min(0).catch(120),
+      workBaseMintReward: z.number().int().min(0).catch(100),
+      workBonusFromWorksMax: z.number().int().min(0).catch(100),
+      workBonusScaleMode: z.enum(["flat", "percent"]).catch("flat"),
+      workCooldownMinutes: z.number().min(0).max(1440).catch(30),
+      workDailyCap: z.number().min(0).max(100).catch(5),
+      workCurrencyId: z.string().catch("coins"),
+      workPaysFromSector: z
+        .enum(["global", "works", "trade", "tax"])
+        .catch("works"),
+      workFailureChance: z.number().min(0).max(1).catch(0.1),
+    })
+    .optional()
+    .catch(() => ({ ...DEFAULT_WORK_CONFIG })),
+  progression: z
+    .object({
+      enabled: z.boolean().catch(true),
+      xpAmounts: z.object({
+        daily_claim: z.number().int().min(0).catch(60),
+        work_claim: z.number().int().min(0).catch(25),
+        store_buy: z.number().int().min(0).catch(15),
+        store_sell: z.number().int().min(0).catch(10),
+        quest_complete: z.number().int().min(0).catch(120),
+        craft: z.number().int().min(0).catch(10),
+      }),
+      cooldownSeconds: z.object({
+        daily_claim: z.number().int().min(0).catch(0),
+        work_claim: z.number().int().min(0).catch(0),
+        store_buy: z.number().int().min(0).catch(15),
+        store_sell: z.number().int().min(0).catch(15),
+        quest_complete: z.number().int().min(0).catch(0),
+        craft: z.number().int().min(0).catch(0),
+      }),
+    })
+    .optional()
     .catch(() => ({
-      dailyReward: 250,
-      dailyCooldownHours: 24,
-      dailyCurrencyId: "coins",
+      enabled: true,
+      xpAmounts: { ...DEFAULT_PROGRESSION_CONFIG.xpAmounts },
+      cooldownSeconds: { ...DEFAULT_PROGRESSION_CONFIG.cooldownSeconds },
     })),
   updatedAt: z.date().catch(() => new Date()),
   version: z.number().catch(0),
@@ -62,12 +133,40 @@ export type GuildEconomyData = z.infer<typeof GuildEconomyDataSchema>;
 /** Convert DB data to domain model. */
 function toDomain(guildId: string, data: GuildEconomyData): GuildEconomyConfig {
   const daily = data.daily ?? DEFAULT_DAILY_CONFIG;
+  const resolvedWorkCurrencyId =
+    data.work?.workCurrencyId ??
+    daily.dailyCurrencyId ??
+    DEFAULT_WORK_CONFIG.workCurrencyId;
+  const work: WorkConfig = {
+    ...DEFAULT_WORK_CONFIG,
+    ...data.work,
+    workCurrencyId: resolvedWorkCurrencyId,
+  };
+  const progression: ProgressionConfig = {
+    ...DEFAULT_PROGRESSION_CONFIG,
+    ...data.progression,
+    xpAmounts: {
+      ...DEFAULT_PROGRESSION_CONFIG.xpAmounts,
+      ...(data.progression?.xpAmounts ?? {}),
+    },
+    cooldownSeconds: {
+      ...DEFAULT_PROGRESSION_CONFIG.cooldownSeconds,
+      ...(data.progression?.cooldownSeconds ?? {}),
+    },
+  };
+  const features: EconomyFeatureFlags = {
+    ...DEFAULT_FEATURE_FLAGS,
+    ...data.features,
+  };
   return {
     guildId,
     sectors: data.sectors as SectorBalances,
     tax: data.tax as TaxConfig,
     thresholds: data.thresholds as TransferThresholds,
     daily: daily as DailyConfig,
+    work,
+    progression,
+    features,
     updatedAt: data.updatedAt,
     version: data.version,
   };
@@ -86,11 +185,22 @@ function toDomain(guildId: string, data: GuildEconomyData): GuildEconomyConfig {
 
 /** Get default economy data for new guilds. */
 function getDefaultData(): GuildEconomyData {
+  const workDefaults = {
+    ...DEFAULT_WORK_CONFIG,
+    workCurrencyId: DEFAULT_DAILY_CONFIG.dailyCurrencyId,
+  };
   return {
+    features: { ...DEFAULT_FEATURE_FLAGS },
     sectors: { ...DEFAULT_SECTOR_BALANCES },
     tax: { ...DEFAULT_TAX_CONFIG },
     thresholds: { ...DEFAULT_TRANSFER_THRESHOLDS },
     daily: { ...DEFAULT_DAILY_CONFIG },
+    work: workDefaults,
+    progression: {
+      enabled: DEFAULT_PROGRESSION_CONFIG.enabled,
+      xpAmounts: { ...DEFAULT_PROGRESSION_CONFIG.xpAmounts },
+      cooldownSeconds: { ...DEFAULT_PROGRESSION_CONFIG.cooldownSeconds },
+    },
     updatedAt: new Date(),
     version: 0,
   };
@@ -101,7 +211,9 @@ export interface GuildEconomyRepo {
    * Find economy config for a guild.
    * Returns null if guild exists but has no economy config.
    */
-  findByGuildId(guildId: GuildId): Promise<Result<GuildEconomyConfig | null, Error>>;
+  findByGuildId(
+    guildId: GuildId,
+  ): Promise<Result<GuildEconomyConfig | null, Error>>;
 
   /**
    * Ensure economy config exists, creating with defaults if needed.
@@ -143,6 +255,22 @@ export interface GuildEconomyRepo {
   ): Promise<Result<GuildEconomyConfig, Error>>;
 
   /**
+   * Update work claim configuration.
+   */
+  updateWorkConfig(
+    guildId: GuildId,
+    work: Partial<WorkConfig>,
+  ): Promise<Result<GuildEconomyConfig, Error>>;
+
+  /**
+   * Update progression configuration.
+   */
+  updateProgressionConfig(
+    guildId: GuildId,
+    progression: ProgressionConfigUpdate,
+  ): Promise<Result<GuildEconomyConfig, Error>>;
+
+  /**
    * Atomically deposit to a sector (increment).
    */
   depositToSector(
@@ -160,10 +288,20 @@ export interface GuildEconomyRepo {
     sector: EconomySector,
     amount: number,
   ): Promise<Result<GuildEconomyConfig, Error>>;
+
+  /**
+   * Update economy feature flags.
+   */
+  updateFeatureFlags(
+    guildId: GuildId,
+    features: Partial<EconomyFeatureFlags>,
+  ): Promise<Result<GuildEconomyConfig, Error>>;
 }
 
 class GuildEconomyRepoImpl implements GuildEconomyRepo {
-  async findByGuildId(guildId: GuildId): Promise<Result<GuildEconomyConfig | null, Error>> {
+  async findByGuildId(
+    guildId: GuildId,
+  ): Promise<Result<GuildEconomyConfig | null, Error>> {
     const guildResult = await GuildStore.get(guildId);
     if (guildResult.isErr()) {
       return ErrResult(guildResult.error);
@@ -182,7 +320,10 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
     const parsed = GuildEconomyDataSchema.safeParse(raw);
     if (!parsed.success) {
       // Auto-repair with defaults
-      console.warn(`[GuildEconomyRepo] Invalid economy data for guild ${guildId}, using defaults`);
+      console.warn(
+        `[GuildEconomyRepo] Invalid economy data for guild ${guildId}:`,
+        parsed.error.format(),
+      );
       const defaults = getDefaultData();
       return OkResult(toDomain(guildId, defaults));
     }
@@ -226,7 +367,9 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
 
       return OkResult(toDomain(guildId, defaults));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -241,7 +384,9 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
 
     const config = current.unwrap();
     if (!config) {
-      return ErrResult(new GuildEconomyError("CONFIG_NOT_FOUND", "Economy config not found"));
+      return ErrResult(
+        new GuildEconomyError("CONFIG_NOT_FOUND", "Economy config not found"),
+      );
     }
 
     if (config.version !== expectedVersion) {
@@ -274,7 +419,9 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       const raw = (result as any).economy;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -293,12 +440,18 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
         "economy.updatedAt": now,
       };
 
-      if (tax.rate !== undefined) setPaths["economy.tax.rate"] = Math.max(0, Math.min(1, tax.rate));
-      if (tax.enabled !== undefined) setPaths["economy.tax.enabled"] = tax.enabled;
+      if (tax.rate !== undefined)
+        setPaths["economy.tax.rate"] = Math.max(0, Math.min(1, tax.rate));
+      if (tax.enabled !== undefined)
+        setPaths["economy.tax.enabled"] = tax.enabled;
       if (tax.minimumTaxableAmount !== undefined) {
-        setPaths["economy.tax.minimumTaxableAmount"] = Math.max(0, tax.minimumTaxableAmount);
+        setPaths["economy.tax.minimumTaxableAmount"] = Math.max(
+          0,
+          tax.minimumTaxableAmount,
+        );
       }
-      if (tax.taxSector !== undefined) setPaths["economy.tax.taxSector"] = tax.taxSector;
+      if (tax.taxSector !== undefined)
+        setPaths["economy.tax.taxSector"] = tax.taxSector;
 
       const result = await col.findOneAndUpdate(
         { _id: guildId } as any,
@@ -307,13 +460,17 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       );
 
       if (!result) {
-        return ErrResult(new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"));
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
       }
 
       const raw = (result as any).economy;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -333,13 +490,19 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       };
 
       if (thresholds.warning !== undefined) {
-        setPaths["economy.thresholds.warning"] = Math.max(0, thresholds.warning);
+        setPaths["economy.thresholds.warning"] = Math.max(
+          0,
+          thresholds.warning,
+        );
       }
       if (thresholds.alert !== undefined) {
         setPaths["economy.thresholds.alert"] = Math.max(0, thresholds.alert);
       }
       if (thresholds.critical !== undefined) {
-        setPaths["economy.thresholds.critical"] = Math.max(0, thresholds.critical);
+        setPaths["economy.thresholds.critical"] = Math.max(
+          0,
+          thresholds.critical,
+        );
       }
 
       const result = await col.findOneAndUpdate(
@@ -349,13 +512,17 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       );
 
       if (!result) {
-        return ErrResult(new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"));
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
       }
 
       const raw = (result as any).economy;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -384,6 +551,27 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       if (daily.dailyCurrencyId !== undefined) {
         setPaths["economy.daily.dailyCurrencyId"] = daily.dailyCurrencyId;
       }
+      if (daily.dailyFeeRate !== undefined) {
+        setPaths["economy.daily.dailyFeeRate"] = Math.max(
+          0,
+          Math.min(0.2, daily.dailyFeeRate),
+        );
+      }
+      if (daily.dailyFeeSector !== undefined) {
+        setPaths["economy.daily.dailyFeeSector"] = daily.dailyFeeSector;
+      }
+      if (daily.dailyStreakBonus !== undefined) {
+        setPaths["economy.daily.dailyStreakBonus"] = Math.max(
+          0,
+          Math.trunc(daily.dailyStreakBonus),
+        );
+      }
+      if (daily.dailyStreakCap !== undefined) {
+        setPaths["economy.daily.dailyStreakCap"] = Math.max(
+          0,
+          Math.trunc(daily.dailyStreakCap),
+        );
+      }
 
       const result = await col.findOneAndUpdate(
         { _id: guildId } as any,
@@ -392,13 +580,163 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       );
 
       if (!result) {
-        return ErrResult(new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"));
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
       }
 
       const raw = (result as any).economy;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  async updateWorkConfig(
+    guildId: GuildId,
+    work: Partial<WorkConfig>,
+  ): Promise<Result<GuildEconomyConfig, Error>> {
+    const ensureResult = await this.ensure(guildId);
+    if (ensureResult.isErr()) return ErrResult(ensureResult.error);
+
+    try {
+      const col = await GuildStore.collection();
+      const now = new Date();
+      const setPaths: Record<string, unknown> = {
+        "economy.updatedAt": now,
+      };
+
+      if (work.workRewardBase !== undefined) {
+        setPaths["economy.work.workRewardBase"] = Math.max(
+          0,
+          work.workRewardBase,
+        );
+      }
+      if (work.workBaseMintReward !== undefined) {
+        setPaths["economy.work.workBaseMintReward"] = Math.max(
+          0,
+          Math.trunc(work.workBaseMintReward),
+        );
+      }
+      if (work.workBonusFromWorksMax !== undefined) {
+        setPaths["economy.work.workBonusFromWorksMax"] = Math.max(
+          0,
+          Math.trunc(work.workBonusFromWorksMax),
+        );
+      }
+      if (work.workBonusScaleMode !== undefined) {
+        setPaths["economy.work.workBonusScaleMode"] = work.workBonusScaleMode;
+      }
+      if (work.workCooldownMinutes !== undefined) {
+        setPaths["economy.work.workCooldownMinutes"] = Math.max(
+          0,
+          Math.min(1440, work.workCooldownMinutes),
+        );
+      }
+      if (work.workDailyCap !== undefined) {
+        setPaths["economy.work.workDailyCap"] = Math.max(
+          0,
+          Math.min(100, work.workDailyCap),
+        );
+      }
+      if (work.workCurrencyId !== undefined) {
+        setPaths["economy.work.workCurrencyId"] = work.workCurrencyId;
+      }
+      if (work.workPaysFromSector !== undefined) {
+        setPaths["economy.work.workPaysFromSector"] = work.workPaysFromSector;
+      }
+      if (work.workFailureChance !== undefined) {
+        setPaths["economy.work.workFailureChance"] = Math.max(
+          0,
+          Math.min(1, work.workFailureChance),
+        );
+      }
+
+      const result = await col.findOneAndUpdate(
+        { _id: guildId } as any,
+        { $set: setPaths } as any,
+        { returnDocument: "after" },
+      );
+
+      if (!result) {
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
+      }
+
+      const raw = (result as any).economy;
+      return OkResult(toDomain(guildId, raw));
+    } catch (error) {
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  async updateProgressionConfig(
+    guildId: GuildId,
+    progression: ProgressionConfigUpdate,
+  ): Promise<Result<GuildEconomyConfig, Error>> {
+    const ensureResult = await this.ensure(guildId);
+    if (ensureResult.isErr()) return ErrResult(ensureResult.error);
+
+    try {
+      const col = await GuildStore.collection();
+      const now = new Date();
+      const setPaths: Record<string, unknown> = {
+        "economy.updatedAt": now,
+      };
+
+      if (progression.enabled !== undefined) {
+        setPaths["economy.progression.enabled"] = progression.enabled;
+      }
+
+      if (progression.xpAmounts) {
+        for (const [key, value] of Object.entries(progression.xpAmounts)) {
+          if (value === undefined) continue;
+          const normalized = Number(value);
+          if (!Number.isFinite(normalized)) continue;
+          setPaths[`economy.progression.xpAmounts.${key}`] = Math.max(
+            0,
+            Math.trunc(normalized),
+          );
+        }
+      }
+
+      if (progression.cooldownSeconds) {
+        for (const [key, value] of Object.entries(
+          progression.cooldownSeconds,
+        )) {
+          if (value === undefined) continue;
+          const normalized = Number(value);
+          if (!Number.isFinite(normalized)) continue;
+          setPaths[`economy.progression.cooldownSeconds.${key}`] = Math.max(
+            0,
+            Math.trunc(normalized),
+          );
+        }
+      }
+
+      const result = await col.findOneAndUpdate(
+        { _id: guildId } as any,
+        { $set: setPaths } as any,
+        { returnDocument: "after" },
+      );
+
+      if (!result) {
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
+      }
+
+      const raw = (result as any).economy;
+      return OkResult(toDomain(guildId, raw));
+    } catch (error) {
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -408,7 +746,9 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
     amount: number,
   ): Promise<Result<GuildEconomyConfig, Error>> {
     if (!Number.isFinite(amount) || amount <= 0) {
-      return ErrResult(new GuildEconomyError("INVALID_AMOUNT", "Amount must be positive"));
+      return ErrResult(
+        new GuildEconomyError("INVALID_AMOUNT", "Amount must be positive"),
+      );
     }
 
     const ensureResult = await this.ensure(guildId);
@@ -430,13 +770,17 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       );
 
       if (!result) {
-        return ErrResult(new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"));
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
       }
 
       const raw = (result as any).economy;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -446,7 +790,9 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
     amount: number,
   ): Promise<Result<GuildEconomyConfig, Error>> {
     if (!Number.isFinite(amount) || amount <= 0) {
-      return ErrResult(new GuildEconomyError("INVALID_AMOUNT", "Amount must be positive"));
+      return ErrResult(
+        new GuildEconomyError("INVALID_AMOUNT", "Amount must be positive"),
+      );
     }
 
     const ensureResult = await this.ensure(guildId);
@@ -454,7 +800,12 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
 
     const config = ensureResult.unwrap();
     if (config.sectors[sector] < amount) {
-      return ErrResult(new GuildEconomyError("INSUFFICIENT_FUNDS", "Sector has insufficient funds"));
+      return ErrResult(
+        new GuildEconomyError(
+          "INSUFFICIENT_FUNDS",
+          "Sector has insufficient funds",
+        ),
+      );
     }
 
     try {
@@ -462,7 +813,10 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       const now = new Date();
 
       const result = await col.findOneAndUpdate(
-        { _id: guildId, [`economy.sectors.${sector}`]: { $gte: amount } } as any,
+        {
+          _id: guildId,
+          [`economy.sectors.${sector}`]: { $gte: amount },
+        } as any,
         {
           $inc: { [`economy.sectors.${sector}`]: -amount } as any,
           $set: {
@@ -473,13 +827,74 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
       );
 
       if (!result) {
-        return ErrResult(new GuildEconomyError("INSUFFICIENT_FUNDS", "Sector has insufficient funds"));
+        return ErrResult(
+          new GuildEconomyError(
+            "INSUFFICIENT_FUNDS",
+            "Sector has insufficient funds",
+          ),
+        );
       }
 
       const raw = (result as any).economy;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  async updateFeatureFlags(
+    guildId: GuildId,
+    features: Partial<EconomyFeatureFlags>,
+  ): Promise<Result<GuildEconomyConfig, Error>> {
+    const ensureResult = await this.ensure(guildId);
+    if (ensureResult.isErr()) return ErrResult(ensureResult.error);
+
+    try {
+      const col = await GuildStore.collection();
+      const now = new Date();
+      const setPaths: Record<string, unknown> = {
+        "economy.updatedAt": now,
+      };
+
+      if (features.coinflip !== undefined) {
+        setPaths["economy.features.coinflip"] = features.coinflip;
+      }
+      if (features.trivia !== undefined) {
+        setPaths["economy.features.trivia"] = features.trivia;
+      }
+      if (features.rob !== undefined) {
+        setPaths["economy.features.rob"] = features.rob;
+      }
+      if (features.voting !== undefined) {
+        setPaths["economy.features.voting"] = features.voting;
+      }
+      if (features.crafting !== undefined) {
+        setPaths["economy.features.crafting"] = features.crafting;
+      }
+      if (features.store !== undefined) {
+        setPaths["economy.features.store"] = features.store;
+      }
+
+      const result = await col.findOneAndUpdate(
+        { _id: guildId } as any,
+        { $set: setPaths } as any,
+        { returnDocument: "after" },
+      );
+
+      if (!result) {
+        return ErrResult(
+          new GuildEconomyError("GUILD_NOT_FOUND", "Guild not found"),
+        );
+      }
+
+      const raw = (result as any).economy;
+      return OkResult(toDomain(guildId, raw));
+    } catch (error) {
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 }

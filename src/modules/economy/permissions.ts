@@ -15,10 +15,11 @@ import { memberHasDiscordPermission } from "@/utils/commandGuards";
 import type { UserId } from "@/db/types";
 
 /** Permission levels for economy operations. */
-export type EconomyPermissionLevel =
-  | "admin" // ManageGuild - can do everything including debt/negative adjustments
-  | "mod" // KickMembers or BanMembers - can give currency, limited adjustments
-  | "user"; // Regular user - can only use own economy (transfers, etc.)
+export enum EconomyPermissionLevel {
+  ADMIN = "admin",
+  MOD = "mod",
+  USER = "user",
+}
 
 /** Default permission required for mod-only operations. */
 export const DEFAULT_MOD_PERMISSION = ["ManageGuild"];
@@ -44,7 +45,10 @@ export async function checkEconomyPermission(
       return memberHasDiscordPermission(member, DEFAULT_ADMIN_PERMISSION);
     case "mod":
       // Mods need ManageGuild or admin
-      const hasAdmin = await memberHasDiscordPermission(member, DEFAULT_ADMIN_PERMISSION);
+      const hasAdmin = await memberHasDiscordPermission(
+        member,
+        DEFAULT_ADMIN_PERMISSION,
+      );
       if (hasAdmin) return true;
       return memberHasDiscordPermission(member, DEFAULT_MOD_PERMISSION);
     case "user":
@@ -80,13 +84,17 @@ export function createPermissionChecker(
  */
 export async function checkEconomyOperationPermission(
   member: InteractionGuildMember | null | undefined,
-  operation: "adjust_currency" | "transfer_currency" | "grant_item" | "remove_item",
+  operation:
+    | "adjust_currency"
+    | "transfer_currency"
+    | "grant_item"
+    | "remove_item",
 ): Promise<boolean> {
   const permissionMap: Record<typeof operation, EconomyPermissionLevel> = {
-    adjust_currency: "admin", // Mod-only: can go negative (debt)
-    transfer_currency: "user", // Users can transfer
-    grant_item: "admin", // Mod-only
-    remove_item: "admin", // Mod-only
+    adjust_currency: EconomyPermissionLevel.ADMIN, // Mod-only: can go negative (debt)
+    transfer_currency: EconomyPermissionLevel.USER, // Users can transfer
+    grant_item: EconomyPermissionLevel.ADMIN, // Mod-only
+    remove_item: EconomyPermissionLevel.ADMIN, // Mod-only
   };
 
   return checkEconomyPermission(member, permissionMap[operation]);
@@ -101,13 +109,17 @@ export function createEconomyPermissionChecker(
 ) {
   return {
     /** Check if member can adjust currency (mod-only, debt allowed). */
-    canAdjustCurrency: () => checkEconomyPermission(member, "admin"),
+    canAdjustCurrency: () =>
+      checkEconomyPermission(member, EconomyPermissionLevel.ADMIN),
     /** Check if member can transfer currency (users allowed). */
-    canTransfer: () => checkEconomyPermission(member, "user"),
+    canTransfer: () =>
+      checkEconomyPermission(member, EconomyPermissionLevel.USER),
     /** Check if member can grant items (mod-only). */
-    canGrantItems: () => checkEconomyPermission(member, "admin"),
+    canGrantItems: () =>
+      checkEconomyPermission(member, EconomyPermissionLevel.ADMIN),
     /** Check if member can remove items (mod-only). */
-    canRemoveItems: () => checkEconomyPermission(member, "admin"),
+    canRemoveItems: () =>
+      checkEconomyPermission(member, EconomyPermissionLevel.ADMIN),
   };
 }
 
@@ -121,6 +133,6 @@ export function createLegacyPermissionChecker(
   member: InteractionGuildMember | null | undefined,
 ): (actorId: UserId, guildId?: string) => Promise<boolean> {
   return async () => {
-    return checkEconomyPermission(member, "admin");
+    return checkEconomyPermission(member, EconomyPermissionLevel.ADMIN);
   };
 }

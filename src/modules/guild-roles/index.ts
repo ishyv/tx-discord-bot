@@ -61,10 +61,10 @@ export interface ResolveRoleActionPermissionInput {
 export interface ResolveRoleActionPermissionResult {
   allowed: boolean;
   decision:
-  | "override-allow"
-  | "override-deny"
-  | "discord-allow"
-  | "discord-deny";
+    | "override-allow"
+    | "override-deny"
+    | "discord-allow"
+    | "discord-deny";
   roleKey?: string;
   override?: RoleCommandOverride;
 }
@@ -100,7 +100,9 @@ function normaliseKey(k: string) {
   return normaliseAction(k);
 }
 
-export async function listGuildRoleSnapshots(guildId: string): Promise<RoleSnapshot[]> {
+export async function listGuildRoleSnapshots(
+  guildId: string,
+): Promise<RoleSnapshot[]> {
   const res = await GuildStore.get(guildId);
   const guild = res.unwrap();
   const rolesObj = guild?.roles ?? {};
@@ -319,8 +321,6 @@ export async function consumeRoleLimits({
   };
 }
 
-
-
 export async function clearRoleLimit(
   guildId: string,
   roleKey: string,
@@ -331,23 +331,32 @@ export async function clearRoleLimit(
     const action = normaliseAction(actionKey);
     delete (roles[roleKey] as any).limits[action];
     return roles;
-  }).then(r => r.unwrap());
+  }).then((r) => r.unwrap());
 }
 
-export async function getManagedRole(guildId: string, key: string): Promise<RoleSnapshot | null> {
+export async function getManagedRole(
+  guildId: string,
+  key: string,
+): Promise<RoleSnapshot | null> {
   const roles = await listGuildRoleSnapshots(guildId);
-  return roles.find(r => r.key === key) ?? null;
+  return roles.find((r) => r.key === key) ?? null;
 }
 
-export async function resetRoleOverrides(guildId: string, roleKey: string): Promise<void> {
+export async function resetRoleOverrides(
+  guildId: string,
+  roleKey: string,
+): Promise<void> {
   await GuildRolesRepo.write(guildId, (roles) => {
     if (!roles[roleKey]) return roles;
     (roles[roleKey] as any).reach = {};
     return roles;
-  }).then(r => r.unwrap());
+  }).then((r) => r.unwrap());
 }
 
-export async function getRoleOverrides(guildId: string, roleKey: string): Promise<Record<string, RoleCommandOverride>> {
+export async function getRoleOverrides(
+  guildId: string,
+  roleKey: string,
+): Promise<Record<string, RoleCommandOverride>> {
   const res = await GuildStore.get(guildId);
   const guild = res.unwrap();
   return (guild?.roles?.[roleKey] as GuildRoleRecord)?.reach ?? {};
@@ -357,7 +366,9 @@ export async function setRoleOverride(
   guildId: string,
   roleKey: string,
   actionKey: string,
-  override: RoleCommandOverride
+  override: RoleCommandOverride,
 ): Promise<void> {
-  await GuildRolesRepo.setOverride(guildId, roleKey, actionKey, override).then(r => r.unwrap());
+  await GuildRolesRepo.setOverride(guildId, roleKey, actionKey, override).then(
+    (r) => r.unwrap(),
+  );
 }

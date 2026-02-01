@@ -23,7 +23,7 @@ import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   name: createStringOption({
-    description: "Nombre de la regla a deshabilitar",
+    description: "Name of the rule to disable",
     required: true,
     autocomplete: respondRuleAutocomplete,
   }),
@@ -31,7 +31,7 @@ const options = {
 
 @Declare({
   name: "disable",
-  description: "Deshabilitar una regla de auto-role",
+  description: "Disable an auto-role rule",
 })
 @Options(options)
 export default class AutoroleDisableCommand extends SubCommand {
@@ -45,29 +45,37 @@ export default class AutoroleDisableCommand extends SubCommand {
     const rule = res.isOk() ? res.unwrap() : null;
 
     if (!rule) {
-      await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
+      await ctx.write({ content: `No rule found named \`${slug}\`.` });
       return;
     }
     if (!rule.enabled) {
-      await ctx.write({ content: `La regla \`${slug}\` ya estaba deshabilitada.` });
+      await ctx.write({
+        content: `The rule \`${slug}\` was already disabled.`,
+      });
       return;
     }
 
-    const updated = await AutoroleService.toggleRule(context.guildId, slug, false);
+    const updated = await AutoroleService.toggleRule(
+      context.guildId,
+      slug,
+      false,
+    );
     if (!updated) {
-      await ctx.write({ content: "No se pudo deshabilitar la regla. Intenta nuevamente." });
+      await ctx.write({
+        content: "Could not disable the rule. Please try again.",
+      });
       return;
     }
 
     await ctx.write({
-      content: `Se deshabilito \`${slug}\`.\n${formatRuleSummary(updated)}`,
+      content: `Disabled \`${slug}\`.\n${formatRuleSummary(updated)}`,
     });
 
     await logModerationAction(ctx.client, context.guildId, {
-      title: "Autorole deshabilitado",
+      title: "Autorole disabled",
       description: formatRuleSummary(updated),
       actorId: ctx.author.id,
-      fields: [{ name: "Regla", value: `\`${slug}\`` }],
+      fields: [{ name: "Rule", value: `\`${slug}\`` }],
     });
   }
 }

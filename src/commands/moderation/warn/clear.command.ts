@@ -84,7 +84,9 @@ export default class ClearWarnCommand extends SubCommand {
     await logModerationAction(ctx.client, guildId, {
       title: "Warns eliminados",
       description: `Se limpiaron ${warns.length} warns de <@${user.id}>`,
-      fields: [{ name: "Moderador", value: `<@${ctx.author.id}>`, inline: true }],
+      fields: [
+        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+      ],
       actorId: ctx.author.id,
     });
   }

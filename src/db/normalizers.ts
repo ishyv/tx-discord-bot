@@ -2,15 +2,22 @@ export const normalizeStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return Array.from(
     new Set(
-      value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
+      value.filter(
+        (entry): entry is string =>
+          typeof entry === "string" && entry.length > 0,
+      ),
     ),
   );
 };
 
-export const normalizeWarns = <T extends Record<string, unknown>>(value: unknown): T[] => {
+export const normalizeWarns = <T extends Record<string, unknown>>(
+  value: unknown,
+): T[] => {
   if (!Array.isArray(value)) return [];
   return value
-    .map((entry) => (typeof entry === "object" && entry ? { ...entry } as T : null))
+    .map((entry) =>
+      typeof entry === "object" && entry ? ({ ...entry } as T) : null,
+    )
     .filter((entry): entry is T => !!entry);
 };
 
@@ -31,7 +38,10 @@ export const normalizeNumberMap = (value: unknown): Record<string, number> => {
   return acc;
 };
 
-export const asDate = (value: unknown, fallback: Date | null = null): Date | null => {
+export const asDate = (
+  value: unknown,
+  fallback: Date | null = null,
+): Date | null => {
   if (!value) return fallback;
   if (value instanceof Date) return value;
   const parsed = new Date(value as string);

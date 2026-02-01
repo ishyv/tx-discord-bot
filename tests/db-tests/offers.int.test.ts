@@ -17,7 +17,10 @@ import {
   type Suite,
 } from "./_utils";
 
-const cleanupOffer = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupOffer = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await removeOffer(id);
     if (res.isErr()) return;
@@ -62,7 +65,10 @@ export const suite: Suite = {
         assertEqual(created._id, offerId, "createOffer should persist");
 
         const found = assertOk(await findById(offerId));
-        assert(found !== null && found._id === offerId, "findById should return offer");
+        assert(
+          found !== null && found._id === offerId,
+          "findById should return offer",
+        );
 
         const active = assertOk(await findActiveByAuthor(guildId, authorId));
         assert(
@@ -81,7 +87,10 @@ export const suite: Suite = {
             { allowedFrom: ["PENDING_REVIEW"] },
           ),
         );
-        assert(updated !== null && updated.status === "APPROVED", "updateOffer should update");
+        assert(
+          updated !== null && updated.status === "APPROVED",
+          "updateOffer should update",
+        );
 
         const blocked = assertOk(
           await updateOffer(
@@ -93,7 +102,11 @@ export const suite: Suite = {
         assertEqual(blocked, null, "updateOffer should honor allowedFrom");
 
         const notActive = assertOk(await findActiveByAuthor(guildId, authorId));
-        assertEqual(notActive, null, "findActiveByAuthor should ignore non-active offers");
+        assertEqual(
+          notActive,
+          null,
+          "findActiveByAuthor should ignore non-active offers",
+        );
       },
     },
     {
@@ -184,14 +197,20 @@ export const suite: Suite = {
 
         await updateOffer(offerId, { status: "APPROVED" });
 
-        const listed = assertOk(await listByStatus(guildId, ["APPROVED", "REJECTED"]));
+        const listed = assertOk(
+          await listByStatus(guildId, ["APPROVED", "REJECTED"]),
+        );
         assert(
           listed.some((offer) => offer._id === offerId),
           "listByStatus should include offer",
         );
 
         const empty = assertOk(await listByStatus(guildId, ["INVALID" as any]));
-        assertEqual(empty.length, 0, "listByStatus should filter invalid statuses");
+        assertEqual(
+          empty.length,
+          0,
+          "listByStatus should filter invalid statuses",
+        );
 
         const removed = assertOk(await removeOffer(offerId));
         assertEqual(removed, true, "removeOffer should delete");
@@ -207,7 +226,11 @@ export const suite: Suite = {
         const missing = assertOk(
           await updateOffer(factory.offerId(), { status: "REJECTED" }),
         );
-        assertEqual(missing, null, "updateOffer should return null when missing");
+        assertEqual(
+          missing,
+          null,
+          "updateOffer should return null when missing",
+        );
       },
     },
   ],

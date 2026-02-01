@@ -43,7 +43,9 @@ export default class ForumsAddCommand extends SubCommand {
 
     const forum = ctx.options.foro;
     if (!forum || forum.type !== ChannelType.GuildForum) {
-      await ctx.write({ content: "Debes elegir un canal de tipo foro válido." });
+      await ctx.write({
+        content: "Debes elegir un canal de tipo foro válido.",
+      });
       return;
     }
 

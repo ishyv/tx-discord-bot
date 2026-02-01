@@ -76,6 +76,408 @@ function getCurrentBalance(
   return currency[currencyId] ?? 0;
 }
 
+type TransferValidation = {
+  readonly senderId: UserId;
+  readonly recipientId: UserId;
+  readonly guildId?: string;
+  readonly currencyId: CurrencyId;
+  readonly amount: number;
+  readonly reason?: string;
+  readonly correlationId?: string;
+};
+
+type TransferExecution = {
+  readonly transferId: string;
+  readonly senderId: UserId;
+  readonly recipientId: UserId;
+  readonly currencyId: CurrencyId;
+  readonly amount: number;
+  readonly senderBefore: unknown;
+  readonly senderAfter: unknown;
+  readonly recipientBefore: unknown;
+  readonly recipientAfter: unknown;
+};
+
+function validateTransferInput(
+  input: import("./types").TransferCurrencyInput,
+): Result<TransferValidation, CurrencyMutationError> {
+  const {
+    senderId,
+    recipientId,
+    guildId,
+    currencyId: rawCurrencyId,
+    amount,
+    reason,
+    correlationId,
+  } = input;
+
+  const currencyCheck = validateAndSanitizeCurrencyId(rawCurrencyId);
+  if (currencyCheck.isErr()) {
+    return ErrResult(currencyCheck.error);
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "INVALID_AMOUNT",
+        "La cantidad debe ser un número positivo.",
+      ),
+    );
+  }
+
+  if (senderId === recipientId) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "SELF_TRANSFER",
+        "No puedes transferirte a ti mismo.",
+      ),
+    );
+  }
+
+  return OkResult({
+    senderId,
+    recipientId,
+    guildId,
+    currencyId: currencyCheck.unwrap(),
+    amount,
+    reason,
+    correlationId,
+  });
+}
+
+function computeTaxAndNet(amount: number): { tax: number; netAmount: number } {
+  return { tax: 0, netAmount: amount };
+}
+
+async function executeTransferTransaction(
+  input: TransferValidation,
+): Promise<Result<TransferExecution, CurrencyMutationError>> {
+  const { senderId, recipientId, currencyId, amount, correlationId } = input;
+
+  const [senderEnsure, recipientEnsure] = await Promise.all([
+    economyAccountRepo.ensure(senderId),
+    economyAccountRepo.ensure(recipientId),
+  ]);
+
+  if (senderEnsure.isErr()) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "ACTOR_BLOCKED",
+        "No se pudo acceder a tu cuenta.",
+      ),
+    );
+  }
+  if (recipientEnsure.isErr()) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "TARGET_NOT_FOUND",
+        "No se pudo acceder a la cuenta del destinatario.",
+      ),
+    );
+  }
+
+  const senderAccount = senderEnsure.unwrap().account;
+  const recipientAccount = recipientEnsure.unwrap().account;
+
+  if (senderAccount.status === "banned") {
+    return ErrResult(
+      new CurrencyMutationError(
+        "ACTOR_BANNED",
+        "Tu cuenta tiene restricciones permanentes.",
+      ),
+    );
+  }
+  if (senderAccount.status === "blocked") {
+    return ErrResult(
+      new CurrencyMutationError(
+        "ACTOR_BLOCKED",
+        "Tu cuenta tiene restricciones temporales.",
+      ),
+    );
+  }
+  if (recipientAccount.status === "banned") {
+    return ErrResult(
+      new CurrencyMutationError(
+        "TARGET_BANNED",
+        "La cuenta del destinatario tiene restricciones permanentes.",
+      ),
+    );
+  }
+  if (recipientAccount.status === "blocked") {
+    return ErrResult(
+      new CurrencyMutationError(
+        "TARGET_BLOCKED",
+        "La cuenta del destinatario tiene restricciones temporales.",
+      ),
+    );
+  }
+
+  const [senderUser, recipientUser] = await Promise.all([
+    UserStore.get(senderId),
+    UserStore.get(recipientId),
+  ]);
+
+  if (senderUser.isErr() || !senderUser.unwrap()) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "ACTOR_BLOCKED",
+        "No se pudo acceder a tu cuenta.",
+      ),
+    );
+  }
+  if (recipientUser.isErr() || !recipientUser.unwrap()) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "TARGET_NOT_FOUND",
+        "Destinatario no encontrado.",
+      ),
+    );
+  }
+
+  const senderCurrency = (senderUser.unwrap()!.currency ??
+    {}) as CurrencyInventory;
+  const recipientCurrency = (recipientUser.unwrap()!.currency ??
+    {}) as CurrencyInventory;
+
+  const senderBefore = getCurrentBalance(senderCurrency, currencyId) as number;
+  const recipientBefore = getCurrentBalance(
+    recipientCurrency,
+    currencyId,
+  ) as number;
+
+  const isSimpleCurrency =
+    typeof (senderCurrency[currencyId] ?? 0) === "number";
+  if (isSimpleCurrency && senderBefore < amount) {
+    return ErrResult(
+      new CurrencyMutationError(
+        "INSUFFICIENT_FUNDS",
+        "No tienes suficientes fondos para esta transferencia.",
+      ),
+    );
+  }
+
+  const transferId =
+    correlationId ??
+    `xfer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  const { netAmount } = computeTaxAndNet(amount);
+
+  let senderAfter: unknown;
+  let recipientAfter: unknown;
+
+  if (isSimpleCurrency) {
+    const col = await UserStore.collection();
+    const now = new Date();
+
+    try {
+      const senderResult = await col.findOneAndUpdate(
+        { _id: senderId } as any,
+        {
+          $inc: { [`currency.${currencyId}`]: -netAmount } as any,
+          $set: { updatedAt: now } as any,
+        },
+        { returnDocument: "after" },
+      );
+
+      if (!senderResult) {
+        return ErrResult(
+          new CurrencyMutationError(
+            "UPDATE_FAILED",
+            "No se pudo actualizar el balance del remitente.",
+          ),
+        );
+      }
+
+      const recipientResult = await col.findOneAndUpdate(
+        { _id: recipientId } as any,
+        {
+          $inc: { [`currency.${currencyId}`]: netAmount } as any,
+          $set: { updatedAt: now } as any,
+        },
+        { returnDocument: "after" },
+      );
+
+      if (!recipientResult) {
+        await col.updateOne({ _id: senderId } as any, {
+          $inc: { [`currency.${currencyId}`]: netAmount } as any,
+        });
+        return ErrResult(
+          new CurrencyMutationError(
+            "UPDATE_FAILED",
+            "Error en la transferencia. Intenta nuevamente.",
+          ),
+        );
+      }
+
+      senderAfter = getCurrentBalance(
+        ((senderResult as any).currency ?? {}) as CurrencyInventory,
+        currencyId,
+      );
+      recipientAfter = getCurrentBalance(
+        ((recipientResult as any).currency ?? {}) as CurrencyInventory,
+        currencyId,
+      );
+    } catch (e) {
+      return ErrResult(
+        new CurrencyMutationError(
+          "UPDATE_FAILED",
+          "Error de base de datos durante la transferencia.",
+        ),
+      );
+    }
+  } else {
+    const { currencyTransaction } = await import("../transactions");
+
+    const senderTx = await currencyTransaction(senderId, {
+      costs: [
+        {
+          currencyId,
+          value: { hand: netAmount, bank: 0, use_total_on_subtract: false },
+        },
+      ],
+      allowDebt: false,
+    });
+
+    if (senderTx.isErr()) {
+      return ErrResult(
+        new CurrencyMutationError(
+          "INSUFFICIENT_FUNDS",
+          "No tienes suficientes fondos para esta transferencia.",
+        ),
+      );
+    }
+
+    const recipientTx = await currencyTransaction(recipientId, {
+      rewards: [
+        {
+          currencyId,
+          value: { hand: netAmount, bank: 0, use_total_on_subtract: false },
+        },
+      ],
+    });
+
+    if (recipientTx.isErr()) {
+      await currencyTransaction(senderId, {
+        rewards: [
+          {
+            currencyId,
+            value: { hand: netAmount, bank: 0, use_total_on_subtract: false },
+          },
+        ],
+      });
+      return ErrResult(
+        new CurrencyMutationError(
+          "UPDATE_FAILED",
+          "Error en la transferencia. Intenta nuevamente.",
+        ),
+      );
+    }
+
+    senderAfter = senderTx.unwrap()[currencyId];
+    recipientAfter = recipientTx.unwrap()[currencyId];
+  }
+
+  return OkResult({
+    transferId,
+    senderId,
+    recipientId,
+    currencyId,
+    amount: netAmount,
+    senderBefore,
+    senderAfter,
+    recipientBefore,
+    recipientAfter,
+  });
+}
+
+async function writeAudit(
+  input: TransferValidation,
+  result: TransferExecution,
+): Promise<void> {
+  const { guildId, reason, currencyId } = input;
+  const {
+    transferId,
+    senderId,
+    recipientId,
+    amount,
+    senderBefore,
+    senderAfter,
+    recipientBefore,
+    recipientAfter,
+  } = result;
+
+  const senderAudit = await economyAuditRepo.create({
+    operationType: "currency_transfer",
+    actorId: senderId,
+    targetId: recipientId,
+    guildId,
+    source: "transfer",
+    reason,
+    currencyData: {
+      currencyId,
+      delta: -amount,
+      beforeBalance: senderBefore,
+      afterBalance: senderAfter,
+    },
+    metadata: {
+      transferId,
+      correlationId: transferId,
+      direction: "outgoing",
+    },
+  });
+
+  if (senderAudit.isErr()) {
+    console.error(
+      "[CurrencyMutationService] Failed to create sender audit entry:",
+      senderAudit.error,
+    );
+  }
+
+  const recipientAudit = await economyAuditRepo.create({
+    operationType: "currency_transfer",
+    actorId: senderId,
+    targetId: recipientId,
+    guildId,
+    source: "transfer",
+    reason,
+    currencyData: {
+      currencyId,
+      delta: amount,
+      beforeBalance: recipientBefore,
+      afterBalance: recipientAfter,
+    },
+    metadata: {
+      transferId,
+      correlationId: transferId,
+      direction: "incoming",
+    },
+  });
+
+  if (recipientAudit.isErr()) {
+    console.error(
+      "[CurrencyMutationService] Failed to create recipient audit entry:",
+      recipientAudit.error,
+    );
+  }
+}
+
+function buildResponse(
+  result: TransferExecution,
+  timestamp: Date,
+): Result<import("./types").TransferCurrencyResult, CurrencyMutationError> {
+  return OkResult({
+    transferId: result.transferId,
+    senderId: result.senderId,
+    recipientId: result.recipientId,
+    currencyId: result.currencyId,
+    amount: result.amount,
+    senderBefore: result.senderBefore,
+    senderAfter: result.senderAfter,
+    recipientBefore: result.recipientBefore,
+    recipientAfter: result.recipientAfter,
+    timestamp,
+  });
+}
+
 export interface CurrencyMutationService {
   /**
    * Adjust currency balance (mod-only, supports negative delta).
@@ -110,7 +512,9 @@ export interface CurrencyMutationService {
    */
   transferCurrency(
     input: import("./types").TransferCurrencyInput,
-  ): Promise<Result<import("./types").TransferCurrencyResult, CurrencyMutationError>>;
+  ): Promise<
+    Result<import("./types").TransferCurrencyResult, CurrencyMutationError>
+  >;
 }
 
 class CurrencyMutationServiceImpl implements CurrencyMutationService {
@@ -118,7 +522,14 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
     input: AdjustCurrencyBalanceInput,
     checkAdmin: (actorId: UserId, guildId?: string) => Promise<boolean>,
   ): Promise<Result<AdjustCurrencyBalanceResult, CurrencyMutationError>> {
-    const { actorId, targetId, guildId, currencyId: rawCurrencyId, delta, reason } = input;
+    const {
+      actorId,
+      targetId,
+      guildId,
+      currencyId: rawCurrencyId,
+      delta,
+      reason,
+    } = input;
 
     // Step 1: Check actor permissions
     const permCheck = await checkActorPermission(actorId, guildId, checkAdmin);
@@ -137,7 +548,10 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
     const ensureResult = await economyAccountRepo.ensure(targetId);
     if (ensureResult.isErr()) {
       return ErrResult(
-        new CurrencyMutationError("TARGET_NOT_FOUND", "No se pudo acceder a la cuenta del objetivo."),
+        new CurrencyMutationError(
+          "TARGET_NOT_FOUND",
+          "No se pudo acceder a la cuenta del objetivo.",
+        ),
       );
     }
     const { account: targetAccount } = ensureResult.unwrap();
@@ -145,12 +559,18 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
     // Step 4: Gate on target status
     if (targetAccount.status === "banned") {
       return ErrResult(
-        new CurrencyMutationError("TARGET_BANNED", "La cuenta del objetivo tiene restricciones permanentes."),
+        new CurrencyMutationError(
+          "TARGET_BANNED",
+          "La cuenta del objetivo tiene restricciones permanentes.",
+        ),
       );
     }
     if (targetAccount.status === "blocked") {
       return ErrResult(
-        new CurrencyMutationError("TARGET_BLOCKED", "La cuenta del objetivo tiene restricciones temporales."),
+        new CurrencyMutationError(
+          "TARGET_BLOCKED",
+          "La cuenta del objetivo tiene restricciones temporales.",
+        ),
       );
     }
 
@@ -179,14 +599,20 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
       const repResult = await incrementReputation(targetId, delta);
       if (repResult.isErr()) {
         return ErrResult(
-          new CurrencyMutationError("UPDATE_FAILED", "No se pudo actualizar la reputación."),
+          new CurrencyMutationError(
+            "UPDATE_FAILED",
+            "No se pudo actualizar la reputación.",
+          ),
         );
       }
       // Re-fetch user to get updated state
       const refreshed = await UserStore.get(targetId);
       if (refreshed.isErr() || !refreshed.unwrap()) {
         return ErrResult(
-          new CurrencyMutationError("UPDATE_FAILED", "Error al obtener estado actualizado."),
+          new CurrencyMutationError(
+            "UPDATE_FAILED",
+            "Error al obtener estado actualizado.",
+          ),
         );
       }
       updateResult = refreshed;
@@ -212,12 +638,18 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
             updateResult = OkResult(doc);
           } else {
             return ErrResult(
-              new CurrencyMutationError("UPDATE_FAILED", "No se pudo actualizar el balance."),
+              new CurrencyMutationError(
+                "UPDATE_FAILED",
+                "No se pudo actualizar el balance.",
+              ),
             );
           }
         } catch (e) {
           return ErrResult(
-            new CurrencyMutationError("UPDATE_FAILED", "Error de base de datos."),
+            new CurrencyMutationError(
+              "UPDATE_FAILED",
+              "Error de base de datos.",
+            ),
           );
         }
       } else {
@@ -226,14 +658,41 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
         const { currencyTransaction } = await import("../transactions");
 
         const txResult = await currencyTransaction(targetId, {
-          rewards: delta > 0 ? [{ currencyId, value: { hand: delta, bank: 0, use_total_on_subtract: false } }] : undefined,
-          costs: delta < 0 ? [{ currencyId, value: { hand: Math.abs(delta), bank: 0, use_total_on_subtract: false } }] : undefined,
+          rewards:
+            delta > 0
+              ? [
+                  {
+                    currencyId,
+                    value: {
+                      hand: delta,
+                      bank: 0,
+                      use_total_on_subtract: false,
+                    },
+                  },
+                ]
+              : undefined,
+          costs:
+            delta < 0
+              ? [
+                  {
+                    currencyId,
+                    value: {
+                      hand: Math.abs(delta),
+                      bank: 0,
+                      use_total_on_subtract: false,
+                    },
+                  },
+                ]
+              : undefined,
           allowDebt: true, // Mods can create debt
         });
 
         if (txResult.isErr()) {
           return ErrResult(
-            new CurrencyMutationError("UPDATE_FAILED", "No se pudo actualizar el balance de moneda."),
+            new CurrencyMutationError(
+              "UPDATE_FAILED",
+              "No se pudo actualizar el balance de moneda.",
+            ),
           );
         }
 
@@ -257,7 +716,10 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
         });
 
         if (auditResult.isErr()) {
-          console.error("[CurrencyMutationService] Failed to create audit entry:", auditResult.error);
+          console.error(
+            "[CurrencyMutationService] Failed to create audit entry:",
+            auditResult.error,
+          );
           // Don't fail the operation if audit fails, but log it
         }
 
@@ -274,14 +736,20 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
 
     if (updateResult.isErr()) {
       return ErrResult(
-        new CurrencyMutationError("UPDATE_FAILED", "Error al actualizar el balance."),
+        new CurrencyMutationError(
+          "UPDATE_FAILED",
+          "Error al actualizar el balance.",
+        ),
       );
     }
 
     const updatedUser = updateResult.unwrap();
     if (!updatedUser) {
       return ErrResult(
-        new CurrencyMutationError("TARGET_NOT_FOUND", "Usuario no encontrado después de actualizar."),
+        new CurrencyMutationError(
+          "TARGET_NOT_FOUND",
+          "Usuario no encontrado después de actualizar.",
+        ),
       );
     }
 
@@ -306,7 +774,10 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
     });
 
     if (auditResult.isErr()) {
-      console.error("[CurrencyMutationService] Failed to create audit entry:", auditResult.error);
+      console.error(
+        "[CurrencyMutationService] Failed to create audit entry:",
+        auditResult.error,
+      );
       // Don't fail the operation if audit fails, but log it
     }
 
@@ -323,268 +794,26 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
 
   async transferCurrency(
     input: import("./types").TransferCurrencyInput,
-  ): Promise<Result<import("./types").TransferCurrencyResult, CurrencyMutationError>> {
-    const { senderId, recipientId, guildId, currencyId: rawCurrencyId, amount, reason } = input;
-
-    // Step 1: Validate and sanitize currency ID
-    const currencyCheck = validateAndSanitizeCurrencyId(rawCurrencyId);
-    if (currencyCheck.isErr()) {
-      return ErrResult(currencyCheck.error);
-    }
-    const currencyId = currencyCheck.unwrap();
-
-    // Step 2: Validate amount is positive
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return ErrResult(
-        new CurrencyMutationError("INVALID_AMOUNT", "La cantidad debe ser un número positivo."),
-      );
+  ): Promise<
+    Result<import("./types").TransferCurrencyResult, CurrencyMutationError>
+  > {
+    const validation = validateTransferInput(input);
+    if (validation.isErr()) {
+      return ErrResult(validation.error);
     }
 
-    // Step 3: Prevent self-transfer
-    if (senderId === recipientId) {
-      return ErrResult(
-        new CurrencyMutationError("SELF_TRANSFER", "No puedes transferirte a ti mismo."),
-      );
+    const execution = await executeTransferTransaction(validation.unwrap());
+    if (execution.isErr()) {
+      return ErrResult(execution.error);
     }
 
-    // Step 4: Ensure both accounts exist
-    const [senderEnsure, recipientEnsure] = await Promise.all([
-      economyAccountRepo.ensure(senderId),
-      economyAccountRepo.ensure(recipientId),
-    ]);
-
-    if (senderEnsure.isErr()) {
-      return ErrResult(
-        new CurrencyMutationError("ACTOR_BLOCKED", "No se pudo acceder a tu cuenta."),
-      );
-    }
-    if (recipientEnsure.isErr()) {
-      return ErrResult(
-        new CurrencyMutationError("TARGET_NOT_FOUND", "No se pudo acceder a la cuenta del destinatario."),
-      );
-    }
-
-    const senderAccount = senderEnsure.unwrap().account;
-    const recipientAccount = recipientEnsure.unwrap().account;
-
-    // Step 5: Gate on both account statuses
-    if (senderAccount.status === "banned") {
-      return ErrResult(
-        new CurrencyMutationError("ACTOR_BANNED", "Tu cuenta tiene restricciones permanentes."),
-      );
-    }
-    if (senderAccount.status === "blocked") {
-      return ErrResult(
-        new CurrencyMutationError("ACTOR_BLOCKED", "Tu cuenta tiene restricciones temporales."),
-      );
-    }
-    if (recipientAccount.status === "banned") {
-      return ErrResult(
-        new CurrencyMutationError("TARGET_BANNED", "La cuenta del destinatario tiene restricciones permanentes."),
-      );
-    }
-    if (recipientAccount.status === "blocked") {
-      return ErrResult(
-        new CurrencyMutationError("TARGET_BLOCKED", "La cuenta del destinatario tiene restricciones temporales."),
-      );
-    }
-
-    // Step 6: Get current balances and check sufficient funds
-    const [senderUser, recipientUser] = await Promise.all([
-      UserStore.get(senderId),
-      UserStore.get(recipientId),
-    ]);
-
-    if (senderUser.isErr() || !senderUser.unwrap()) {
-      return ErrResult(
-        new CurrencyMutationError("ACTOR_BLOCKED", "No se pudo acceder a tu cuenta."),
-      );
-    }
-    if (recipientUser.isErr() || !recipientUser.unwrap()) {
-      return ErrResult(
-        new CurrencyMutationError("TARGET_NOT_FOUND", "Destinatario no encontrado."),
-      );
-    }
-
-    const senderCurrency = (senderUser.unwrap()!.currency ?? {}) as CurrencyInventory;
-    const recipientCurrency = (recipientUser.unwrap()!.currency ?? {}) as CurrencyInventory;
-
-    const senderBefore = getCurrentBalance(senderCurrency, currencyId) as number;
-    const recipientBefore = getCurrentBalance(recipientCurrency, currencyId) as number;
-
-    // Check sufficient funds (for numeric currencies)
-    const isSimpleCurrency = typeof (senderCurrency[currencyId] ?? 0) === "number";
-    if (isSimpleCurrency && senderBefore < amount) {
-      return ErrResult(
-        new CurrencyMutationError("INSUFFICIENT_FUNDS", "No tienes suficientes fondos para esta transferencia."),
-      );
-    }
-
-    // Step 7: Perform atomic transfer
-    // Generate correlation ID for audit
-    const transferId = `xfer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-    let senderAfter: unknown;
-    let recipientAfter: unknown;
-
-    if (isSimpleCurrency) {
-      // For simple numeric currencies, use $inc on both users
-      const col = await UserStore.collection();
-      const now = new Date();
-
-      try {
-        // Decrement sender
-        const senderResult = await col.findOneAndUpdate(
-          { _id: senderId } as any,
-          {
-            $inc: { [`currency.${currencyId}`]: -amount } as any,
-            $set: { updatedAt: now } as any,
-          },
-          { returnDocument: "after" },
-        );
-
-        if (!senderResult) {
-          return ErrResult(
-            new CurrencyMutationError("UPDATE_FAILED", "No se pudo actualizar el balance del remitente."),
-          );
-        }
-
-        // Increment recipient
-        const recipientResult = await col.findOneAndUpdate(
-          { _id: recipientId } as any,
-          {
-            $inc: { [`currency.${currencyId}`]: amount } as any,
-            $set: { updatedAt: now } as any,
-          },
-          { returnDocument: "after" },
-        );
-
-        if (!recipientResult) {
-          // This is bad - sender was decremented but recipient failed
-          // Try to refund sender (best effort)
-          await col.updateOne(
-            { _id: senderId } as any,
-            { $inc: { [`currency.${currencyId}`]: amount } as any },
-          );
-          return ErrResult(
-            new CurrencyMutationError("UPDATE_FAILED", "Error en la transferencia. Intenta nuevamente."),
-          );
-        }
-
-        senderAfter = getCurrentBalance(
-          ((senderResult as any).currency ?? {}) as CurrencyInventory,
-          currencyId,
-        );
-        recipientAfter = getCurrentBalance(
-          ((recipientResult as any).currency ?? {}) as CurrencyInventory,
-          currencyId,
-        );
-      } catch (e) {
-        return ErrResult(
-          new CurrencyMutationError("UPDATE_FAILED", "Error de base de datos durante la transferencia."),
-        );
-      }
-    } else {
-      // Complex currency (like coins) - use transaction system
-      // First deduct from sender
-      const { currencyTransaction } = await import("../transactions");
-
-      const senderTx = await currencyTransaction(senderId, {
-        costs: [{ currencyId, value: { hand: amount, bank: 0, use_total_on_subtract: false } }],
-        allowDebt: false,
-      });
-
-      if (senderTx.isErr()) {
-        return ErrResult(
-          new CurrencyMutationError("INSUFFICIENT_FUNDS", "No tienes suficientes fondos para esta transferencia."),
-        );
-      }
-
-      // Then add to recipient
-      const recipientTx = await currencyTransaction(recipientId, {
-        rewards: [{ currencyId, value: { hand: amount, bank: 0, use_total_on_subtract: false } }],
-      });
-
-      if (recipientTx.isErr()) {
-        // Try to refund sender (best effort)
-        await currencyTransaction(senderId, {
-          rewards: [{ currencyId, value: { hand: amount, bank: 0, use_total_on_subtract: false } }],
-        });
-        return ErrResult(
-          new CurrencyMutationError("UPDATE_FAILED", "Error en la transferencia. Intenta nuevamente."),
-        );
-      }
-
-      senderAfter = senderTx.unwrap()[currencyId];
-      recipientAfter = recipientTx.unwrap()[currencyId];
-    }
-
-    // Step 8: Create audit entries with correlation ID
     const timestamp = new Date();
+    await writeAudit(validation.unwrap(), execution.unwrap());
 
-    // Audit entry for sender (outgoing)
-    const senderAudit = await economyAuditRepo.create({
-      operationType: "currency_transfer",
-      actorId: senderId,
-      targetId: recipientId,
-      guildId,
-      source: "transfer",
-      reason,
-      currencyData: {
-        currencyId,
-        delta: -amount,
-        beforeBalance: senderBefore,
-        afterBalance: senderAfter,
-      },
-      metadata: {
-        transferId,
-        direction: "outgoing",
-      },
-    });
-
-    if (senderAudit.isErr()) {
-      console.error("[CurrencyMutationService] Failed to create sender audit entry:", senderAudit.error);
-    }
-
-    // Audit entry for recipient (incoming)
-    const recipientAudit = await economyAuditRepo.create({
-      operationType: "currency_transfer",
-      actorId: senderId,
-      targetId: recipientId,
-      guildId,
-      source: "transfer",
-      reason,
-      currencyData: {
-        currencyId,
-        delta: amount,
-        beforeBalance: recipientBefore,
-        afterBalance: recipientAfter,
-      },
-      metadata: {
-        transferId,
-        direction: "incoming",
-      },
-    });
-
-    if (recipientAudit.isErr()) {
-      console.error("[CurrencyMutationService] Failed to create recipient audit entry:", recipientAudit.error);
-    }
-
-    // Step 9: Return result
-    return OkResult({
-      transferId,
-      senderId,
-      recipientId,
-      currencyId,
-      amount,
-      senderBefore,
-      senderAfter,
-      recipientBefore,
-      recipientAfter,
-      timestamp,
-    });
+    return buildResponse(execution.unwrap(), timestamp);
   }
 }
 
 /** Singleton instance. */
-export const currencyMutationService: CurrencyMutationService = new CurrencyMutationServiceImpl();
+export const currencyMutationService: CurrencyMutationService =
+  new CurrencyMutationServiceImpl();

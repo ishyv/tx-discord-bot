@@ -1,0 +1,53 @@
+/**
+ * Perk definitions registry.
+ *
+ * Purpose: provide built-in perk definitions and cost curves.
+ */
+
+import type { PerkDefinition } from "./types";
+
+const costCurve =
+  (base: number, growth: number, currencyId = "coins", minLevel?: number) =>
+  (nextLevel: number) => ({
+    currencyId,
+    amount: Math.max(
+      0,
+      Math.round(base * Math.pow(growth, Math.max(0, nextLevel - 1))),
+    ),
+    minLevel,
+  });
+
+export const PERK_DEFINITIONS: PerkDefinition[] = [
+  {
+    id: "weight_boost",
+    name: "💪 Peso extra",
+    description: "Aumenta la capacidad de peso de tu inventario.",
+    maxLevel: 10,
+    effects: [{ type: "weight_cap", value: 20 }],
+    cost: costCurve(400, 1.35, "coins"),
+  },
+  {
+    id: "slot_boost",
+    name: "🧳 Más slots",
+    description: "Aumenta la cantidad máxima de slots en tu inventario.",
+    maxLevel: 6,
+    effects: [{ type: "slot_cap", value: 2 }],
+    cost: costCurve(650, 1.45, "coins"),
+  },
+  {
+    id: "work_focus",
+    name: "🛠️ Experiencia laboral",
+    description: "Incrementa el pago de /work.",
+    maxLevel: 5,
+    effects: [{ type: "work_bonus_pct", value: 0.05 }],
+    cost: costCurve(900, 1.5, "coins", 2),
+  },
+  {
+    id: "daily_bonus_cap",
+    name: "🎁 Racha extendida",
+    description: "Aumenta el tope de bonus diario por racha.",
+    maxLevel: 5,
+    effects: [{ type: "daily_bonus_cap", value: 1 }],
+    cost: costCurve(500, 1.4, "coins", 3),
+  },
+];

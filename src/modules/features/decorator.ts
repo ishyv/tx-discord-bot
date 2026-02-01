@@ -24,7 +24,7 @@ export interface FeatureBoundCommand {
  * @returns Decorador de clase que agrega la propiedad `disabled`.
  *
  * @example
- * 
+ *
  * ```typescript
  * @BindDisabled(Features.Warns)
  * export default class WarnCommand extends Command {

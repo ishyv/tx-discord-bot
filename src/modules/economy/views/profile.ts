@@ -11,7 +11,6 @@
  * - Days calculations use UTC boundaries.
  */
 
-
 import type { CurrencyInventory } from "../currency";
 import type { ItemInventory } from "@/modules/inventory/inventory";
 import {
@@ -21,6 +20,7 @@ import {
   type BalanceViewOptions,
   ACCOUNT_STATUS_DISPLAY,
 } from "../account/types";
+import type { ProgressionView } from "../progression/types";
 import { buildBalanceView } from "./balance";
 import { buildBankBreakdown } from "./bank";
 import { buildInventorySummary } from "./inventory";
@@ -67,10 +67,14 @@ export function buildProfileView(
   account: EconomyAccount,
   currencyInventory: CurrencyInventory,
   itemInventory: ItemInventory,
+  progression: ProgressionView | null,
   options: ProfileViewBuilderOptions = {},
 ): ProfileSummaryView {
   const accountView = buildAccountView(account);
-  const balanceView = buildBalanceView(currencyInventory, options.balanceOptions);
+  const balanceView = buildBalanceView(
+    currencyInventory,
+    options.balanceOptions,
+  );
   const bankView = buildBankBreakdown(currencyInventory);
   const inventoryView = buildInventorySummary(itemInventory);
   const reputation = getReputation(currencyInventory);
@@ -82,6 +86,7 @@ export function buildProfileView(
     bank: bankView,
     inventory: inventoryView,
     reputation,
+    progression,
   };
 }
 
@@ -95,7 +100,10 @@ export function buildCompactProfileView(
   currencyInventory: CurrencyInventory,
   itemInventory: ItemInventory,
 ): Omit<ProfileSummaryView, "balances"> & {
-  balances: { primaryCurrency: { display: string } | null; hasMultipleCurrencies: boolean };
+  balances: {
+    primaryCurrency: { display: string } | null;
+    hasMultipleCurrencies: boolean;
+  };
 } {
   const accountView = buildAccountView(account);
   const balanceView = buildBalanceView(currencyInventory, {
@@ -115,5 +123,6 @@ export function buildCompactProfileView(
     bank: null, // Omitted in compact view
     inventory: inventoryView,
     reputation,
+    progression: null,
   };
 }

@@ -19,7 +19,10 @@ import {
   markAIMessage,
   stripAIMessageMarker,
 } from "@/services/ai/messageTracker";
-import { sendPaginatedByReference, sendPaginatedMessages } from "@/utils/messages";
+import {
+  sendPaginatedByReference,
+  sendPaginatedMessages,
+} from "@/utils/messages";
 
 /**
  * Listener que responde menciones al bot utilizando el servicio de IA.
@@ -106,7 +109,12 @@ function buildContinueRow(options: {
         guildId: options.guildId ?? ctx.guildId,
       });
 
-      await sendContinuationResponse(ctx, response, options.authorId, options.guildId);
+      await sendContinuationResponse(
+        ctx,
+        response,
+        options.authorId,
+        options.guildId,
+      );
     });
 
   return new ActionRow<Button>().addComponents(button);
@@ -167,9 +175,13 @@ type ReplyContext = {
   quotedText?: string | null;
 };
 
-async function resolveReplyContext(message: any, client: any): Promise<ReplyContext> {
+async function resolveReplyContext(
+  message: any,
+  client: any,
+): Promise<ReplyContext> {
   const referenceId =
-    message?.messageReference?.messageId ?? message?.messageReference?.message_id;
+    message?.messageReference?.messageId ??
+    message?.messageReference?.message_id;
   if (!referenceId) return { isReplyToAIMessage: false };
 
   const referenceChannelId =
@@ -188,7 +200,9 @@ async function resolveReplyContext(message: any, client: any): Promise<ReplyCont
 
   if (!isReplyToAI) return { isReplyToAIMessage: false };
 
-  const quotedText = referencedContent ? stripAIMessageMarker(referencedContent) : null;
+  const quotedText = referencedContent
+    ? stripAIMessageMarker(referencedContent)
+    : null;
 
   return {
     isReplyToAIMessage: true,
@@ -196,7 +210,11 @@ async function resolveReplyContext(message: any, client: any): Promise<ReplyCont
   };
 }
 
-async function fetchReferencedMessage(client: any, messageId: string, channelId: string) {
+async function fetchReferencedMessage(
+  client: any,
+  messageId: string,
+  channelId: string,
+) {
   try {
     return await client.messages.fetch(messageId, channelId);
   } catch {

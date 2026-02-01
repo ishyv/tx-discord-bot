@@ -18,7 +18,7 @@ const readEnv = (key: string): string | undefined => {
 };
 
 const getUri = (): string => {
-  const uri = readEnv("MONGO_URI")
+  const uri = readEnv("MONGO_URI");
 
   if (!uri) {
     throw new Error(
@@ -46,6 +46,14 @@ export async function getDb(): Promise<Db> {
   await client.connect();
   dbInstance = client.db(getDbName());
   return dbInstance;
+}
+
+export async function getMongoClient(): Promise<MongoClient> {
+  if (!client) {
+    client = new MongoClient(getUri());
+  }
+  await client.connect();
+  return client;
 }
 
 export async function disconnectDb(): Promise<void> {

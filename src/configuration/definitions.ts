@@ -22,18 +22,20 @@ export { z };
 
 // biome-ignore lint/suspicious/noEmptyInterface: Interface enables module augmentation per feature configs.
 export interface ConfigDefinitions {
-    // To be extended by module augmentations
+  // To be extended by module augmentations
 }
 
 // We rely on the Enum values being the specific keys, or we can just use string keys for the map
 // but typed access is preferred.
 export type ConfigKey = ConfigurableModule;
-export type ConfigOf<K extends ConfigKey> = K extends keyof ConfigDefinitions ? ConfigDefinitions[K] : never;
+export type ConfigOf<K extends ConfigKey> = K extends keyof ConfigDefinitions
+  ? ConfigDefinitions[K]
+  : never;
 
 export type ConfigDefinition<K extends ConfigKey = ConfigKey> = {
-    key: K;
-    schema: ZodSchema<any>;
-    path?: string;
+  key: K;
+  schema: ZodSchema<any>;
+  path?: string;
 };
 
 // Registry to hold the runtime schema definitions and storage paths.
@@ -52,12 +54,12 @@ const registry = new Map<string, ConfigDefinition>();
  * @invariant The key must be unique to avoid overriding another schema/path.
  */
 export function defineConfig<K extends ConfigKey>(
-    key: K,
-    schema: ZodSchema<any>,
-    options: { path?: string } = {},
+  key: K,
+  schema: ZodSchema<any>,
+  options: { path?: string } = {},
 ) {
-    registry.set(key, { key, schema, path: options.path });
-    return schema;
+  registry.set(key, { key, schema, path: options.path });
+  return schema;
 }
 
 /**
@@ -67,7 +69,7 @@ export function defineConfig<K extends ConfigKey>(
  * @sideEffects None.
  */
 export function getSchema<K extends ConfigKey>(key: K) {
-    return registry.get(key)?.schema;
+  return registry.get(key)?.schema;
 }
 
 /**
@@ -77,9 +79,9 @@ export function getSchema<K extends ConfigKey>(key: K) {
  * @sideEffects None.
  */
 export function getConfigDefinition<K extends ConfigKey>(
-    key: K,
+  key: K,
 ): ConfigDefinition<K> | undefined {
-    return registry.get(key) as ConfigDefinition<K> | undefined;
+  return registry.get(key) as ConfigDefinition<K> | undefined;
 }
 
 /**
@@ -89,5 +91,5 @@ export function getConfigDefinition<K extends ConfigKey>(
  * @sideEffects None.
  */
 export function getConfigPath<K extends ConfigKey>(key: K): string | undefined {
-    return registry.get(key)?.path;
+  return registry.get(key)?.path;
 }

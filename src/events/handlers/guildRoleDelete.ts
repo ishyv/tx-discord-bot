@@ -15,4 +15,3 @@ export default createEvent({
     await emitGuildRoleDelete(role, client, shardId);
   },
 });
-

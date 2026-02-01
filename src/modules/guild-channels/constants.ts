@@ -34,8 +34,7 @@ export enum CoreChannelNames {
  * Catalogo central de canales obligatorios: alinea la configuracion en DB
  * con los identificadores fijos definidos en CHANNELS_ID.
  */
-export const CORE_CHANNEL_DEFINITIONS: Record<string, string> =
-{
+export const CORE_CHANNEL_DEFINITIONS: Record<string, string> = {
   // Pares de: identificar : descripción humana del canal
   [CoreChannelNames.MessageLogs]: "Registro de mensajes moderados",
   [CoreChannelNames.VoiceLogs]: "Registro de actividad en voz",
@@ -51,6 +50,5 @@ export const CORE_CHANNEL_DEFINITIONS: Record<string, string> =
   [CoreChannelNames.OffersReview]: "Revisión de ofertas laborales",
   [CoreChannelNames.ApprovedOffers]: "Publicación de ofertas aprobadas",
 };
-
 
 export type CoreChannelName = keyof typeof CORE_CHANNEL_DEFINITIONS;

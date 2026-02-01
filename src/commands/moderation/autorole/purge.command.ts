@@ -9,7 +9,11 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
-import { AutoroleService, AutoRoleRulesStore, autoroleKeys } from "@/modules/autorole";
+import {
+  AutoroleService,
+  AutoRoleRulesStore,
+  autoroleKeys,
+} from "@/modules/autorole";
 import { respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 
 const options = {
@@ -40,7 +44,11 @@ export default class AutorolePurgeCommand extends SubCommand {
       return;
     }
 
-    const result = await AutoroleService.purgeRule(ctx.client, context.guildId, slug);
+    const result = await AutoroleService.purgeRule(
+      ctx.client,
+      context.guildId,
+      slug,
+    );
 
     await ctx.write({
       content:

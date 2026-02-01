@@ -14,12 +14,16 @@ import {
   AutoRoleRulesStore,
   autoroleKeys,
 } from "@/modules/autorole";
-import { formatRuleSummary, respondRuleAutocomplete, requireAutoroleContext } from "./shared";
+import {
+  formatRuleSummary,
+  respondRuleAutocomplete,
+  requireAutoroleContext,
+} from "./shared";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   name: createStringOption({
-    description: "Nombre de la regla a habilitar",
+    description: "Name of the rule to enable",
     required: true,
     autocomplete: respondRuleAutocomplete,
   }),
@@ -27,7 +31,7 @@ const options = {
 
 @Declare({
   name: "enable",
-  description: "Habilitar una regla de auto-role",
+  description: "Enable an auto-role rule",
 })
 @Options(options)
 export default class AutoroleEnableCommand extends SubCommand {
@@ -41,29 +45,37 @@ export default class AutoroleEnableCommand extends SubCommand {
     const rule = res.isOk() ? res.unwrap() : null;
 
     if (!rule) {
-      await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
+      await ctx.write({ content: `No rule found named \`${slug}\`.` });
       return;
     }
     if (rule.enabled) {
-      await ctx.write({ content: `La regla \`${slug}\` ya estaba habilitada.` });
+      await ctx.write({
+        content: `The rule \`${slug}\` was already enabled.`,
+      });
       return;
     }
 
-    const updated = await AutoroleService.toggleRule(context.guildId, slug, true);
+    const updated = await AutoroleService.toggleRule(
+      context.guildId,
+      slug,
+      true,
+    );
     if (!updated) {
-      await ctx.write({ content: "No se pudo habilitar la regla. Intenta nuevamente." });
+      await ctx.write({
+        content: "Could not enable the rule. Please try again.",
+      });
       return;
     }
 
     await ctx.write({
-      content: `Se habilito \`${slug}\`.\n${formatRuleSummary(updated)}`,
+      content: `Enabled \`${slug}\`.\n${formatRuleSummary(updated)}`,
     });
 
     await logModerationAction(ctx.client, context.guildId, {
-      title: "Autorole habilitado",
+      title: "Autorole enabled",
       description: formatRuleSummary(updated),
       actorId: ctx.author.id,
-      fields: [{ name: "Regla", value: `\`${slug}\`` }],
+      fields: [{ name: "Rule", value: `\`${slug}\`` }],
     });
   }
 }

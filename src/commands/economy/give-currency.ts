@@ -63,7 +63,8 @@ export default class GiveCurrencyCommand extends Command {
     const currencyId = sanitizeCurrencyId(rawCurrencyId);
     if (!currencyId) {
       await ctx.write({
-        content: "⚠️ ID de moneda inválido. Solo se permiten letras, números, guiones y guiones bajos.",
+        content:
+          "⚠️ ID de moneda inválido. Solo se permiten letras, números, guiones y guiones bajos.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -101,15 +102,20 @@ export default class GiveCurrencyCommand extends Command {
 
       // Map error codes to user-friendly messages
       const errorMessages: Record<string, string> = {
-        INSUFFICIENT_PERMISSIONS: "❌ No tienes permisos para realizar esta acción.",
+        INSUFFICIENT_PERMISSIONS:
+          "❌ No tienes permisos para realizar esta acción.",
         CURRENCY_NOT_FOUND: "La moneda especificada no existe.",
         TARGET_NOT_FOUND: "El usuario objetivo no existe.",
-        TARGET_BLOCKED: "⛔ La cuenta del usuario tiene restricciones temporales.",
-        TARGET_BANNED: "🚫 La cuenta del usuario tiene restricciones permanentes.",
-        UPDATE_FAILED: "❌ No se pudo actualizar el balance. Intenta nuevamente.",
+        TARGET_BLOCKED:
+          "⛔ La cuenta del usuario tiene restricciones temporales.",
+        TARGET_BANNED:
+          "🚫 La cuenta del usuario tiene restricciones permanentes.",
+        UPDATE_FAILED:
+          "❌ No se pudo actualizar el balance. Intenta nuevamente.",
       };
 
-      const message = errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+      const message =
+        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
 
       await ctx.write({
         content: message,
@@ -125,7 +131,8 @@ export default class GiveCurrencyCommand extends Command {
       await recordReputationChange(ctx.client, guildId, target.id, amount);
       const targetAccount = await economyAccountRepo.findById(target.id);
       if (targetAccount.isOk() && targetAccount.unwrap()) {
-        const repBalance = targetAccount.unwrap()!.status === "ok" ? adjustment.after : 0;
+        const repBalance =
+          targetAccount.unwrap()!.status === "ok" ? adjustment.after : 0;
         await AutoroleService.syncUserReputationRoles(
           ctx.client,
           guildId,

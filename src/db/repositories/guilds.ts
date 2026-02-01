@@ -1,28 +1,33 @@
 import { normalizeStringArray } from "@/db/normalizers";
 import { deepClone } from "@/db/helpers";
 import { type Guild, GuildSchema } from "@/db/schemas/guild";
-import { Features, type GuildChannelsRecord, type GuildFeaturesRecord, type ManagedChannelRecord } from "@/db/schemas/guild";
+import {
+  Features,
+  type GuildChannelsRecord,
+  type GuildFeaturesRecord,
+  type ManagedChannelRecord,
+} from "@/db/schemas/guild";
 import type { GuildId } from "@/db/types";
 import { MongoStore } from "../mongo-store";
 import { GuildRolesRepo } from "./guild-roles";
 
 /**
- * Repositorio de guilds: acceso validado + helpers de rutas para canales/tickets.
+ * Guilds Repository: Validated access + path helpers for channels/tickets.
  *
- * Encaje: capa base para módulos de configuración, canales y tickets. Delegamos
- * validación a `MongoStore` (Zod) y exponemos helpers que manipulan sub-rutas
- * sin reconstruir el documento completo.
+ * Context: Base layer for configuration, channel, and ticket modules. We delegate
+ * validation to `MongoStore` (Zod) and expose helpers that manipulate sub-paths
+ * without rebuilding the full document.
  */
 export const GuildStore = new MongoStore<Guild>("guilds", GuildSchema);
 
 /**
- * Aplica parches puntuales en rutas (`dot-notation`) o pipelines defensivos.
+ * Applies point patches on paths (`dot-notation`) or defensive pipelines.
  *
- * Propósito: actualizar subdocumentos sin sobreescribir todo el guild.
- * Invariantes: asegura objetos vacíos en campos críticos antes de aplicar
- * `paths`, evita `null`/tipos incorrectos en `channels|features|ai|roles`.
- * Gotchas: si se pasa `pipeline`, NO se actualiza `updatedAt` automáticamente;
- * el pipeline debe manejarlo. Usa `$$REMOVE` para unsets cuando se provee.
+ * Purpose: Update subdocuments without overwriting the entire guild.
+ * Invariants: Ensures empty objects in critical fields before applying
+ * `paths`, avoids `null`/incorrect types in `channels|features|ai|roles`.
+ * Gotchas: If a `pipeline` is passed, `updatedAt` is NOT updated automatically;
+ * the pipeline must handle it. Uses `$$REMOVE` for unsets when provided.
  */
 export async function updateGuildPaths(
   id: GuildId,
@@ -89,8 +94,8 @@ export async function updateGuildPaths(
 /* ------------------------------------------------------------------------- */
 
 /**
- * Devuelve la lista normalizada de tickets pendientes (strings únicos).
- * Side effects: asegura el documento de guild.
+ * Returns the normalized list of pending tickets (unique strings).
+ * Side effects: Ensures the guild document exists.
  */
 export async function getPendingTickets(id: GuildId): Promise<string[]> {
   const g = await GuildStore.ensure(id);
@@ -98,8 +103,8 @@ export async function getPendingTickets(id: GuildId): Promise<string[]> {
 }
 
 /**
- * Aplica una función de transformación al array de pendientes y persiste.
- * Garantiza unicidad y tipo string; devuelve el nuevo valor normalizado.
+ * Applies a transformation function to the pending array and persists it.
+ * Guarantees uniqueness and string type; returns the new normalized value.
  */
 export async function setPendingTickets(
   id: GuildId,
@@ -113,7 +118,11 @@ export async function setPendingTickets(
   return normalizeStringArray(res.unwrap()?.pendingTickets);
 }
 
-const normActionKey = (k: string) => k.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const normActionKey = (k: string) =>
+  k
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 
 export async function ensureGuild(id: GuildId): Promise<Guild> {
   const res = await GuildStore.ensure(id);
@@ -127,7 +136,10 @@ export async function getGuild(id: GuildId): Promise<Guild | null> {
   return res.unwrap();
 }
 
-export async function updateGuild(id: GuildId, patch: Partial<Guild>): Promise<Guild> {
+export async function updateGuild(
+  id: GuildId,
+  patch: Partial<Guild>,
+): Promise<Guild> {
   const res = await GuildStore.patch(id, patch);
   if (res.isErr()) throw res.error;
   return res.unwrap();
@@ -197,7 +209,10 @@ export async function getCoreChannel(
   name: string,
 ): Promise<{ channelId: string } | null> {
   const channels = await readChannels(id);
-  const core = (channels.core ?? {}) as Record<string, { channelId: string } | null>;
+  const core = (channels.core ?? {}) as Record<
+    string,
+    { channelId: string } | null
+  >;
   return core[name] ?? null;
 }
 
@@ -227,9 +242,14 @@ export async function setTicketMessage(
   return readChannels(id);
 }
 
-export async function listManagedChannels(id: GuildId): Promise<ManagedChannelRecord[]> {
+export async function listManagedChannels(
+  id: GuildId,
+): Promise<ManagedChannelRecord[]> {
   const channels = await readChannels(id);
-  const managed = (channels.managed ?? {}) as Record<string, ManagedChannelRecord>;
+  const managed = (channels.managed ?? {}) as Record<
+    string,
+    ManagedChannelRecord
+  >;
   return Object.values(managed).filter(Boolean);
 }
 
@@ -252,7 +272,10 @@ export async function updateManagedChannel(
   patch: Partial<Pick<ManagedChannelRecord, "label" | "channelId">>,
 ): Promise<ManagedChannelRecord | null> {
   const channels = await readChannels(id);
-  const managed = (channels.managed ?? {}) as Record<string, ManagedChannelRecord>;
+  const managed = (channels.managed ?? {}) as Record<
+    string,
+    ManagedChannelRecord
+  >;
   const entry = managed[identifier]
     ? [identifier, managed[identifier]]
     : Object.entries(managed).find(([, v]) => v?.label === identifier);
@@ -273,7 +296,10 @@ export async function removeManagedChannel(
   identifier: string,
 ): Promise<boolean> {
   const channels = await readChannels(id);
-  const managed = (channels.managed ?? {}) as Record<string, ManagedChannelRecord>;
+  const managed = (channels.managed ?? {}) as Record<
+    string,
+    ManagedChannelRecord
+  >;
   const key = managed[identifier]
     ? identifier
     : Object.entries(managed).find(([, v]) => v?.label === identifier)?.[0];
@@ -302,7 +328,10 @@ export async function getRole(id: GuildId, key: string): Promise<any | null> {
   return roles?.[key] ?? null;
 }
 
-export async function ensureRoleExists(id: GuildId, key: string): Promise<void> {
+export async function ensureRoleExists(
+  id: GuildId,
+  key: string,
+): Promise<void> {
   await writeRoles(id, (current) => {
     if (current?.[key]) return current;
     return {
@@ -329,7 +358,10 @@ export async function updateRole(
   return res.unwrap() as any;
 }
 
-export async function removeRole(id: GuildId, key: string): Promise<Record<string, any>> {
+export async function removeRole(
+  id: GuildId,
+  key: string,
+): Promise<Record<string, any>> {
   const res = await GuildRolesRepo.remove(id, key);
   if (res.isErr()) throw res.error;
   return res.unwrap() as any;
@@ -341,7 +373,12 @@ export async function setRoleOverride(
   actionKey: string,
   override: any,
 ): Promise<void> {
-  const res = await GuildRolesRepo.setOverride(id, roleKey, actionKey, override);
+  const res = await GuildRolesRepo.setOverride(
+    id,
+    roleKey,
+    actionKey,
+    override,
+  );
   if (res.isErr()) throw res.error;
 }
 
@@ -379,7 +416,10 @@ export async function clearRoleOverride(
   return true;
 }
 
-export async function resetRoleOverrides(id: GuildId, roleKey: string): Promise<void> {
+export async function resetRoleOverrides(
+  id: GuildId,
+  roleKey: string,
+): Promise<void> {
   await writeRoles(id, (current) => {
     const role = current?.[roleKey];
     if (!role) return current;
@@ -398,7 +438,11 @@ export async function setRoleLimit(
   id: GuildId,
   roleKey: string,
   actionKey: string,
-  limit: { limit: number; window?: string | null; windowSeconds?: number | null },
+  limit: {
+    limit: number;
+    window?: string | null;
+    windowSeconds?: number | null;
+  },
 ): Promise<void> {
   const res = await GuildRolesRepo.setLimit(id, roleKey, actionKey, limit);
   if (res.isErr()) throw res.error;

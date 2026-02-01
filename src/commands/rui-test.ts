@@ -18,19 +18,24 @@ import { ButtonStyle } from "seyfert/lib/types";
 })
 export default class RuiTestCommand extends Command {
   async run(ctx: CommandContext) {
-      await new UI<{ count: number }>(
-          { count: 0 },
-          (state) => {
-              const embed = new Embed().setDescription(`Clicks: ${state.count}`);
+    await new UI<{ count: number }>(
+      { count: 0 },
+      (state) => {
+        const embed = new Embed().setDescription(`Clicks: ${state.count}`);
 
-              const increment = new Button()
-                  .setLabel("+1")
-                  .setStyle(ButtonStyle.Primary)
-                  .onClick("increment", () => { state.count += 1; });
+        const increment = new Button()
+          .setLabel("+1")
+          .setStyle(ButtonStyle.Primary)
+          .onClick("increment", () => {
+            state.count += 1;
+          });
 
-              return { embeds: [embed], components: [new ActionRow().addComponents(increment)] };
-          },
-          (msg) => ctx.editOrReply(msg),
-      ).send();
+        return {
+          embeds: [embed],
+          components: [new ActionRow().addComponents(increment)],
+        };
+      },
+      (msg) => ctx.editOrReply(msg),
+    ).send();
   }
 }

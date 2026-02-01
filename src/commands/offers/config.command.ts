@@ -7,7 +7,13 @@
  */
 import "./config";
 
-import { createChannelOption, Declare, Options, SubCommand, type GuildCommandContext } from "seyfert";
+import {
+  createChannelOption,
+  Declare,
+  Options,
+  SubCommand,
+  type GuildCommandContext,
+} from "seyfert";
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
 
 import { GuildStore } from "@/db/repositories/guilds";

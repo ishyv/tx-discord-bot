@@ -29,7 +29,7 @@ const economyService = createEconomyAccountService(economyAccountRepo);
 
 @Declare({
   name: "balance",
-  description: "Muestra tu balance de monedas y reputación.",
+  description: "Shows your balance of coins and reputation.",
 })
 @BindDisabled(Features.Economy)
 @Cooldown({
@@ -45,7 +45,7 @@ export default class BalanceCommand extends Command {
     const ensureResult = await economyService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu cuenta económica.")],
+        embeds: [buildErrorEmbed("Could not load your economy account.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -64,9 +64,16 @@ export default class BalanceCommand extends Command {
 
       // Handle specific error types
       if (error instanceof EconomyError) {
-        if (error.code === "ACCOUNT_BLOCKED" || error.code === "ACCOUNT_BANNED") {
+        if (
+          error.code === "ACCOUNT_BLOCKED" ||
+          error.code === "ACCOUNT_BANNED"
+        ) {
           await ctx.write({
-            embeds: [buildAccessDeniedEmbed(error.code === "ACCOUNT_BANNED" ? "banned" : "blocked")],
+            embeds: [
+              buildAccessDeniedEmbed(
+                error.code === "ACCOUNT_BANNED" ? "banned" : "blocked",
+              ),
+            ],
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -74,22 +81,23 @@ export default class BalanceCommand extends Command {
       }
 
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu balance.")],
+        embeds: [buildErrorEmbed("Could not load your balance.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const view = result.unwrap();
-    const embed = buildBalanceEmbed(view, ctx.author.username, ctx.author.avatarURL());
+    const embed = buildBalanceEmbed(
+      view,
+      ctx.author.username,
+      ctx.author.avatarURL(),
+    );
 
     // On first use, show creation notice before balance
     if (isNew) {
       await ctx.write({
-        embeds: [
-          buildAccountCreatedEmbed(ctx.author.username),
-          embed,
-        ],
+        embeds: [buildAccountCreatedEmbed(ctx.author.username), embed],
       });
       return;
     }

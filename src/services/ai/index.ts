@@ -1,20 +1,20 @@
 /**
- * Motivacion: encapsular las llamadas a Gemini y la gestion de memoria contextual.
+ * Motivation: Encapsulate calls to AI providers (Gemini, OpenAI) and contextual memory management.
  *
- * Idea/concepto: este archivo es el "orquestador" del sistema de IA:
- * - resuelve configuracion por guild (provider/model) via `configStore`
- * - mantiene memoria efimera por usuario (userMemory) para conversaciones
- * - expone una API estable consumida por listeners/comandos (`processMessage`, `generateForGuild`)
+ * Idea/concept: This file is the "orchestrator" of the AI system:
+ * - Resolves per-guild configuration (provider/model) via `configStore`
+ * - Maintains ephemeral in-memory storage per user (userMemory) for conversations
+ * - Exposes a stable API consumed by listeners/commands (`processMessage`, `generateForGuild`)
  *
- * Los detalles de cada proveedor viven en modulos dedicados:
+ * Each provider's details live in dedicated modules:
  * - `src/ai/gemini.ts`
  * - `src/ai/openai.ts`
- * y los contratos/constantes compartidas en:
+ * and the shared contracts/constants in:
  * - `src/ai/types.ts`
  * - `src/ai/constants.ts`
  * - `src/ai/response.ts`
  *
- * Alcance: produce texto (o imagenes) a partir de la API; no decide flujos de negocio.
+ * Scope: Produces text (or images) from the API; does not decide business flows.
  */
 import { configStore, ConfigurableModule } from "@/configuration";
 import { getContextMessages } from "@/utils/getContext";
@@ -43,11 +43,11 @@ const providers: Record<AIProviderId, AIProvider> = {
 };
 
 /**
- * Entrada "conversacional" por usuario.
+ * "Conversational" input per user.
  *
- * - Fusiona (opcional) contexto citado + memoria efimera + el mensaje actual
- * - Ejecuta `generateForGuild` (respeta provider/model configurado)
- * - Persiste la memoria usando `meta.rawText` para evitar guardar la nota de truncado
+ * - Merges (optional) quoted context + ephemeral memory + the current message
+ * - Executes `generateForGuild` (respects configured provider/model)
+ * - Persists memory using `meta.rawText` to avoid saving the truncation note
  */
 export const processMessage = async ({
   userId,
@@ -80,12 +80,12 @@ export const processMessage = async ({
   } catch (error) {
     console.error("[processMessage] Error:", error);
     return {
-      text: "Ocurrio un error procesando tu mensaje.",
+      text: "An error occurred while processing your message.",
     };
   }
 };
 
-/** Devuelve los providers disponibles (id/label) para autocomplete/UX. */
+/** Returns available providers (id/label) for autocomplete/UX. */
 export function listProviders(): Array<{ id: AIProviderId; label: string }> {
   return Object.values(providers).map((provider) => ({
     id: provider.id,
@@ -93,37 +93,42 @@ export function listProviders(): Array<{ id: AIProviderId; label: string }> {
   }));
 }
 
-/** Lista modelos conocidos para un provider. */
+/** Lists known models for a provider. */
 export function listModelsForProvider(providerId: string): string[] {
   if (!isProviderAvailable(providerId)) return [];
   return [...providers[providerId].models];
 }
 
-/** Provider default (usado cuando no hay config por guild o la config es invalida). */
+/** Default provider (used when there is no guild config or config is invalid). */
 export function getDefaultProviderId(): AIProviderId {
   return DEFAULT_PROVIDER_ID;
 }
 
-/** Modelo default por provider (usado cuando el modelo guardado no es valido). */
+/** Default model per provider (used when the saved model is not valid). */
 export function getDefaultModelForProvider(providerId: string): string {
   if (!isProviderAvailable(providerId)) return DEFAULT_GEMINI_MODEL;
   return providers[providerId].defaultModel;
 }
 
 /** Type guard para providers soportados. */
-export function isProviderAvailable(providerId: string): providerId is AIProviderId {
+export function isProviderAvailable(
+  providerId: string,
+): providerId is AIProviderId {
   return providerId in providers;
 }
 
-/** Verifica si el modelo existe dentro del provider dado. */
-export function isModelAvailableForProvider(providerId: string, model: string): boolean {
+/** Checks if the model exists within the given provider. */
+export function isModelAvailableForProvider(
+  providerId: string,
+  model: string,
+): boolean {
   return listModelsForProvider(providerId).includes(model);
 }
 
 /**
- * Entrada generica para generar texto segun configuracion de guild.
+ * Generic entry point to generate text according to guild configuration.
  *
- * Uso tipico: listeners (forumAutoReply) y comandos (joke) construyen un prompt y llaman a esto.
+ * Typical use: listeners (forumAutoReply) and commands (joke) build a prompt and call this.
  */
 export async function generateForGuild(options: {
   guildId?: string | null;
@@ -138,7 +143,10 @@ export async function generateForGuild(options: {
 
   // Rate limit check
   if (options.guildId && options.userId) {
-    const config = await configStore.get(options.guildId, ConfigurableModule.AI);
+    const config = await configStore.get(
+      options.guildId,
+      ConfigurableModule.AI,
+    );
     if (config.rateLimitEnabled) {
       const outcome = await aiRateLimiter.consume(
         options.guildId,
@@ -149,7 +157,7 @@ export async function generateForGuild(options: {
 
       if (!outcome.allowed) {
         return {
-          text: `Has alcanzado el limite de **${config.rateLimitMax}** solicitudes por **${config.rateLimitWindow}** segundos en este servidor. Intenta de nuevo en **${Math.ceil((outcome.resetAt - Date.now()) / 1000)}** segundos.`,
+          text: `You have reached the limit of **${config.rateLimitMax}** requests per **${config.rateLimitWindow}** seconds on this server. Try again in **${Math.ceil((outcome.resetAt - Date.now()) / 1000)}** seconds.`,
         };
       }
     }

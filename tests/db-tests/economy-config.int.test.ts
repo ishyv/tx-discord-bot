@@ -8,19 +8,13 @@
  */
 
 import * as GuildsRepo from "../../src/db/repositories/guilds";
-import {
-  guildEconomyRepo,
-  economyAuditRepo,
-} from "../../src/modules/economy";
-import {
-  assert,
-  assertEqual,
-  assertOk,
-  ops,
-  type Suite,
-} from "./_utils";
+import { guildEconomyRepo, economyAuditRepo } from "../../src/modules/economy";
+import { assert, assertEqual, assertOk, ops, type Suite } from "./_utils";
 
-const cleanupGuild = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupGuild = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     await GuildsRepo.deleteGuild(id);
   });
@@ -42,7 +36,9 @@ export const suite: Suite = {
         const before = assertOk(await guildEconomyRepo.ensure(guildId));
         assertEqual(before.tax.rate, 0.05, "default tax rate should be 5%");
 
-        const after = assertOk(await guildEconomyRepo.updateTaxConfig(guildId, { rate: 0.1 }));
+        const after = assertOk(
+          await guildEconomyRepo.updateTaxConfig(guildId, { rate: 0.1 }),
+        );
         assertEqual(after.tax.rate, 0.1, "tax rate should persist");
       },
     },
@@ -56,7 +52,11 @@ export const suite: Suite = {
         await GuildsRepo.ensureGuild(guildId);
         assertOk(await guildEconomyRepo.ensure(guildId));
 
-        const after = assertOk(await guildEconomyRepo.updateTaxConfig(guildId, { taxSector: "works" }));
+        const after = assertOk(
+          await guildEconomyRepo.updateTaxConfig(guildId, {
+            taxSector: "works",
+          }),
+        );
         assertEqual(after.tax.taxSector, "works", "tax sector should persist");
       },
     },
@@ -70,14 +70,28 @@ export const suite: Suite = {
         await GuildsRepo.ensureGuild(guildId);
         assertOk(await guildEconomyRepo.ensure(guildId));
 
-        const after = assertOk(await guildEconomyRepo.updateThresholds(guildId, {
-          warning: 50_000,
-          alert: 500_000,
-          critical: 5_000_000,
-        }));
-        assertEqual(after.thresholds.warning, 50_000, "warning threshold should persist");
-        assertEqual(after.thresholds.alert, 500_000, "alert threshold should persist");
-        assertEqual(after.thresholds.critical, 5_000_000, "critical threshold should persist");
+        const after = assertOk(
+          await guildEconomyRepo.updateThresholds(guildId, {
+            warning: 50_000,
+            alert: 500_000,
+            critical: 5_000_000,
+          }),
+        );
+        assertEqual(
+          after.thresholds.warning,
+          50_000,
+          "warning threshold should persist",
+        );
+        assertEqual(
+          after.thresholds.alert,
+          500_000,
+          "alert threshold should persist",
+        );
+        assertEqual(
+          after.thresholds.critical,
+          5_000_000,
+          "critical threshold should persist",
+        );
       },
     },
     {
@@ -90,25 +104,37 @@ export const suite: Suite = {
 
         await GuildsRepo.ensureGuild(guildId);
         assertOk(await guildEconomyRepo.ensure(guildId));
-        assertOk(await guildEconomyRepo.updateTaxConfig(guildId, { rate: 0.08 }));
+        assertOk(
+          await guildEconomyRepo.updateTaxConfig(guildId, { rate: 0.08 }),
+        );
 
-        const auditCreate = assertOk(await economyAuditRepo.create({
-          operationType: "config_update",
-          actorId,
-          targetId: guildId,
-          guildId,
-          source: "economy-config set tax-rate",
-          metadata: {
-            correlationId: `config_${Date.now()}_test`,
-            key: "tax.rate",
-            before: { rate: 0.05 },
-            after: { rate: 0.08 },
-          },
-        }));
+        const auditCreate = assertOk(
+          await economyAuditRepo.create({
+            operationType: "config_update",
+            actorId,
+            targetId: guildId,
+            guildId,
+            source: "economy-config set tax-rate",
+            metadata: {
+              correlationId: `config_${Date.now()}_test`,
+              key: "tax.rate",
+              before: { rate: 0.05 },
+              after: { rate: 0.08 },
+            },
+          }),
+        );
 
-        assertEqual(auditCreate.operationType, "config_update", "audit operationType should be config_update");
+        assertEqual(
+          auditCreate.operationType,
+          "config_update",
+          "audit operationType should be config_update",
+        );
         assertEqual(auditCreate.actorId, actorId, "audit actorId should match");
-        assertEqual(auditCreate.targetId, guildId, "audit targetId should be guild");
+        assertEqual(
+          auditCreate.targetId,
+          guildId,
+          "audit targetId should be guild",
+        );
         const meta = auditCreate.metadata as { correlationId?: string };
         assert(meta?.correlationId != null, "audit should have correlationId");
 
@@ -119,7 +145,11 @@ export const suite: Suite = {
           pageSize: 10,
         });
         assertOk(query);
-        assertEqual(query.unwrap().entries.length, 1, "query should return the created entry");
+        assertEqual(
+          query.unwrap().entries.length,
+          1,
+          "query should return the created entry",
+        );
       },
     },
     {
@@ -132,9 +162,68 @@ export const suite: Suite = {
         await GuildsRepo.ensureGuild(guildId);
         const config = assertOk(await guildEconomyRepo.ensure(guildId));
 
-        assertEqual(config.daily.dailyReward, 250, "default daily reward should be 250");
-        assertEqual(config.daily.dailyCooldownHours, 24, "default cooldown should be 24h");
-        assertEqual(config.daily.dailyCurrencyId, "coins", "default currency should be coins");
+        assertEqual(
+          config.daily.dailyReward,
+          250,
+          "default daily reward should be 250",
+        );
+        assertEqual(
+          config.daily.dailyCooldownHours,
+          24,
+          "default cooldown should be 24h",
+        );
+        assertEqual(
+          config.daily.dailyCurrencyId,
+          "coins",
+          "default currency should be coins",
+        );
+        assertEqual(
+          config.daily.dailyStreakBonus,
+          5,
+          "default daily streak bonus should be 5",
+        );
+        assertEqual(
+          config.daily.dailyStreakCap,
+          10,
+          "default daily streak cap should be 10",
+        );
+      },
+    },
+    {
+      name: "guild config includes work defaults",
+      ops: [ops.create, ops.read],
+      run: async ({ factory, cleanup }) => {
+        const guildId = factory.guildId();
+        cleanupGuild(cleanup, guildId);
+
+        await GuildsRepo.ensureGuild(guildId);
+        const config = assertOk(await guildEconomyRepo.ensure(guildId));
+
+        assertEqual(
+          config.work.workRewardBase,
+          120,
+          "default work reward should be 120",
+        );
+        assertEqual(
+          config.work.workCooldownMinutes,
+          30,
+          "default work cooldown should be 30m",
+        );
+        assertEqual(
+          config.work.workDailyCap,
+          5,
+          "default work daily cap should be 5",
+        );
+        assertEqual(
+          config.work.workCurrencyId,
+          config.daily.dailyCurrencyId,
+          "default work currency should follow daily currency",
+        );
+        assertEqual(
+          config.work.workPaysFromSector,
+          "works",
+          "default work pays from works sector",
+        );
       },
     },
   ],

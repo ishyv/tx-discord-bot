@@ -5,91 +5,94 @@
 import { z } from "zod";
 
 const TriggerReactAny = z.object({
-    type: z.literal("MESSAGE_REACT_ANY"),
-    args: z.object({}).catch({}),
+  type: z.literal("MESSAGE_REACT_ANY"),
+  args: z.object({}).catch({}),
 });
 
 const TriggerReactSpecific = z.object({
-    type: z.literal("REACT_SPECIFIC"),
-    args: z.object({
-        messageId: z.string(),
-        emojiKey: z.string(),
-    }),
+  type: z.literal("REACT_SPECIFIC"),
+  args: z.object({
+    messageId: z.string(),
+    emojiKey: z.string(),
+  }),
 });
 
 const TriggerMessageContains = z.object({
-    type: z.literal("MESSAGE_CONTAINS"),
-    args: z.object({
-        keywords: z.array(z.string()),
-    }),
+  type: z.literal("MESSAGE_CONTAINS"),
+  args: z.object({
+    keywords: z.array(z.string()),
+  }),
 });
 
 const TriggerReactedThreshold = z.object({
-    type: z.literal("REACTED_THRESHOLD"),
-    args: z.object({
-        emojiKey: z.string(),
-        count: z.number().int(),
-    }),
+  type: z.literal("REACTED_THRESHOLD"),
+  args: z.object({
+    emojiKey: z.string(),
+    count: z.number().int(),
+  }),
 });
 
 const TriggerReputationThreshold = z.object({
-    type: z.literal("REPUTATION_THRESHOLD"),
-    args: z.object({
-        minRep: z.number().int(),
-    }),
+  type: z.literal("REPUTATION_THRESHOLD"),
+  args: z.object({
+    minRep: z.number().int(),
+  }),
 });
 
 const TriggerAntiquityThreshold = z.object({
-    type: z.literal("ANTIQUITY_THRESHOLD"),
-    args: z.object({
-        durationMs: z.number().int(),
-    }),
+  type: z.literal("ANTIQUITY_THRESHOLD"),
+  args: z.object({
+    durationMs: z.number().int(),
+  }),
 });
 
 export const AutoRoleTriggerSchema = z.discriminatedUnion("type", [
-    TriggerReactAny,
-    TriggerReactSpecific,
-    TriggerMessageContains,
-    TriggerReactedThreshold,
-    TriggerReputationThreshold,
-    TriggerAntiquityThreshold,
+  TriggerReactAny,
+  TriggerReactSpecific,
+  TriggerMessageContains,
+  TriggerReactedThreshold,
+  TriggerReputationThreshold,
+  TriggerAntiquityThreshold,
 ]);
 
 export const AutoRoleRuleSchema = z.object({
-    _id: z.string().catch("unknown"),
-    id: z.string().catch("unknown"),
-    guildId: z.string().catch(""),
-    name: z.string().catch(""),
-    roleId: z.string().catch(""),
-    trigger: AutoRoleTriggerSchema.catch({ type: "MESSAGE_REACT_ANY", args: {} }),
-    durationMs: z.number().int().nullable().catch(null),
-    enabled: z.boolean().catch(true),
-    createdBy: z.string().nullable().catch(null),
-    createdAt: z.date().catch(() => new Date(0)),
-    updatedAt: z.date().catch(() => new Date(0)),
+  _id: z.string().catch("unknown"),
+  id: z.string().catch("unknown"),
+  guildId: z.string().catch(""),
+  name: z.string().catch(""),
+  roleId: z.string().catch(""),
+  trigger: AutoRoleTriggerSchema.catch({ type: "MESSAGE_REACT_ANY", args: {} }),
+  durationMs: z.number().int().nullable().catch(null),
+  enabled: z.boolean().catch(true),
+  createdBy: z.string().nullable().catch(null),
+  createdAt: z.date().catch(() => new Date(0)),
+  updatedAt: z.date().catch(() => new Date(0)),
 });
 
 export const AutoRoleGrantSchema = z.object({
-    _id: z.string().catch("unknown"),
-    guildId: z.string().catch(""),
-    userId: z.string().catch(""),
-    roleId: z.string().catch(""),
-    ruleName: z.string().catch(""),
-    type: z.enum(["LIVE", "TIMED"]).catch("LIVE"),
-    expiresAt: z.date().nullable().catch(null),
-    createdAt: z.date().catch(() => new Date(0)),
-    updatedAt: z.date().catch(() => new Date(0)),
+  _id: z.string().catch("unknown"),
+  guildId: z.string().catch(""),
+  userId: z.string().catch(""),
+  roleId: z.string().catch(""),
+  ruleName: z.string().catch(""),
+  type: z.enum(["LIVE", "TIMED"]).catch("LIVE"),
+  expiresAt: z.date().nullable().catch(null),
+  createdAt: z.date().catch(() => new Date(0)),
+  updatedAt: z.date().catch(() => new Date(0)),
 });
 
 export const AutoRoleTallySchema = z.object({
-    _id: z.string(),
-    guildId: z.string(),
-    messageId: z.string(),
-    emojiKey: z.string(),
-    authorId: z.string().catch(""),
-    count: z.number().int().nonnegative().catch(0),
-    createdAt: z.date().optional().catch(() => new Date()),
-    updatedAt: z.date().catch(() => new Date(0)),
+  _id: z.string(),
+  guildId: z.string(),
+  messageId: z.string(),
+  emojiKey: z.string(),
+  authorId: z.string().catch(""),
+  count: z.number().int().nonnegative().catch(0),
+  createdAt: z
+    .date()
+    .optional()
+    .catch(() => new Date()),
+  updatedAt: z.date().catch(() => new Date(0)),
 });
 
 export type AutoRoleTriggerRow = z.infer<typeof AutoRoleTriggerSchema>;

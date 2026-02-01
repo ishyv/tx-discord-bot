@@ -70,7 +70,11 @@ onVoiceStateUpdate(async (payload, client) => {
       title: serverMute ? "Usuario muteado en voz" : "Mute de voz removido",
       description: [
         `Usuario: ${formatUser(userId)}`,
-        newChannelId ? `Canal: <#${newChannelId}>` : oldChannelId ? `Canal: <#${oldChannelId}>` : "Canal desconocido",
+        newChannelId
+          ? `Canal: <#${newChannelId}>`
+          : oldChannelId
+            ? `Canal: <#${oldChannelId}>`
+            : "Canal desconocido",
         `Hora: <t:${now()}:f>`,
       ].join("\n"),
       color: serverMute ? EmbedColors.Red : EmbedColors.Green,
@@ -79,10 +83,16 @@ onVoiceStateUpdate(async (payload, client) => {
 
   if (serverDeaf !== prevServerDeaf) {
     await logModerationAction(client, guildId, {
-      title: serverDeaf ? "Usuario ensordecido en voz" : "Ensordecimiento removido",
+      title: serverDeaf
+        ? "Usuario ensordecido en voz"
+        : "Ensordecimiento removido",
       description: [
         `Usuario: ${formatUser(userId)}`,
-        newChannelId ? `Canal: <#${newChannelId}>` : oldChannelId ? `Canal: <#${oldChannelId}>` : "Canal desconocido",
+        newChannelId
+          ? `Canal: <#${newChannelId}>`
+          : oldChannelId
+            ? `Canal: <#${oldChannelId}>`
+            : "Canal desconocido",
         `Hora: <t:${now()}:f>`,
       ].join("\n"),
       color: serverDeaf ? EmbedColors.Red : EmbedColors.Green,
@@ -91,7 +101,6 @@ onVoiceStateUpdate(async (payload, client) => {
 });
 
 onChannelCreate(async (channel, client) => {
-
   // Solo canales de voz
   if (!(channel.type === ChannelType.GuildVoice)) return;
   if (!channel.isVoice()) return;

@@ -27,7 +27,6 @@ import {
   buildInventoryPageEmbed,
   buildAccessDeniedEmbed,
   buildErrorEmbed,
-
   EconomyError,
   DEFAULT_INVENTORY_PAGINATION,
 } from "@/modules/economy";
@@ -95,9 +94,16 @@ export default class InventoryCommand extends Command {
     if (result.isErr()) {
       const error = result.error;
       if (error instanceof EconomyError) {
-        if (error.code === "ACCOUNT_BLOCKED" || error.code === "ACCOUNT_BANNED") {
+        if (
+          error.code === "ACCOUNT_BLOCKED" ||
+          error.code === "ACCOUNT_BANNED"
+        ) {
           await ctx.write({
-            embeds: [buildAccessDeniedEmbed(error.code === "ACCOUNT_BANNED" ? "banned" : "blocked")],
+            embeds: [
+              buildAccessDeniedEmbed(
+                error.code === "ACCOUNT_BANNED" ? "banned" : "blocked",
+              ),
+            ],
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -115,12 +121,16 @@ export default class InventoryCommand extends Command {
 
     // If single page, just show it directly
     if (pageView.totalPages <= 1 && !searchTerm) {
-      const embed = buildInventoryPageEmbed(pageView, ctx.author.username, ctx.author.avatarURL());
+      const embed = buildInventoryPageEmbed(
+        pageView,
+        ctx.author.username,
+        ctx.author.avatarURL(),
+      );
 
       if (pageView.items.length === 0) {
         embed.setDescription(
           "🎒 **Tu inventario está vacío**\n\n" +
-          "Usa la tienda o participa en eventos para obtener items."
+            "Usa la tienda o participa en eventos para obtener items.",
         );
       }
 

@@ -6,13 +6,7 @@
  * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
  */
 import type { CommandContext, GuildCommandContext, UsingClient } from "seyfert";
-import {
-  Command,
-  createStringOption,
-  Declare,
-  Embed,
-  Options,
-} from "seyfert";
+import { Command, createStringOption, Declare, Embed, Options } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
@@ -130,8 +124,14 @@ async function resolveSuggestChannel(
   guildId: string,
 ): Promise<string | null> {
   const channels = await getGuildChannels(guildId);
-  const core = channels.core as Record<string, { channelId: string } | null | undefined>;
-  const managed = channels.managed as Record<string, { channelId: string } | null | undefined>;
+  const core = channels.core as Record<
+    string,
+    { channelId: string } | null | undefined
+  >;
+  const managed = channels.managed as Record<
+    string,
+    { channelId: string } | null | undefined
+  >;
   const coreChannelId = core?.suggestions?.channelId ?? null;
   if (coreChannelId) {
     const fetched = await fetchStoredChannel(client, coreChannelId, () =>
@@ -153,7 +153,11 @@ async function resolveSuggestChannel(
   const managedChannelId = managed?.suggestions?.channelId ?? null;
   if (managedChannelId) {
     const fetched = await fetchStoredChannel(client, managedChannelId, () =>
-      updateGuildPaths(guildId, {}, { unset: ["channels.managed.suggestions"] }),
+      updateGuildPaths(
+        guildId,
+        {},
+        { unset: ["channels.managed.suggestions"] },
+      ),
     );
     if (fetched.channel && fetched.channelId) {
       if (!fetched.channel.isTextGuild()) {
@@ -168,5 +172,3 @@ async function resolveSuggestChannel(
 
   return CHANNELS_ID.suggestions ?? null;
 }
-
-

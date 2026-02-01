@@ -19,7 +19,10 @@ import {
   type InventoryPaginationOptions,
   type AccountStatus,
 } from "../../src/modules/economy";
-import type { ItemInventory, CurrencyInventory } from "../../src/modules/economy";
+import type {
+  ItemInventory,
+  CurrencyInventory,
+} from "../../src/modules/economy";
 import {
   assert,
   assertEqual,
@@ -33,7 +36,10 @@ import {
 // Service instance for tests
 const economyService = createEconomyAccountService(economyAccountRepo);
 
-const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupUser = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await UsersRepo.deleteUser(id);
     if (res.isErr()) return;
@@ -59,15 +65,31 @@ export const suite: Suite = {
 
         // Ensure creates account
         const result = assertOk(await economyAccountRepo.ensure(userId));
-        assertEqual(result.isNew, true, "ensure should mark as new on first call");
-        assertEqual(result.account.status, "ok", "new account should have ok status");
-        assertEqual(result.account.userId, userId, "account should have correct userId");
+        assertEqual(
+          result.isNew,
+          true,
+          "ensure should mark as new on first call",
+        );
+        assertEqual(
+          result.account.status,
+          "ok",
+          "new account should have ok status",
+        );
+        assertEqual(
+          result.account.userId,
+          userId,
+          "account should have correct userId",
+        );
         assert(result.account.version >= 0, "version should be non-negative");
 
         // Second ensure returns existing
         const second = assertOk(await economyAccountRepo.ensure(userId));
         assertEqual(second.isNew, false, "second ensure should not be new");
-        assertEqual(second.account.version, result.account.version, "version should not change");
+        assertEqual(
+          second.account.version,
+          result.account.version,
+          "version should not change",
+        );
       },
     },
     {
@@ -115,7 +137,10 @@ export const suite: Suite = {
         // Repair should fix it
         const repair = assertOk(await economyAccountRepo.repair(userId));
         assertEqual(repair.wasCorrupted, true, "should detect corruption");
-        assert(repair.repairedFields.includes("status"), "should repair status");
+        assert(
+          repair.repairedFields.includes("status"),
+          "should repair status",
+        );
         assertEqual(repair.account.status, "ok", "status should default to ok");
       },
     },
@@ -140,8 +165,14 @@ export const suite: Suite = {
 
         const repair = assertOk(await economyAccountRepo.repair(userId));
         assertEqual(repair.wasCorrupted, true, "should detect corruption");
-        assert(repair.repairedFields.length >= 2, "should repair multiple date fields");
-        assert(repair.account.createdAt instanceof Date, "createdAt should be a Date");
+        assert(
+          repair.repairedFields.length >= 2,
+          "should repair multiple date fields",
+        );
+        assert(
+          repair.account.createdAt instanceof Date,
+          "createdAt should be a Date",
+        );
       },
     },
     {
@@ -162,8 +193,16 @@ export const suite: Suite = {
 
         // Ensure should auto-repair
         const result = assertOk(await economyAccountRepo.ensure(userId));
-        assertEqual(result.account.status, "ok", "status should be repaired to ok");
-        assertEqual(result.account.version, 0, "version should be repaired to 0");
+        assertEqual(
+          result.account.status,
+          "ok",
+          "status should be repaired to ok",
+        );
+        assertEqual(
+          result.account.version,
+          0,
+          "version should be repaired to 0",
+        );
       },
     },
     {
@@ -178,8 +217,16 @@ export const suite: Suite = {
 
         // Repair should report no corruption
         const repair = assertOk(await economyAccountRepo.repair(userId));
-        assertEqual(repair.wasCorrupted, false, "should not detect corruption on valid data");
-        assertEqual(repair.repairedFields.length, 0, "should not repair any fields");
+        assertEqual(
+          repair.wasCorrupted,
+          false,
+          "should not detect corruption on valid data",
+        );
+        assertEqual(
+          repair.repairedFields.length,
+          0,
+          "should not repair any fields",
+        );
       },
     },
 
@@ -198,11 +245,19 @@ export const suite: Suite = {
 
         // Update status
         const updated = assertOk(
-          await economyAccountRepo.updateStatus(userId, "blocked", initialVersion),
+          await economyAccountRepo.updateStatus(
+            userId,
+            "blocked",
+            initialVersion,
+          ),
         );
         assert(updated !== null, "update should succeed");
         assertEqual(updated!.status, "blocked", "status should be blocked");
-        assertEqual(updated!.version, initialVersion + 1, "version should increment");
+        assertEqual(
+          updated!.version,
+          initialVersion + 1,
+          "version should increment",
+        );
 
         // Verify persisted
         const found = assertOk(await economyAccountRepo.findById(userId));
@@ -221,13 +276,21 @@ export const suite: Suite = {
 
         // First update succeeds
         const first = assertOk(
-          await economyAccountRepo.updateStatus(userId, "blocked", initialVersion),
+          await economyAccountRepo.updateStatus(
+            userId,
+            "blocked",
+            initialVersion,
+          ),
         );
         assert(first !== null, "first update should succeed");
 
         // Second update with old version should return null (conflict)
         const second = assertOk(
-          await economyAccountRepo.updateStatus(userId, "banned", initialVersion),
+          await economyAccountRepo.updateStatus(
+            userId,
+            "banned",
+            initialVersion,
+          ),
         );
         assertEqual(second, null, "concurrent update should return null");
       },
@@ -257,10 +320,20 @@ export const suite: Suite = {
         cleanupUser(cleanup, userId);
 
         const { account } = assertOk(await economyAccountRepo.ensure(userId));
-        assertOk(await economyAccountRepo.updateStatus(userId, "blocked", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            userId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         const result = assertOk(await economyService.checkAccess(userId));
-        assertEqual(result.allowed, false, "blocked account should not have access");
+        assertEqual(
+          result.allowed,
+          false,
+          "blocked account should not have access",
+        );
         assertEqual(result.status, "blocked", "should return blocked status");
       },
     },
@@ -272,12 +345,22 @@ export const suite: Suite = {
         cleanupUser(cleanup, userId);
 
         const { account } = assertOk(await economyAccountRepo.ensure(userId));
-        assertOk(await economyAccountRepo.updateStatus(userId, "blocked", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            userId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         const result = await economyService.getBalanceView(userId);
         assertEqual(result.isErr(), true, "should return error");
         const error = result.error as EconomyError;
-        assertEqual(error.code, "ACCOUNT_BLOCKED", "error should be ACCOUNT_BLOCKED");
+        assertEqual(
+          error.code,
+          "ACCOUNT_BLOCKED",
+          "error should be ACCOUNT_BLOCKED",
+        );
       },
     },
 
@@ -291,7 +374,11 @@ export const suite: Suite = {
         const inventory: ItemInventory = {};
         const page = buildInventoryPage(inventory, { page: 0, pageSize: 6 });
 
-        assertEqual(page.items.length, 0, "empty inventory should have no items");
+        assertEqual(
+          page.items.length,
+          0,
+          "empty inventory should have no items",
+        );
         assertEqual(page.totalItems, 0, "totalItems should be 0");
         assertEqual(page.totalPages, 1, "should have 1 page even when empty");
         assertEqual(page.page, 0, "should be on page 0");
@@ -362,7 +449,11 @@ export const suite: Suite = {
 
         // Request page size 100, should clamp to 25
         const page = buildInventoryPage(inventory, { page: 0, pageSize: 100 });
-        assertEqual(page.items.length <= 25, true, "should not exceed max page size");
+        assertEqual(
+          page.items.length <= 25,
+          true,
+          "should not exceed max page size",
+        );
       },
     },
     {
@@ -433,7 +524,11 @@ export const suite: Suite = {
         assertEqual(summary.uniqueItems, 3, "uniqueItems should count types");
         assertEqual(summary.isEmpty, false, "should not be empty");
         assertEqual(summary.topItems.length, 3, "should have top items");
-        assertEqual(summary.topItems[0].quantity, 5, "top item should have highest quantity");
+        assertEqual(
+          summary.topItems[0].quantity,
+          5,
+          "top item should have highest quantity",
+        );
       },
     },
     {
@@ -447,8 +542,16 @@ export const suite: Suite = {
         };
 
         const summary = buildInventorySummary(inventory);
-        assertEqual(summary.totalItems, 5, "should only count positive quantities");
-        assertEqual(summary.uniqueItems, 1, "should only count items with positive quantity");
+        assertEqual(
+          summary.totalItems,
+          5,
+          "should only count positive quantities",
+        );
+        assertEqual(
+          summary.uniqueItems,
+          1,
+          "should only count items with positive quantity",
+        );
       },
     },
 
@@ -530,10 +633,24 @@ export const suite: Suite = {
         // UserSchema.catch() should repair, NOT erase to undefined
         const user = assertOk(await UsersRepo.findUser(userId));
         assert(user !== null, "user should exist");
-        assert(user!.economyAccount !== undefined, "economyAccount should NOT be undefined after parse failure");
-        assertEqual(user!.economyAccount!.status, "ok", "status should be repaired to ok");
-        assertEqual(user!.economyAccount!.version, 0, "version should be repaired to 0");
-        assert(user!.economyAccount!.createdAt instanceof Date, "createdAt should be a Date");
+        assert(
+          user!.economyAccount !== undefined,
+          "economyAccount should NOT be undefined after parse failure",
+        );
+        assertEqual(
+          user!.economyAccount!.status,
+          "ok",
+          "status should be repaired to ok",
+        );
+        assertEqual(
+          user!.economyAccount!.version,
+          0,
+          "version should be repaired to 0",
+        );
+        assert(
+          user!.economyAccount!.createdAt instanceof Date,
+          "createdAt should be a Date",
+        );
       },
     },
     {
@@ -556,11 +673,22 @@ export const suite: Suite = {
         // Exactly one should be new
         const oneIsNew = (r1.isNew && !r2.isNew) || (!r1.isNew && r2.isNew);
         const bothNotNew = !r1.isNew && !r2.isNew; // Also acceptable: both see existing
-        assert(oneIsNew || bothNotNew, "one should be new, or both should see existing");
+        assert(
+          oneIsNew || bothNotNew,
+          "one should be new, or both should see existing",
+        );
 
         // Both should return the same account data
-        assertEqual(r1.account.userId, userId, "both should return correct userId");
-        assertEqual(r2.account.userId, userId, "both should return correct userId");
+        assertEqual(
+          r1.account.userId,
+          userId,
+          "both should return correct userId",
+        );
+        assertEqual(
+          r2.account.userId,
+          userId,
+          "both should return correct userId",
+        );
       },
     },
     {
@@ -572,24 +700,45 @@ export const suite: Suite = {
 
         // Create and block account
         const { account } = assertOk(await economyAccountRepo.ensure(userId));
-        assertOk(await economyAccountRepo.updateStatus(userId, "blocked", account.version));
+        assertOk(
+          await economyAccountRepo.updateStatus(
+            userId,
+            "blocked",
+            account.version,
+          ),
+        );
 
         // All service methods should return ACCOUNT_BLOCKED error
         const balanceResult = await economyService.getBalanceView(userId);
         assertEqual(balanceResult.isErr(), true, "getBalanceView should error");
-        assertEqual((balanceResult.error as EconomyError).code, "ACCOUNT_BLOCKED", "should be ACCOUNT_BLOCKED");
+        assertEqual(
+          (balanceResult.error as EconomyError).code,
+          "ACCOUNT_BLOCKED",
+          "should be ACCOUNT_BLOCKED",
+        );
 
         const bankResult = await economyService.getBankBreakdown(userId);
         assertEqual(bankResult.isErr(), true, "getBankBreakdown should error");
 
         const invResult = await economyService.getInventorySummary(userId);
-        assertEqual(invResult.isErr(), true, "getInventorySummary should error");
+        assertEqual(
+          invResult.isErr(),
+          true,
+          "getInventorySummary should error",
+        );
 
-        const pageResult = await economyService.getInventoryPage(userId, { page: 0, pageSize: 6 });
+        const pageResult = await economyService.getInventoryPage(userId, {
+          page: 0,
+          pageSize: 6,
+        });
         assertEqual(pageResult.isErr(), true, "getInventoryPage should error");
 
         const profileResult = await economyService.getProfileSummary(userId);
-        assertEqual(profileResult.isErr(), true, "getProfileSummary should error");
+        assertEqual(
+          profileResult.isErr(),
+          true,
+          "getProfileSummary should error",
+        );
       },
     },
     {
@@ -612,7 +761,11 @@ export const suite: Suite = {
         // Service should repair on ensure, then gate on banned status
         const balanceResult = await economyService.getBalanceView(userId);
         assertEqual(balanceResult.isErr(), true, "should error for banned");
-        assertEqual((balanceResult.error as EconomyError).code, "ACCOUNT_BANNED", "should be ACCOUNT_BANNED");
+        assertEqual(
+          (balanceResult.error as EconomyError).code,
+          "ACCOUNT_BANNED",
+          "should be ACCOUNT_BANNED",
+        );
       },
     },
     {
@@ -634,11 +787,18 @@ export const suite: Suite = {
 
         // findById should return the account as-is (without repairing)
         const result1 = assertOk(await economyAccountRepo.findById(userId));
-        assertEqual(result1!.version, 5, "version should remain 5 (not repaired)");
+        assertEqual(
+          result1!.version,
+          5,
+          "version should remain 5 (not repaired)",
+        );
 
         // ensure() will repair
         const ensured = assertOk(await economyAccountRepo.ensure(userId));
-        assert(ensured.account.version > 5 || ensured.isNew === false, "ensure may repair");
+        assert(
+          ensured.account.version > 5 || ensured.isNew === false,
+          "ensure may repair",
+        );
       },
     },
   ],

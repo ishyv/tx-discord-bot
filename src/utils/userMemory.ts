@@ -1,9 +1,9 @@
 /**
- * Motivación: mantener un historial corto por usuario para dar contexto a respuestas de IA sin depender de almacenamiento externo.
+ * Motivation: Maintain a short history per user to provide context for AI responses without depending on external storage.
  *
- * Idea/concepto: usa un Map en memoria con listas de mensajes y operaciones de append/trim que actúan como buffer.
+ * Idea/concept: Uses an in-memory Map with message lists and append/trim operations that act as a buffer.
  *
- * Alcance: limitado a memoria del proceso y a conversaciones recientes; no es un almacenamiento duradero ni distribuido.
+ * Scope: Limited to process memory and recent conversations; it is not durable or distributed storage.
  */
 export interface Message {
   role: string;
@@ -21,20 +21,20 @@ class UserMemoryStore {
   }
 
   /**
-   * Obtiene el historial de un usuario.
+   * Retrieves the history for a user.
    */
   get(userId: string): Message[] {
     return this.memory.get(userId) ?? [];
   }
 
   /**
-   * Agrega un nuevo mensaje al historial del usuario.
+   * Adds a new message to the user's history.
    */
   append(userId: string, message: Message): void {
     const history = this.get(userId);
     history.push(message);
 
-    // Mantener el historial dentro del límite
+    // Keep history within the limit
     if (history.length > this.limit) {
       history.splice(0, history.length - this.limit);
     }
@@ -43,7 +43,7 @@ class UserMemoryStore {
   }
 
   /**
-   * Reemplaza completamente el historial de un usuario.
+   * Completely replaces a user's history.
    */
   set(userId: string, messages: Message[]): void {
     const trimmed = messages.slice(-this.limit);
@@ -51,14 +51,14 @@ class UserMemoryStore {
   }
 
   /**
-   * Borra la memoria de un usuario.
+   * Clears a user's memory.
    */
   clear(userId: string): void {
     this.memory.delete(userId);
   }
 
   /**
-   * Borra toda la memoria de todos los usuarios.
+   * Clears all memory for all users.
    */
   clearAll(): void {
     this.memory.clear();

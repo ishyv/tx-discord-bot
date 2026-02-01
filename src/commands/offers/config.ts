@@ -14,7 +14,10 @@ import { defineConfig, z } from "@/configuration/definitions";
 import { ConfigurableModule } from "@/configuration/constants";
 
 // WHY: allow undefined (missing) and null (explicit reset) to keep commands flexible.
-const CoreChannelSchema = z.object({ channelId: z.string() }).nullable().optional();
+const CoreChannelSchema = z
+  .object({ channelId: z.string() })
+  .nullable()
+  .optional();
 
 /**
  * Configuración del sistema de ofertas.
@@ -37,4 +40,3 @@ declare module "@/configuration/definitions" {
     [ConfigurableModule.Offers]: z.infer<typeof offersConfig>;
   }
 }
-

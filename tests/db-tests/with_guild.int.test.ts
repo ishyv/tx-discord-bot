@@ -1,5 +1,9 @@
 import { deleteGuild } from "../../src/db/repositories/guilds";
-import { ensureGuild, getGuild, withGuild } from "../../src/db/repositories/with_guild";
+import {
+  ensureGuild,
+  getGuild,
+  withGuild,
+} from "../../src/db/repositories/with_guild";
 import {
   assert,
   assertDeepEqual,
@@ -26,7 +30,10 @@ export const suite: Suite = {
         assertEqual(ensured._id, guildId, "ensureGuild should create guild");
 
         const fetched = await getGuild(guildId);
-        assert(fetched !== null && fetched._id === guildId, "getGuild should return guild");
+        assert(
+          fetched !== null && fetched._id === guildId,
+          "getGuild should return guild",
+        );
       },
     },
     {

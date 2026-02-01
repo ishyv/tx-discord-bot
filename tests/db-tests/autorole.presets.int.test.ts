@@ -1,12 +1,10 @@
-import { applyReputationPreset, updateReputationRule } from "../../src/db/repositories/autorole.presets";
+import {
+  applyReputationPreset,
+  updateReputationRule,
+} from "../../src/db/repositories/autorole.presets";
 import { AutoRoleRulesRepo } from "../../src/db/repositories/autorole.repo";
 import { getGuildRules } from "../../src/modules/autorole/cache";
-import {
-  assert,
-  assertEqual,
-  ops,
-  type Suite,
-} from "./_utils";
+import { assert, assertEqual, ops, type Suite } from "./_utils";
 
 export const suite: Suite = {
   name: "autorole presets",
@@ -90,13 +88,25 @@ export const suite: Suite = {
           ],
           "tester",
         );
-        assertEqual(applied.length, 2, "applyReputationPreset should upsert rules");
+        assertEqual(
+          applied.length,
+          2,
+          "applyReputationPreset should upsert rules",
+        );
 
         const rules = await AutoRoleRulesRepo.fetchByGuild(guildId);
-        const repRules = rules.filter((rule) => rule.trigger.type === "REPUTATION_THRESHOLD");
+        const repRules = rules.filter(
+          (rule) => rule.trigger.type === "REPUTATION_THRESHOLD",
+        );
         const names = repRules.map((rule) => rule.name);
-        assert(!names.includes("legacy"), "applyReputationPreset should remove old rules");
-        assert(names.includes("rep-10") && names.includes("rep-20"), "applyReputationPreset should keep new rules");
+        assert(
+          !names.includes("legacy"),
+          "applyReputationPreset should remove old rules",
+        );
+        assert(
+          names.includes("rep-10") && names.includes("rep-20"),
+          "applyReputationPreset should keep new rules",
+        );
 
         const cache = getGuildRules(guildId);
         assert(

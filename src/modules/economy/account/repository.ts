@@ -37,7 +37,6 @@ import {
   type AccountStatus,
   type AccountEnsureResult,
   type AccountRepairResult,
-
   EconomyError,
 } from "./types";
 
@@ -83,11 +82,15 @@ function extractAccount(
   // Check for corruption
   const corruption = detectCorruption(raw);
   if (corruption.length > 0) {
-    console.warn(`[EconomyAccountRepo] Detected corrupted data for user ${userId}, fields: ${corruption.join(", ")}`);
+    console.warn(
+      `[EconomyAccountRepo] Detected corrupted data for user ${userId}, fields: ${corruption.join(", ")}`,
+    );
 
     if (shouldRepair) {
       const repaired = repairEconomyAccount(raw);
-      console.info(`[EconomyAccountRepo] Auto-repaired account for user ${userId}`);
+      console.info(
+        `[EconomyAccountRepo] Auto-repaired account for user ${userId}`,
+      );
       return {
         account: toDomain(userId, repaired),
         wasRepaired: true,
@@ -97,7 +100,9 @@ function extractAccount(
 
   const parsed = EconomyAccountSchema.safeParse(raw);
   if (!parsed.success) {
-    console.warn(`[EconomyAccountRepo] Failed to parse account for user ${userId}, using defaults`);
+    console.warn(
+      `[EconomyAccountRepo] Failed to parse account for user ${userId}, using defaults`,
+    );
     const repaired = repairEconomyAccount(raw);
     return {
       account: toDomain(userId, repaired),
@@ -149,7 +154,9 @@ export interface EconomyAccountRepo {
 }
 
 class EconomyAccountRepoImpl implements EconomyAccountRepo {
-  async findById(userId: UserId): Promise<Result<EconomyAccount | null, Error>> {
+  async findById(
+    userId: UserId,
+  ): Promise<Result<EconomyAccount | null, Error>> {
     const userResult = await UserStore.get(userId);
     if (userResult.isErr()) {
       return ErrResult(userResult.error);
@@ -220,7 +227,10 @@ class EconomyAccountRepoImpl implements EconomyAccountRepo {
     // Handle race condition: if conflict, someone else created it. Re-read and return existing.
     if (result.isErr()) {
       const error = result.error;
-      if (error instanceof Error && error.message === "ECONOMY_ACCOUNT_INIT_CONFLICT") {
+      if (
+        error instanceof Error &&
+        error.message === "ECONOMY_ACCOUNT_INIT_CONFLICT"
+      ) {
         const freshResult = await this.findById(userId);
         if (freshResult.isErr()) return ErrResult(freshResult.error);
         const existing = freshResult.unwrap();
@@ -247,10 +257,14 @@ class EconomyAccountRepoImpl implements EconomyAccountRepo {
       },
       computeNext: (current) => {
         if (!current) {
-          return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "Account does not exist"));
+          return ErrResult(
+            new EconomyError("ACCOUNT_NOT_FOUND", "Account does not exist"),
+          );
         }
         if (current.version !== expectedVersion) {
-          return ErrResult(new EconomyError("CONCURRENT_MODIFICATION", "Version mismatch"));
+          return ErrResult(
+            new EconomyError("CONCURRENT_MODIFICATION", "Version mismatch"),
+          );
         }
         const next: EconomyAccount = {
           ...current,
@@ -261,7 +275,9 @@ class EconomyAccountRepoImpl implements EconomyAccountRepo {
         return OkResult(next);
       },
       commit: (id, _expected, next) =>
-        UserStore.patch(id, { economyAccount: toData(next as EconomyAccount) } as any),
+        UserStore.patch(id, {
+          economyAccount: toData(next as EconomyAccount),
+        } as any),
       project: (updatedUser) => {
         const data = updatedUser.economyAccount;
         return data ? toDomain(userId, data) : null;
@@ -281,7 +297,10 @@ class EconomyAccountRepoImpl implements EconomyAccountRepo {
       );
     } catch (error) {
       // Fire-and-forget: log but don't propagate
-      console.warn(`[EconomyAccountRepo] Failed to touch activity for ${userId}`, error);
+      console.warn(
+        `[EconomyAccountRepo] Failed to touch activity for ${userId}`,
+        error,
+      );
     }
   }
 
@@ -336,18 +355,23 @@ class EconomyAccountRepoImpl implements EconomyAccountRepo {
       updatedAt: new Date(),
     };
 
-    const result = await UserStore.patch(userId, { economyAccount: data } as any);
+    const result = await UserStore.patch(userId, {
+      economyAccount: data,
+    } as any);
     if (result.isErr()) {
       return ErrResult(result.error);
     }
 
     const accountData = result.unwrap().economyAccount;
     if (!accountData) {
-      return ErrResult(new Error("Repair failed: economyAccount still missing after patch"));
+      return ErrResult(
+        new Error("Repair failed: economyAccount still missing after patch"),
+      );
     }
     return OkResult(toDomain(userId, accountData));
   }
 }
 
 /** Singleton instance. */
-export const economyAccountRepo: EconomyAccountRepo = new EconomyAccountRepoImpl();
+export const economyAccountRepo: EconomyAccountRepo =
+  new EconomyAccountRepoImpl();

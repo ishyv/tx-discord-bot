@@ -79,7 +79,8 @@ export default class RepRequestHandler extends ComponentCommand {
     const guildId = ctx.guildId;
     if (!guildId) {
       await ctx.write({
-        content: "No se pudo determinar el servidor para procesar la solicitud.",
+        content:
+          "No se pudo determinar el servidor para procesar la solicitud.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -152,7 +153,12 @@ export default class RepRequestHandler extends ComponentCommand {
     }
     const total = totalResult.unwrap();
     await recordReputationChange(ctx.client, guildId, targetId, amount);
-    await AutoroleService.syncUserReputationRoles(ctx.client, guildId, targetId, total);
+    await AutoroleService.syncUserReputationRoles(
+      ctx.client,
+      guildId,
+      targetId,
+      total,
+    );
 
     const embed = await resolveRequestEmbed(
       ctx,
@@ -178,11 +184,14 @@ export default class RepRequestHandler extends ComponentCommand {
     try {
       await ctx.editResponse(payload);
     } catch (error) {
-      ctx.client.logger?.warn?.("[rep] failed to edit response for rep request", {
-        error,
-        guildId,
-        messageId: ctx.interaction.message?.id,
-      });
+      ctx.client.logger?.warn?.(
+        "[rep] failed to edit response for rep request",
+        {
+          error,
+          guildId,
+          messageId: ctx.interaction.message?.id,
+        },
+      );
     }
 
     await logModerationAction(

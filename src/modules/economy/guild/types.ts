@@ -5,6 +5,7 @@
  */
 
 import type { CurrencyId } from "../currency";
+import type { ProgressionConfig } from "../progression/types";
 import type { GuildId } from "@/db/types";
 
 /** Economy sectors for guild treasury. */
@@ -83,6 +84,14 @@ export interface DailyConfig {
   readonly dailyCooldownHours: number;
   /** Currency ID for daily reward (default "coins"). */
   readonly dailyCurrencyId: string;
+  /** Fee rate for daily claim (0.00-0.20, default 0.00) */
+  readonly dailyFeeRate: number;
+  /** Sector to deposit daily fee (default: "tax") */
+  readonly dailyFeeSector: EconomySector;
+  /** Bonus per streak day (default 5). */
+  readonly dailyStreakBonus: number;
+  /** Max streak days counted for bonus (default 10). */
+  readonly dailyStreakCap: number;
 }
 
 /** Default daily config. */
@@ -90,6 +99,71 @@ export const DEFAULT_DAILY_CONFIG: DailyConfig = {
   dailyReward: 250,
   dailyCooldownHours: 24,
   dailyCurrencyId: "coins",
+  dailyFeeRate: 0.0,
+  dailyFeeSector: "tax",
+  dailyStreakBonus: 5,
+  dailyStreakCap: 10,
+};
+
+/** Work claim configuration (guild-scoped). */
+export interface WorkConfig {
+  /** Base amount granted per work claim (historic/deprecated if using hybrid). */
+  readonly workRewardBase: number;
+  /** Base amount minted per work claim (integer, default 100). */
+  readonly workBaseMintReward: number;
+  /** Max additional bonus from guild works sector (integer, default 100). */
+  readonly workBonusFromWorksMax: number;
+  /** Scale mode for bonus calculation ("flat" | "percent", default "flat"). */
+  readonly workBonusScaleMode: "flat" | "percent";
+  /** Cooldown in minutes between work claims (default 30). */
+  readonly workCooldownMinutes: number;
+  /** Max work claims per day (default 5). */
+  readonly workDailyCap: number;
+  /** Currency ID for work reward (default: same as dailyCurrencyId). */
+  readonly workCurrencyId: string;
+  /** Sector to pay work rewards from (default: "works"). */
+  readonly workPaysFromSector: EconomySector;
+  /** Optional failure chance (0-1, default 0.10). */
+  readonly workFailureChance: number;
+}
+
+/** Default work config. */
+export const DEFAULT_WORK_CONFIG: WorkConfig = {
+  workRewardBase: 120,
+  workBaseMintReward: 100,
+  workBonusFromWorksMax: 100,
+  workBonusScaleMode: "flat",
+  workCooldownMinutes: 30,
+  workDailyCap: 5,
+  workCurrencyId: DEFAULT_DAILY_CONFIG.dailyCurrencyId,
+  workPaysFromSector: "works",
+  workFailureChance: 0.1,
+};
+
+/** Feature flags for high-risk economy systems (runtime kill switches). */
+export interface EconomyFeatureFlags {
+  /** Coinflip minigame enabled (default: true) */
+  readonly coinflip: boolean;
+  /** Trivia minigame enabled (default: true) */
+  readonly trivia: boolean;
+  /** Rob minigame enabled (default: true) */
+  readonly rob: boolean;
+  /** Voting system enabled (default: true) */
+  readonly voting: boolean;
+  /** Crafting system enabled (default: true) */
+  readonly crafting: boolean;
+  /** Store system enabled (default: true) */
+  readonly store: boolean;
+}
+
+/** Default feature flags (all enabled). */
+export const DEFAULT_FEATURE_FLAGS: EconomyFeatureFlags = {
+  coinflip: true,
+  trivia: true,
+  rob: true,
+  voting: true,
+  crafting: true,
+  store: true,
 };
 
 /** Guild economy configuration stored per guild. */
@@ -99,12 +173,40 @@ export interface GuildEconomyConfig {
   readonly tax: TaxConfig;
   readonly thresholds: TransferThresholds;
   readonly daily: DailyConfig;
+  readonly work: WorkConfig;
+  readonly progression: ProgressionConfig;
+  readonly features: EconomyFeatureFlags;
   readonly updatedAt: Date;
   readonly version: number;
 }
 
 /** Operation types that can be taxed. */
-export type TaxableOperationType = "transfer" | "store_purchase" | "store_sell" | "works_reward";
+export type TaxableOperationType =
+  | "transfer"
+  | "store_purchase"
+  | "store_sell"
+  | "works_reward";
+
+/** Default XP configuration per guild. */
+export const DEFAULT_PROGRESSION_CONFIG: ProgressionConfig = {
+  enabled: true,
+  xpAmounts: {
+    daily_claim: 60,
+    work_claim: 25,
+    store_buy: 15,
+    store_sell: 10,
+    quest_complete: 120,
+    craft: 10,
+  },
+  cooldownSeconds: {
+    daily_claim: 0,
+    work_claim: 0,
+    store_buy: 15,
+    store_sell: 15,
+    quest_complete: 0,
+    craft: 0,
+  },
+};
 
 /** Input for depositing to a sector. */
 export interface DepositToSectorInput {

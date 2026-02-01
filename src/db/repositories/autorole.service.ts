@@ -10,8 +10,9 @@ export const grantByRule = async (
   return res.unwrap();
 };
 
-export const revokeByRule = (options: Parameters<typeof AutoroleService.revokeByRule>[0]) =>
-  AutoroleService.revokeByRule(options);
+export const revokeByRule = (
+  options: Parameters<typeof AutoroleService.revokeByRule>[0],
+) => AutoroleService.revokeByRule(options);
 
 export const purgeRule = (
   client: Parameters<typeof AutoroleService.purgeRule>[0],

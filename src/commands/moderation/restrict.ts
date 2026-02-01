@@ -25,36 +25,36 @@ import {
 import { isSnowflake } from "@/utils/snowflake";
 
 const TYPE_TRANSLATIONS: Record<string, string> = {
-  forums: "Foros",
-  voice: "Voz",
-  jobs: "Empleos",
-  all: "Todo",
+  forums: "Forums",
+  voice: "Voice",
+  jobs: "Jobs",
+  all: "All",
 };
 
 const options = {
   user: createUserOption({
-    description: "Usuario a restringir",
+    description: "User to restrict",
     required: true,
   }),
   type: createStringOption({
-    description: "Tipo de restringir",
+    description: "Restriction type",
     required: true,
     choices: [
-      { name: "Foros", value: "forums" },
-      { name: "Voz", value: "voice" },
-      { name: "Empleos", value: "jobs" },
-      { name: "Todo", value: "all" },
+      { name: "Forums", value: "forums" },
+      { name: "Voice", value: "voice" },
+      { name: "Jobs", value: "jobs" },
+      { name: "All", value: "all" },
     ],
   }),
   reason: createStringOption({
-    description: "Razón de la restricción",
+    description: "Reason for the restriction",
     required: true,
   }),
 };
 
 @Declare({
   name: "restrict",
-  description: "Restringir de los foros y canales a un usuario",
+  description: "Restrict a user from forums and channels",
   defaultMemberPermissions: ["MuteMembers"],
   botPermissions: ["ManageRoles"],
   contexts: ["Guild"],
@@ -70,7 +70,7 @@ export default class RestrictCommand extends Command {
     if (ctx.author.id === user.id)
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ No podés restringirte a vos mismo.",
+        content: "❌ You cannot restrict yourself.",
       });
 
     const targetMember =
@@ -80,20 +80,20 @@ export default class RestrictCommand extends Command {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "❌ No se pudo encontrar al miembro a restringir en el servidor.",
+          "❌ Could not find the member to restrict in the server.",
       });
 
     if (!(await targetMember.moderatable()))
       return ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "❌ No podés restringir a un usuario con un rol igual o superior al tuyo.",
+          "❌ You cannot restrict a user with a role equal to or higher than yours.",
       });
 
     if (!ctx.guildId || !isSnowflake(ctx.guildId) || !isSnowflake(user.id)) {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ IDs invalidos. Intenta nuevamente.",
+        content: "❌ Invalid IDs. Try again.",
       });
     }
 
@@ -114,7 +114,8 @@ export default class RestrictCommand extends Command {
     if (invalidRole) {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ Rol de restricción inválido configurado. Contacta al staff.",
+        content:
+          "❌ Invalid restriction role configured. Contact staff.",
       });
     }
 
@@ -127,16 +128,16 @@ export default class RestrictCommand extends Command {
     }
 
     const successEmbed = new Embed({
-      title: "Usuario restringido correctamente",
+      title: "User restricted correctly",
       description: `
-        El usuario **${ctx.options.user.username}** fue restringido exitosamente.
+        The user **${ctx.options.user.username}** was successfully restricted.
 
-        **Razón:** ${reason}
-        **Restricción:** ${TYPE_TRANSLATIONS[type]}
+        **Reason:** ${reason}
+        **Restriction:** ${TYPE_TRANSLATIONS[type]}
       `,
       color: EmbedColors.Green,
       footer: {
-        text: `Restringido por ${ctx.author.username}`,
+        text: `Restricted by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
       },
     });
@@ -147,17 +148,17 @@ export default class RestrictCommand extends Command {
     });
 
     await GuildLogger.banSanctionLog({
-      title: "Usuario restringido",
+      title: "User restricted",
       color: EmbedColors.DarkOrange,
       thumbnail: await user.avatarURL(),
       fields: [
         {
-          name: "Usuario",
+          name: "User",
           value: `${user.username} (${user.id})`,
           inline: true,
         },
-        { name: "Razón", value: reason, inline: false },
-        { name: "Restricción", value: TYPE_TRANSLATIONS[type], inline: false },
+        { name: "Reason", value: reason, inline: false },
+        { name: "Restriction", value: TYPE_TRANSLATIONS[type], inline: false },
       ],
       footer: {
         text: `${ctx.author.username} (${ctx.author.id})`,

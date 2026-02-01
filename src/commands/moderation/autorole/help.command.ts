@@ -10,12 +10,7 @@
  * Keeping it as a command avoids relying on external docs while we iterate.
  */
 
-import {
-  Declare,
-  Embed,
-  SubCommand,
-  type GuildCommandContext,
-} from "seyfert";
+import { Declare, Embed, SubCommand, type GuildCommandContext } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 
 import { requireAutoroleContext } from "./shared";

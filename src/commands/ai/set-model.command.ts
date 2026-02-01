@@ -6,7 +6,13 @@
  * Alcance: valida y persiste el modelo en la configuracion por guild.
  */
 import type { GuildCommandContext } from "seyfert";
-import { Declare, Options, SubCommand, createStringOption, Middlewares } from "seyfert";
+import {
+  Declare,
+  Options,
+  SubCommand,
+  createStringOption,
+  Middlewares,
+} from "seyfert";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import {
@@ -52,7 +58,8 @@ export default class AiSetModelCommand extends SubCommand {
 
     if (!isProviderAvailable(providerId)) {
       await ctx.write({
-        content: "El proveedor configurado no es valido. Usa /ai set-provider primero.",
+        content:
+          "El proveedor configurado no es valido. Usa /ai set-provider primero.",
       });
       return;
     }

@@ -1,7 +1,13 @@
 import { readdir } from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
-import { ensureTestEnv, connectDb, shutdownDb, getNamespace, getSeed } from "./_utils/env";
+import {
+  ensureTestEnv,
+  connectDb,
+  shutdownDb,
+  getNamespace,
+  getSeed,
+} from "./_utils/env";
 import { printGlobalSummary, runSuites, type Suite } from "./_utils/runner";
 
 const TEST_SUFFIX = ".int.test.ts";

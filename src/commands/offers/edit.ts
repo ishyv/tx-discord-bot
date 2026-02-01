@@ -71,10 +71,18 @@ export default class OfferEditCommand extends SubCommand {
           return;
         }
 
-        const updatedResult = await editOfferContent(ctx.client, offer, details, embed);
+        const updatedResult = await editOfferContent(
+          ctx.client,
+          offer,
+          details,
+          embed,
+        );
 
         if (updatedResult.isErr()) {
-          const message = updatedResult.error instanceof Error ? updatedResult.error.message : "Error desconocido editando la oferta.";
+          const message =
+            updatedResult.error instanceof Error
+              ? updatedResult.error.message
+              : "Error desconocido editando la oferta.";
           await ctx.followup?.({
             content: `No se pudo editar la oferta: ${message}`,
             flags: MessageFlags.Ephemeral,
@@ -93,7 +101,8 @@ export default class OfferEditCommand extends SubCommand {
         }
 
         await ctx.followup?.({
-          content: "Oferta actualizada. Volvió a estado *Pendiente de revisión*.",
+          content:
+            "Oferta actualizada. Volvió a estado *Pendiente de revisión*.",
           flags: MessageFlags.Ephemeral,
         });
       },

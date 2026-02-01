@@ -12,10 +12,7 @@
  */
 
 import type { CurrencyInventory } from "../currency";
-import {
-  type BankBreakdownView,
-  EMPTY_BANK_BREAKDOWN,
-} from "../account/types";
+import { type BankBreakdownView, EMPTY_BANK_BREAKDOWN } from "../account/types";
 
 /** Coin value shape in inventory. */
 interface CoinValue {

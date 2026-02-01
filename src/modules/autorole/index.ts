@@ -1,6 +1,6 @@
 /**
  * Autorole Module
- * 
+ *
  * Consolidates fragmented autorole logic into a single module.
  */
 

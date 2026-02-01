@@ -14,12 +14,12 @@ import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   channel: createChannelOption({
-    description: "Canal donde enviar reportes de AutoMod",
+    description: "Channel where AutoMod reports will be sent",
     required: false,
     channel_types: [ChannelType.GuildText],
   }),
   clear: createBooleanOption({
-    description: "Quitar canal de reportes",
+    description: "Remove reports channel",
     required: false,
   }),
 };
@@ -27,7 +27,7 @@ const options = {
 @Options(options)
 @Declare({
   name: "reportchannel",
-  description: "Configurar el canal de reportes de AutoMod",
+  description: "Configure the AutoMod reports channel",
 })
 @Guard({
   guildOnly: true,
@@ -40,17 +40,24 @@ export default class AutomodReportChannelCommand extends SubCommand {
     const { channel, clear } = ctx.options;
 
     if (!channel && !clear) {
-      const config = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+      const config = await configStore.get(
+        guildId,
+        ConfigurableModule.AutomodLinkSpam,
+      );
       await ctx.write({
-        content: `**AutoMod reportes:** ${
-          config.reportChannelId ? `<#${config.reportChannelId}>` : "(no configurado)"
-        }`,
+        content: `**AutoMod reports:** ${config.reportChannelId
+            ? `<#${config.reportChannelId}>`
+            : "(not configured)"
+          }`,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const current = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+    const current = await configStore.get(
+      guildId,
+      ConfigurableModule.AutomodLinkSpam,
+    );
     const updates: Partial<typeof current> = {};
     if (clear) {
       updates.reportChannelId = null;
@@ -58,7 +65,7 @@ export default class AutomodReportChannelCommand extends SubCommand {
     if (channel) {
       if (!isSnowflake(channel.id)) {
         await ctx.write({
-          content: "Canal invalido. El ID no es un snowflake valido.",
+          content: "Invalid channel. The ID is not a valid snowflake.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -67,12 +74,16 @@ export default class AutomodReportChannelCommand extends SubCommand {
     }
 
     await configStore.set(guildId, ConfigurableModule.AutomodLinkSpam, updates);
-    const updated = await configStore.get(guildId, ConfigurableModule.AutomodLinkSpam);
+    const updated = await configStore.get(
+      guildId,
+      ConfigurableModule.AutomodLinkSpam,
+    );
 
     await ctx.write({
-      content: `**AutoMod reportes actualizado:** ${
-        updated.reportChannelId ? `<#${updated.reportChannelId}>` : "(no configurado)"
-      }`,
+      content: `**AutoMod reports updated:** ${updated.reportChannelId
+          ? `<#${updated.reportChannelId}>`
+          : "(not configured)"
+        }`,
       flags: MessageFlags.Ephemeral,
     });
   }

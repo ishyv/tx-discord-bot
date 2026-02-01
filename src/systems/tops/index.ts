@@ -21,7 +21,10 @@ import {
   type TopWindow,
 } from "@/db/repositories";
 import { format as formatMs } from "@/utils/ms";
-import { fetchStoredChannel, isUnknownChannelError } from "@/utils/channelGuard";
+import {
+  fetchStoredChannel,
+  isUnknownChannelError,
+} from "@/utils/channelGuard";
 
 const SWEEP_INTERVAL_MS = 60_000;
 const inFlight = new Set<string>();
@@ -53,9 +56,12 @@ const toChannelId = (payload: MessageLike): string | null => {
 };
 
 const CUSTOM_EMOJI_REGEX = /<a?:[a-zA-Z0-9_~-]+:(\d+)>/g;
-const UNICODE_EMOJI_REGEX = /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu;
+const UNICODE_EMOJI_REGEX =
+  /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu;
 
-const extractEmojiOccurrences = (content: string | null | undefined): string[] => {
+const extractEmojiOccurrences = (
+  content: string | null | undefined,
+): string[] => {
   if (!content) return [];
   const result: string[] = [];
 
@@ -90,9 +96,7 @@ const pickTopEntries = (
   const entries = Object.entries(map ?? {});
   const filtered = filter ? entries.filter(filter) : entries;
 
-  return filtered
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, Math.max(1, size));
+  return filtered.sort((a, b) => b[1] - a[1]).slice(0, Math.max(1, size));
 };
 
 const formatTopLines = (
@@ -101,9 +105,7 @@ const formatTopLines = (
   emptyFallback: string,
 ): string => {
   if (!entries.length) return emptyFallback;
-  return entries
-    .map((entry, index) => formatter(entry, index))
-    .join("\n");
+  return entries.map((entry, index) => formatter(entry, index)).join("\n");
 };
 
 const buildReportEmbed = (
@@ -129,7 +131,8 @@ const buildReportEmbed = (
 
   const channelLines = formatTopLines(
     topChannels,
-    ([channelId, count], index) => `**${index + 1}.** <#${channelId}> — ${count}`,
+    ([channelId, count], index) =>
+      `**${index + 1}.** <#${channelId}> — ${count}`,
     "Sin mensajes en los canales monitoreados.",
   );
 
@@ -159,9 +162,7 @@ const buildReportEmbed = (
   return embed;
 };
 
-const isActive = (
-  window: TopWindow | null,
-): window is TopWindow => {
+const isActive = (window: TopWindow | null): window is TopWindow => {
   if (!window) return false;
   return Boolean(window.intervalMs > 0 && window.channelId != null);
 };
@@ -171,9 +172,13 @@ async function sendReport(
   window: TopWindow,
   now: Date,
 ): Promise<boolean> {
-  const resolved = await fetchStoredChannel(client, window.channelId, async () => {
-    await updateTopConfig(window.guildId, { channelId: null });
-  });
+  const resolved = await fetchStoredChannel(
+    client,
+    window.channelId,
+    async () => {
+      await updateTopConfig(window.guildId, { channelId: null });
+    },
+  );
   if (!resolved.channelId || !resolved.channel) return false;
   if (!resolved.channel.isTextGuild()) {
     return false;
@@ -204,7 +209,9 @@ async function sendReport(
 }
 
 const hasIntervalElapsed = (window: TopWindow, now: Date): boolean => {
-  const start = window.windowStartedAt?.getTime?.() ?? new Date(window.windowStartedAt).getTime();
+  const start =
+    window.windowStartedAt?.getTime?.() ??
+    new Date(window.windowStartedAt).getTime();
   const dueAt = start + Number(window.intervalMs ?? 0);
   return now.getTime() >= dueAt;
 };
@@ -240,10 +247,13 @@ async function emitIfDue(
         },
       });
     } catch (error) {
-      client.logger?.error?.("[tops] no se pudo guardar el historial de reporte", {
-        error,
-        guildId,
-      });
+      client.logger?.error?.(
+        "[tops] no se pudo guardar el historial de reporte",
+        {
+          error,
+          guildId,
+        },
+      );
     }
 
     await rotateWindowAfterReport(guildId, now);

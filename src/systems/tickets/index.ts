@@ -1,24 +1,24 @@
 /**
  * Ticket system entrypoint: keeps UI prompts, modal builders, and limits in one place.
  *
- * Encaje: puente entre comandos/componentes y los servicios de tickets (repositorios,
- * features, canales). Aquí se definen los IDs de componentes, el payload inicial y
- * los invariantes de deduplicación del mensaje de tickets por guild.
+ * Context: Bridge between commands/components and ticket services (repositories,
+ * features, channels). Component IDs, the initial payload, and the 
+ * deduplication invariants of the ticket message per guild are defined here.
  *
- * Dependencias relevantes: config de canales (`guild-channels`), feature flags,
- * `channelGuard` para sanear rutas rotas, `updateGuildPaths` para persistir el
- * mensaje/IDs, y `openTicket` para crear el canal real.
+ * Key Dependencies: Channel config (`guild-channels`), feature flags,
+ * `channelGuard` to clean up broken paths, `updateGuildPaths` to persist 
+ * messages/IDs, and `openTicket` to create the actual channel.
  *
- * Invariantes clave:
- * - Un único mensaje de ticket por guild (`channels.ticketMessageId`), con customId
- *   prefijado `tickets:*` para compatibilidad hacia atrás.
- * - Los componentes solo se renderizan si la feature `Tickets` está habilitada.
- * - Los IDs guardados se limpian si el canal desaparece; no se reintenta en bucle.
+ * Key Invariants:
+ * - A single ticket message per guild (`channels.ticketMessageId`), with 
+ *   prefixed customId `tickets:*` for backward compatibility.
+ * - Components are only rendered if the `Tickets` feature is enabled.
+ * - Saved IDs are cleared if the channel disappears; no infinite retries.
  *
- * Gotchas: el selector se recrea si falta el mensaje o el bot encuentra prompts
- * obsoletos; si cambian los prefixes/customIds, los handlers (`components/*`) dejan
- * de matchear. No asume perms elevados: fallos de listado/borrado quedan logueados
- * pero no abortan el boot.
+ * Gotchas: The selector is recreated if the message is missing or the bot 
+ * finds obsolete prompts; if prefixes/customIds change, handlers (`components/*`) 
+ * stop matching. Does not assume high perms: listing/deletion failures stay 
+ * logged but do not abort boot.
  */
 
 import {
@@ -57,32 +57,32 @@ export interface TicketCategory {
 export const TICKET_CATEGORIES: readonly TicketCategory[] = [
   {
     id: "report",
-    label: "Reportar",
-    description: "Denunciar mal comportamiento de otros usuarios.",
+    label: "Report",
+    description: "Report bad behavior from other users.",
     emoji: "\u2757",
   },
   {
     id: "featured",
-    label: "Aviso Destacado",
-    description: "Compra o consulta por publicidad en el servidor.",
+    label: "Featured Notice",
+    description: "Inquire about or purchase advertisement on the server.",
     emoji: "\uD83D\uDCE3",
   },
   {
     id: "workshop",
-    label: "Quiero dar un Taller",
-    description: "Quieres dar un taller en el servidor?",
+    label: "I want to give a Workshop",
+    description: "Do you want to host a workshop on the server?",
     emoji: "\uD83C\uDF93",
   },
   {
     id: "alliance",
-    label: "Solicitar alianza de servidor",
-    description: "Minimo 300 usuarios y debe cumplir la ToS de Discord.",
+    label: "Request server alliance",
+    description: "Minimum 300 users and must comply with Discord TOS.",
     emoji: "\uD83E\uDD1D",
   },
   {
     id: "general",
     label: "General",
-    description: "Si ninguna de las opciones anteriores aplica.",
+    description: "If none of the options above apply.",
     emoji: "\u2754",
   },
 ] as const;
@@ -112,19 +112,19 @@ function messageHasTicketSelector(message: unknown): boolean {
 /**
  * Ensure a single ticket prompt per guild, recreating or cleaning as needed.
  *
- * Propósito: idempotentizar el mensaje principal del sistema de tickets para que
- * comandos/listeners no dupliquen prompts ni se queden con referencias rotas.
+ * Purpose: Idempotize the main ticket system message so commands/listeners 
+ * don't duplicate prompts or end up with broken references.
  *
- * Parámetros: `client` Seyfert con acceso a guilds/messages y logger opcional.
- * Retorno: `Promise<void>` best-effort (no lanza; loguea warnings/errores).
- * Side effects: lee/writing en Discord (listar/borrar/crear mensajes) y en DB
- * (`updateGuildPaths` cuando limpia rutas o persiste el nuevo mensaje).
- * Invariantes: respeta feature flag `Tickets`; mantiene solo un mensaje cuyo
- * `customId` inicia con `tickets:category`; conserva el primer prompt válido y
- * borra duplicados posteriores del bot.
- * Gotchas: si el canal configurado deja de existir o no es texto, se omite y se
- * loguea; cambios de `customId` requieren actualizar los handlers registrados.
- * Ejemplo: se invoca en boot y tras `/tickets config` para refrescar el prompt.
+ * Parameters: Seyfert `client` with access to guilds/messages and optional logger.
+ * Returns: Best-effort `Promise<void>` (does not throw; logs warnings/errors).
+ * Side effects: Reads/writes on Discord (listing/deleting/creating messages) 
+ * and DB (`updateGuildPaths` when clearing paths or persisting the new message).
+ * Invariants: Respects feature flag `Tickets`; maintains only one message 
+ * whose `customId` starts with `tickets:category`; keeps the first valid prompt 
+ * and deletes subsequent bot duplicates.
+ * Gotchas: If the configured channel disappears or is not text, it is skipped 
+ * and logged; `customId` changes require updating registered handlers.
+ * Example: Invoked during boot and after `/tickets config` to refresh the prompt.
  */
 export async function ensureTicketMessage(client: UsingClient): Promise<void> {
   const guilds = await client.guilds.list();
@@ -201,13 +201,13 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
 
     const prompts = botId
       ? recent.filter(
-          (m) => m?.author?.id === botId && messageHasTicketSelector(m),
-        )
+        (m) => m?.author?.id === botId && messageHasTicketSelector(m),
+      )
       : recent.filter((m) => messageHasTicketSelector(m));
 
     if (prompts.length > 0) {
-      // WHY: conservamos el primer prompt válido para no romper referencias previas
-      // (p.ej. logs o tickets abiertos que citan el mensaje); el resto se purga.
+      // WHY: We keep the first valid prompt to avoid breaking previous references
+      // (e.g. logs or open tickets quoting the message); the rest are purged.
       const keep = prompts[0];
 
       for (const m of prompts.slice(1)) {
@@ -262,16 +262,16 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
 }
 
 /**
- * Construye el modal de creación de ticket para una categoría.
+ * Builds the ticket creation modal for a category.
  *
- * Parámetros: `category` (id/label/desc/emoji) usado para customId y texto.
- * Retorno: instancia `Modal` con input obligatorio `ticket_details`.
- * Side effects: ninguno hasta que `run` se ejecuta; el callback crea canal y
- * escribe mensajes.
- * Invariantes: customId `${TICKET_MODAL_PREFIX}:{id}` debe alinearse con los
- * handlers/filters; el input se valida con min/max y es requerido.
- * Errores: respuestas de usuario o fallos de red se devuelven vía `ctx.write`
- * con `MessageFlags.Ephemeral`.
+ * Parameters: `category` (id/label/desc/emoji) used for customId and text.
+ * Returns: `Modal` instance with required input `ticket_details`.
+ * Side effects: None until `run` is executed; the callback creates the 
+ * channel and writes messages.
+ * Invariants: customId `${TICKET_MODAL_PREFIX}:{id}` must align with 
+ * handlers/filters; input is validated with min/max and is required.
+ * Errors: User responses or network failures are returned via `ctx.write` 
+ * with `MessageFlags.Ephemeral`.
  */
 export function buildTicketModal(category: TicketCategory): Modal {
   return (
@@ -282,9 +282,9 @@ export function buildTicketModal(category: TicketCategory): Modal {
         new ActionRow<TextInput>().addComponents(
           new TextInput()
             .setCustomId(TICKET_DETAILS_INPUT_ID)
-            .setLabel("Describe tu solicitud")
+            .setLabel("Describe your request")
             .setPlaceholder(
-              "Incluye contexto, enlaces o evidencias que consideres necesarias.",
+              "Include context, links, or evidence you deem necessary.",
             )
             .setRequired(true)
             .setLength({ min: 8, max: 1000 })
@@ -301,7 +301,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
         if (!guildId) {
           await ctx.write({
             content:
-              "No se pudo crear el ticket porque no pudimos detectar el servidor.",
+              "Could not create the ticket because the server was not detected.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -309,7 +309,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
 
         if (!userId) {
           await ctx.write({
-            content: "No pudimos identificar tu usuario. Intentalo nuevamente.",
+            content: "We could not identify your user. Please try again.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -322,7 +322,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
         if (!ticketsEnabled) {
           await ctx.write({
             content:
-              "El sistema de tickets está deshabilitado actualmente por los administradores.",
+              "The ticket system is currently disabled by administrators.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -349,7 +349,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
         if (!ticketCategoryId || !fetchedCategory.channel) {
           await ctx.write({
             content:
-              "No hay una categoria configurada para tickets. Avisale a un administrador.",
+              "No ticket category is configured. Please inform an administrator.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -370,8 +370,8 @@ export function buildTicketModal(category: TicketCategory): Modal {
         if (opened.isErr()) {
           const reason =
             opened.error?.message === "TICKET_LIMIT_REACHED"
-              ? "Ya tienes un ticket abierto. Cierra el anterior antes de crear uno nuevo."
-              : "Ocurrio un error al crear tu ticket. Intentalo nuevamente en unos segundos.";
+              ? "You already have an open ticket. Please close the previous one before creating a new one."
+              : "An error occurred while creating your ticket. Please try again in a few seconds.";
           if (opened.error?.message !== "TICKET_LIMIT_REACHED") {
             ctx.client.logger?.error?.("[tickets] failed to open ticket", {
               error: opened.error,
@@ -392,22 +392,22 @@ export function buildTicketModal(category: TicketCategory): Modal {
           .setColor(Colors.info)
           .setTitle(`Ticket - ${category.label}`)
           .setDescription(
-            "Por favor, agrega toda la informacion relevante a tu solicitud mientras esperas...",
+            "Please add all relevant information to your request while you wait...",
           )
           .setFooter({
-            text: `Creado por ${ctx.user?.username || "???"}`,
+            text: `Created by ${ctx.user?.username || "???"}`,
           });
 
         const reasonEmbed = new Embed()
           .setColor(Colors.info)
-          .setTitle("Razon del Ticket")
+          .setTitle("Ticket Reason")
           .setDescription(content);
 
         const row = new ActionRow<Button>().addComponents(
           new Button()
             .setCustomId(`${TICKET_CLOSE_BUTTON_ID}:${ticketChannelId}`)
-            .setLabel("Cerrar Ticket")
-            .setStyle(ButtonStyle.Danger), // Discord no admite botones naranja; Danger es lo más cercano.
+            .setLabel("Close Ticket")
+            .setStyle(ButtonStyle.Danger), // Discord doesn't support orange buttons; Danger is closest.
         );
 
         await ctx.client.messages.write(ticketChannelId, {
@@ -426,7 +426,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
         });
 
         await ctx.write({
-          content: `✅ Gracias! Tu ticket fue enviado: <#${ticketChannelId}>`,
+          content: `✅ Success! Your ticket has been sent: <#${ticketChannelId}>`,
           flags: MessageFlags.Ephemeral,
         });
       })
@@ -436,21 +436,21 @@ export function buildTicketModal(category: TicketCategory): Modal {
 function buildTicketMessagePayload() {
   const embed = new Embed()
     .setColor("Blurple")
-    .setTitle("Gestión de tickets")
+    .setTitle("Ticket Management")
     .setDescription(
       [
-        "# Elije el tipo de ticket a abrir",
+        "# Choose the type of ticket to open",
         "",
-        "Abajo puedes elegir el tipo de ticket que deseas abrir para hablar con los administradores.",
+        "Below you can choose the type of ticket you wish to open to speak with administrators.",
       ].join("\n"),
     )
     .setFooter({
-      text: `Los tickets NO son para soporte técnico. Usa uno de los foros públicos para eso.`,
+      text: `Tickets are NOT for technical support. Use one of the public forums for that.`,
     });
 
   const menu = new StringSelectMenu()
     .setCustomId(TICKET_SELECT_CUSTOM_ID)
-    .setPlaceholder("Selecciona el tipo de ticket")
+    .setPlaceholder("Select the ticket type")
     .setValuesLength({ min: 1, max: 1 });
 
   for (const category of TICKET_CATEGORIES) {
@@ -478,7 +478,7 @@ export function getTicketCategory(
 }
 
 function buildTicketChannelName(username: string | undefined): string {
-  const base = (username ?? "usuario").normalize("NFD");
+  const base = (username ?? "user").normalize("NFD");
   const sanitized = base
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9\s-]/g, "")
@@ -486,6 +486,6 @@ function buildTicketChannelName(username: string | undefined): string {
     .replace(/\s+/g, "-")
     .toLowerCase();
 
-  const suffix = sanitized || "usuario";
-  return `reporte-${suffix}`.slice(0, 100);
+  const suffix = sanitized || "user";
+  return `ticket-${suffix}`.slice(0, 100);
 }

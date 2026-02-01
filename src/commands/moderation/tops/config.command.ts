@@ -69,13 +69,21 @@ const MIN_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos para evitar spam accidenta
 export default class ConfigTopsCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
+    if (!guildId) {
+      await ctx.write({
+        content: "Este comando solo puede usarse en un servidor.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     const currentWindow = await getTopWindow(guildId);
     const disable = ctx.options.desactivar ?? false;
     if (disable) {
       await updateTopConfig(guildId, { channelId: null });
       await ctx.write({
-        content: "Sistema de TOPs desactivado. No se enviarán nuevos reportes hasta configurar un canal nuevamente.",
+        content:
+          "Sistema de TOPs desactivado. No se enviarán nuevos reportes hasta configurar un canal nuevamente.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -85,7 +93,8 @@ export default class ConfigTopsCommand extends SubCommand {
     const intervalInput = ctx.options.intervalo;
     if (!channel || !intervalInput) {
       await ctx.write({
-        content: "Debes indicar un canal y un intervalo (ej: `24h`, `3d`, `1w`).",
+        content:
+          "Debes indicar un canal y un intervalo (ej: `24h`, `3d`, `1w`).",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -116,7 +125,8 @@ export default class ConfigTopsCommand extends SubCommand {
       ctx.options.reiniciar === true || !currentWindow.channelId;
     if (shouldReset) {
       await resetTopWindow(guildId, new Date());
-      resetNote = "\nSe reinició la ventana actual para comenzar a contar desde ahora.";
+      resetNote =
+        "\nSe reinició la ventana actual para comenzar a contar desde ahora.";
     }
 
     await ctx.write({

@@ -1,21 +1,21 @@
 /**
- * Transacciones de economía (monedas) con concurrencia optimista.
+ * Economy transactions (coins) with optimistic concurrency.
  *
- * Encaje en el sistema:
- * - Este módulo aplica cambios a `user.currency` (inventario de monedas) de forma determinística.
- * - Se apoya en:
- *   - `CurrencyRegistry`: define reglas por moneda (`add/sub/zero/isValid`).
- *   - `users` repo: lectura/ensure del usuario.
- *   - `replaceCurrencyIfMatch`: update condicional para evitar perder escrituras concurrentes.
+ * System context:
+ * - This module applies changes to `user.currency` (coin inventory) deterministically.
+ * - Relies on:
+ *   - `CurrencyRegistry`: defines rules per currency (`add/sub/zero/isValid`).
+ *   - `users` repo: user read/ensure.
+ *   - `replaceCurrencyIfMatch`: conditional update to avoid lost concurrent writes.
  *
- * Invariantes clave:
- * - Una transacción debe tener `costs` o `rewards`.
- * - Cada moneda debe validar su estado (`isValid`) tras aplicar `add/sub`.
- * - El inventario persistido es el **resultado** del motor (`CurrencyEngine`), no una suma "a mano".
+ * Key Invariants:
+ * - A transaction must have `costs` or `rewards`.
+ * - Each currency must validate its state (`isValid`) after applying `add/sub`.
+ * - Persisted inventory is the **result** of the engine (`CurrencyEngine`), not a manual sum.
  *
  * Gotchas:
- * - Concurrencia: dos comandos pueden intentar actualizar balances al mismo tiempo.
- *   Este módulo evita el "lost update" con un loop de reintentos (optimistic concurrency).
+ * - Concurrency: two commands may attempt to update balances simultaneously.
+ *   This module avoids "lost updates" with a retry loop (optimistic concurrency).
  */
 import { CurrencyId, type CurrencyInventory } from "./currency";
 import { CurrencyRegistry, currencyRegistry } from "./currencyRegistry";
@@ -52,10 +52,10 @@ class CurrencyEngine {
     op: "add" | "sub",
     tx: Transaction,
   ): boolean {
-    // WHY: Esta función es el "core" del motor: unifica la aplicación de costos/recompensas
-    // y valida cada paso.
-    // RISK: Si se omite `isValid`, una moneda podría quedar en estado inválido y luego
-    // romper otras operaciones (o permitir balances negativos).
+    // WHY: This function is the "core" of the engine: it unifies the application of costs/rewards
+    // and validates each step.
+    // RISK: If `isValid` is omitted, a currency could be left in an invalid state and then
+    // break other operations (or allow negative balances).
     for (const amount of amounts) {
       const currency = this.registry.get(amount.currencyId);
       if (!currency) {
@@ -63,7 +63,9 @@ class CurrencyEngine {
       }
 
       const current =
-        amount.currencyId in target ? target[amount.currencyId] : currency.zero();
+        amount.currencyId in target
+          ? target[amount.currencyId]
+          : currency.zero();
 
       const next =
         op === "add"
@@ -101,7 +103,9 @@ class CurrencyEngine {
 
     if (!this.canApply(inv, tx)) {
       return ErrResult(
-        new Error("Transaction cannot be applied: insufficient funds or invalid currency."),
+        new Error(
+          "Transaction cannot be applied: insufficient funds or invalid currency.",
+        ),
       );
     }
 
@@ -116,28 +120,27 @@ class CurrencyEngine {
 
 export const currencyEngine = new CurrencyEngine(currencyRegistry);
 
-
 /**
- * Aplicar una transacción de moneda a un usuario.
+ * Applies a currency transaction to a user.
  */
 export async function currencyTransaction(
   userId: string,
   tx: Transaction,
   engine: CurrencyEngine = currencyEngine,
 ): Promise<TransactionResult> {
-  // Propósito: aplicar `tx` sobre el inventario de monedas del usuario y persistirlo.
+  // Purpose: Apply `tx` to the user's coin inventory and persist it.
   //
   // Side effects:
-  // - Lee y escribe en Mongo (users collection).
+  // - Reads and writes in Mongo (users collection).
   //
-  // Errores:
-  // - `Err(...)` si la transacción es inválida, no puede aplicarse o si hay problemas de DB.
-  // - `Err("CURRENCY_TX_CONFLICT")` si no se pudo ganar la carrera luego de varios reintentos.
+  // Errors:
+  // - `Err(...)` if the transaction is invalid, cannot be applied or if there are DB issues.
+  // - `Err("CURRENCY_TX_CONFLICT")` if the race could not be won after several retries.
   // Optimistic retry loop to avoid lost updates under concurrent writes.
-  // WHY: Mongo update es "last write wins" si no condicionamos por estado previo.
-  // RISK: Si quitamos el retry, dos comandos concurrentes pueden pisarse y perder dinero.
-  // ALT: Transacciones de Mongo/locks. Se descartó por costo/complexidad; el patrón CAS
-  // (compare-and-swap) es suficiente para este caso.
+  // WHY: Mongo update is "last write wins" if we don't condition by previous state.
+  // RISK: If we remove retry, two concurrent commands may overwrite each other and lose money.
+  // ALT: Mongo transactions/locks. Discarded due to cost/complexity; CAS pattern
+  // (compare-and-swap) is sufficient for this case.
   return runUserTransition(userId, {
     getSnapshot: (user) => (user.currency as CurrencyInventory) ?? {},
     computeNext: (inv) => engine.apply(inv, tx),
@@ -145,7 +148,7 @@ export async function currencyTransaction(
       UserStore.replaceIfMatch(
         id,
         { currency: expected } as any,
-        { currency: next } as any
+        { currency: next } as any,
       ),
     project: (updatedUser) => (updatedUser.currency ?? {}) as CurrencyInventory,
     conflictError: "CURRENCY_TX_CONFLICT",

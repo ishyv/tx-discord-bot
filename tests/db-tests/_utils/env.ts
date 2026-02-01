@@ -10,16 +10,14 @@ const readEnv = (key: string): string | undefined => {
   return trimmed.length ? trimmed : undefined;
 };
 
-export const getSeed = (): string =>
-  readEnv("DB_TEST_SEED") ?? "db-tests";
+export const getSeed = (): string => readEnv("DB_TEST_SEED") ?? "db-tests";
 
 let cachedNamespace: string | null = null;
 
 export const getNamespace = (): string => {
   if (cachedNamespace) return cachedNamespace;
   cachedNamespace =
-    readEnv("DB_TEST_NAMESPACE") ??
-    `${getSeed()}-${Date.now().toString(36)}`;
+    readEnv("DB_TEST_NAMESPACE") ?? `${getSeed()}-${Date.now().toString(36)}`;
   return cachedNamespace;
 };
 

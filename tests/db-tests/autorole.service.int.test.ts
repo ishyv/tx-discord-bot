@@ -1,11 +1,13 @@
-import { AutoRoleGrantsRepo, AutoRoleRulesRepo } from "../../src/db/repositories/autorole.repo";
-import { grantByRule, purgeRule, revokeByRule } from "../../src/db/repositories/autorole.service";
 import {
-  assert,
-  assertEqual,
-  ops,
-  type Suite,
-} from "./_utils";
+  AutoRoleGrantsRepo,
+  AutoRoleRulesRepo,
+} from "../../src/db/repositories/autorole.repo";
+import {
+  grantByRule,
+  purgeRule,
+  revokeByRule,
+} from "../../src/db/repositories/autorole.service";
+import { assert, assertEqual, ops, type Suite } from "./_utils";
 
 type CallLog = {
   addRole: Array<{ guildId: string; userId: string; roleId: string }>;
@@ -36,7 +38,10 @@ const buildClient = () => {
       }),
     },
     guilds: {
-      fetch: async (guildId: string) => ({ id: guildId, name: `Guild-${guildId}` }),
+      fetch: async (guildId: string) => ({
+        id: guildId,
+        name: `Guild-${guildId}`,
+      }),
     },
     users: {
       write: async (userId: string, payload: { content?: string }) => {
@@ -82,7 +87,11 @@ export const suite: Suite = {
           reason: "test-grant",
         });
         assertEqual(first.type, "LIVE", "grantByRule should store live grant");
-        assertEqual(calls.addRole.length, 1, "grantByRule should grant role once");
+        assertEqual(
+          calls.addRole.length,
+          1,
+          "grantByRule should grant role once",
+        );
         assertEqual(calls.dms.length, 1, "grantByRule should send DM");
 
         await grantByRule({
@@ -91,7 +100,11 @@ export const suite: Suite = {
           userId,
           reason: "test-grant",
         });
-        assertEqual(calls.addRole.length, 1, "grantByRule should not double grant");
+        assertEqual(
+          calls.addRole.length,
+          1,
+          "grantByRule should not double grant",
+        );
 
         await AutoRoleRulesRepo.delete({ guildId, name: ruleName });
       },
@@ -128,7 +141,11 @@ export const suite: Suite = {
         await grantByRule({ client, rule: ruleA, userId, reason: "first" });
         await grantByRule({ client, rule: ruleB, userId, reason: "second" });
 
-        assertEqual(calls.addRole.length, 1, "second reason should not re-grant role");
+        assertEqual(
+          calls.addRole.length,
+          1,
+          "second reason should not re-grant role",
+        );
 
         await AutoRoleRulesRepo.delete({ guildId, name: ruleA.name });
         await AutoRoleRulesRepo.delete({ guildId, name: ruleB.name });
@@ -168,8 +185,15 @@ export const suite: Suite = {
           reason: "timed-grant",
         });
         const secondExpires = second.expiresAt?.getTime() ?? 0;
-        assert(secondExpires >= firstExpires, "grantByRule should extend expiry");
-        assertEqual(calls.addRole.length, 1, "timed grant should only grant once");
+        assert(
+          secondExpires >= firstExpires,
+          "grantByRule should extend expiry",
+        );
+        assertEqual(
+          calls.addRole.length,
+          1,
+          "timed grant should only grant once",
+        );
 
         await AutoRoleRulesRepo.delete({ guildId, name: timedRule.name });
       },
@@ -213,7 +237,11 @@ export const suite: Suite = {
           grantType: "LIVE",
         });
         assertEqual(revokedA, true, "revokeByRule should remove grant");
-        assertEqual(calls.removeRole.length, 0, "should not revoke while reasons remain");
+        assertEqual(
+          calls.removeRole.length,
+          0,
+          "should not revoke while reasons remain",
+        );
 
         const revokedB = await revokeByRule({
           client,
@@ -223,7 +251,11 @@ export const suite: Suite = {
           grantType: "LIVE",
         });
         assertEqual(revokedB, true, "revokeByRule should remove grant");
-        assertEqual(calls.removeRole.length, 1, "should revoke when last reason removed");
+        assertEqual(
+          calls.removeRole.length,
+          1,
+          "should revoke when last reason removed",
+        );
 
         await AutoRoleRulesRepo.delete({ guildId, name: ruleA.name });
         await AutoRoleRulesRepo.delete({ guildId, name: ruleB.name });
@@ -291,7 +323,11 @@ export const suite: Suite = {
           1,
           "purgeRule should revoke only when last reason removed",
         );
-        assertEqual(calls.removeRole.length, 1, "purgeRule should enqueue revoke");
+        assertEqual(
+          calls.removeRole.length,
+          1,
+          "purgeRule should enqueue revoke",
+        );
 
         await AutoRoleRulesRepo.delete({ guildId, name: ruleA.name });
         await AutoRoleRulesRepo.delete({ guildId, name: ruleB.name });

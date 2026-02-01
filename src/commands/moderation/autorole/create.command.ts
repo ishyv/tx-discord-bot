@@ -21,7 +21,10 @@ import {
   parseTrigger,
   refreshGuildRules,
 } from "@/modules/autorole";
-import type { AutoRoleRule, AutoRoleTrigger } from "@/modules/autorole/domain/types";
+import type {
+  AutoRoleRule,
+  AutoRoleTrigger,
+} from "@/modules/autorole/domain/types";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 import {
@@ -102,7 +105,11 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-    const invokerCanManage = await userCanManageTargetRole(ctx, context.guildId, roleId);
+    const invokerCanManage = await userCanManageTargetRole(
+      ctx,
+      context.guildId,
+      roleId,
+    );
     if (!invokerCanManage) {
       await ctx.write({
         content:
@@ -129,7 +136,12 @@ export default class AutoroleCreateCommand extends SubCommand {
       return;
     }
 
-    const preflightError = await validateTriggerInput(ctx, context.guildId, trigger, existingRules);
+    const preflightError = await validateTriggerInput(
+      ctx,
+      context.guildId,
+      trigger,
+      existingRules,
+    );
     if (preflightError) {
       await ctx.write({ content: preflightError });
       return;
@@ -148,14 +160,26 @@ export default class AutoroleCreateCommand extends SubCommand {
     if (rule.trigger.type === "ANTIQUITY_THRESHOLD" && rule.enabled) {
       // Aplicar el rol a miembros existentes que cumplan la antigüedad
       // En una implementación real, esto podría ser pesado, así que se hace asíncrono
-      ctx.client.members.list(context.guildId).then(async members => {
-        for (const member of members) {
-          await AutoroleService.syncUserAntiquityRoles(ctx.client, context.guildId, {
-            id: member.id,
-            joinedAt: member.joinedAt
-          });
-        }
-      }).catch(e => ctx.client.logger?.error?.("[autorole] initial antiquity sync failed", e));
+      ctx.client.members
+        .list(context.guildId)
+        .then(async (members) => {
+          for (const member of members) {
+            await AutoroleService.syncUserAntiquityRoles(
+              ctx.client,
+              context.guildId,
+              {
+                id: member.id,
+                joinedAt: member.joinedAt,
+              },
+            );
+          }
+        })
+        .catch((e) =>
+          ctx.client.logger?.error?.(
+            "[autorole] initial antiquity sync failed",
+            e,
+          ),
+        );
     }
 
     const embed = new Embed({
@@ -200,7 +224,11 @@ async function validateTriggerInput(
     const emojiError = await ensureEmojiIsUsable(ctx, guildId, emojiKey);
     if (emojiError) return emojiError;
   } else if (trigger.type === "REACTED_THRESHOLD") {
-    const emojiError = await ensureEmojiIsUsable(ctx, guildId, trigger.args.emojiKey);
+    const emojiError = await ensureEmojiIsUsable(
+      ctx,
+      guildId,
+      trigger.args.emojiKey,
+    );
     if (emojiError) return emojiError;
   } else if (trigger.type === "REPUTATION_THRESHOLD") {
     const duplicate = existingRules.find(
@@ -257,7 +285,9 @@ async function userCanManageTargetRole(
     const target = roles.find((role) => role.id === roleId);
     if (!target) return false;
 
-    const member = await guild.members.fetch(ctx.author.id, true).catch(() => null);
+    const member = await guild.members
+      .fetch(ctx.author.id, true)
+      .catch(() => null);
     if (!member) return false;
 
     const highest = await member.roles.highest(true).catch(() => null);
@@ -265,11 +295,14 @@ async function userCanManageTargetRole(
 
     return highest.position > target.position;
   } catch (error) {
-    ctx.client.logger?.warn?.("[autorole] no se pudo validar jerarquia del usuario", {
-      guildId,
-      roleId,
-      error,
-    });
+    ctx.client.logger?.warn?.(
+      "[autorole] no se pudo validar jerarquia del usuario",
+      {
+        guildId,
+        roleId,
+        error,
+      },
+    );
     return false;
   }
 }

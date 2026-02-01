@@ -29,14 +29,20 @@ import {
   type Suite,
 } from "./_utils";
 
-const cleanupUser = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupUser = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await UsersRepo.deleteUser(id);
     if (res.isErr()) return;
   });
 };
 
-const cleanupGuild = (cleanup: { add: (task: () => Promise<void> | void) => void }, id: string) => {
+const cleanupGuild = (
+  cleanup: { add: (task: () => Promise<void> | void) => void },
+  id: string,
+) => {
   cleanup.add(async () => {
     const res = await GuildsRepo.deleteGuild(id);
     if (res.isErr()) return;
@@ -60,10 +66,22 @@ export const suite: Suite = {
         await GuildsRepo.ensureGuild(guildId);
 
         const catalog = assertOk(await storeService.getCatalog(guildId));
-        assertEqual(catalog.guildId, guildId, "catalog should have correct guild ID");
-        assertEqual(catalog.active, true, "catalog should be active by default");
+        assertEqual(
+          catalog.guildId,
+          guildId,
+          "catalog should have correct guild ID",
+        );
+        assertEqual(
+          catalog.active,
+          true,
+          "catalog should be active by default",
+        );
         assertEqual(catalog.taxRate, 0.05, "default tax rate should be 5%");
-        assertEqual(Object.keys(catalog.items).length, 0, "catalog should start empty");
+        assertEqual(
+          Object.keys(catalog.items).length,
+          0,
+          "catalog should start empty",
+        );
       },
     },
     {
@@ -86,7 +104,11 @@ export const suite: Suite = {
         };
 
         const catalog = assertOk(await storeRepo.upsertItem(guildId, item));
-        assertEqual(catalog.items["palo"]?.name, "Palo de Madera", "item should be added");
+        assertEqual(
+          catalog.items["palo"]?.name,
+          "Palo de Madera",
+          "item should be added",
+        );
         assertEqual(catalog.items["palo"]?.stock, 100, "stock should be set");
       },
     },
@@ -114,11 +136,21 @@ export const suite: Suite = {
         };
         assertOk(await storeRepo.upsertItem(guildId, item));
 
-        const stockCheck = assertOk(await storeService.checkItemStock(guildId, "palo", 5));
+        const stockCheck = assertOk(
+          await storeService.checkItemStock(guildId, "palo", 5),
+        );
         assertEqual(stockCheck.available, true, "should have enough stock");
         assertEqual(stockCheck.requested, 5, "requested should be 5");
-        assertEqual(stockCheck.availableStock, 10, "available stock should be 10");
-        assertEqual(stockCheck.unlimited, false, "stock should not be unlimited");
+        assertEqual(
+          stockCheck.availableStock,
+          10,
+          "available stock should be 10",
+        );
+        assertEqual(
+          stockCheck.unlimited,
+          false,
+          "stock should not be unlimited",
+        );
       },
     },
     {
@@ -140,9 +172,19 @@ export const suite: Suite = {
         };
         assertOk(await storeRepo.upsertItem(guildId, item));
 
-        const stockCheck = assertOk(await storeService.checkItemStock(guildId, "palo", 9999));
-        assertEqual(stockCheck.available, true, "should allow any quantity with unlimited stock");
-        assertEqual(stockCheck.unlimited, true, "should be marked as unlimited");
+        const stockCheck = assertOk(
+          await storeService.checkItemStock(guildId, "palo", 9999),
+        );
+        assertEqual(
+          stockCheck.available,
+          true,
+          "should allow any quantity with unlimited stock",
+        );
+        assertEqual(
+          stockCheck.unlimited,
+          true,
+          "should be marked as unlimited",
+        );
       },
     },
     {
@@ -174,9 +216,17 @@ export const suite: Suite = {
           quantity: 10,
         });
 
-        assertEqual(result.isErr(), true, "should reject when stock insufficient");
+        assertEqual(
+          result.isErr(),
+          true,
+          "should reject when stock insufficient",
+        );
         const error = result.error as StoreError;
-        assertEqual(error.code, "INSUFFICIENT_STOCK", "error should be INSUFFICIENT_STOCK");
+        assertEqual(
+          error.code,
+          "INSUFFICIENT_STOCK",
+          "error should be INSUFFICIENT_STOCK",
+        );
       },
     },
 
@@ -202,7 +252,9 @@ export const suite: Suite = {
         };
         assertOk(await storeRepo.upsertItem(guildId, item));
 
-        const pricing = assertOk(await storeService.calculatePurchasePrice(guildId, "palo", 2));
+        const pricing = assertOk(
+          await storeService.calculatePurchasePrice(guildId, "palo", 2),
+        );
 
         assertEqual(pricing.unitPrice, 100, "unit price should be 100");
         assertEqual(pricing.subtotal, 200, "subtotal should be 200");
@@ -249,7 +301,11 @@ export const suite: Suite = {
         });
 
         // This should succeed (within capacity)
-        assertEqual(result.isOk(), true, "purchase within capacity should succeed");
+        assertEqual(
+          result.isOk(),
+          true,
+          "purchase within capacity should succeed",
+        );
       },
     },
 
@@ -275,7 +331,9 @@ export const suite: Suite = {
         };
         assertOk(await storeRepo.upsertItem(guildId, item));
 
-        const sellPrice = assertOk(await storeService.getSellPrice(guildId, "palo"));
+        const sellPrice = assertOk(
+          await storeService.getSellPrice(guildId, "palo"),
+        );
         assertEqual(sellPrice, 85, "sell price should be 85");
       },
     },
@@ -290,7 +348,9 @@ export const suite: Suite = {
 
         // Don't add item to store - should fall back to item definition
         // espada has value: 100 in definitions
-        const sellPrice = assertOk(await storeService.getSellPrice(guildId, "espada"));
+        const sellPrice = assertOk(
+          await storeService.getSellPrice(guildId, "espada"),
+        );
         assertEqual(sellPrice, 85, "should calculate 85% of base value (100)");
       },
     },
@@ -334,9 +394,17 @@ export const suite: Suite = {
           quantity: 10, // Would cost 850
         });
 
-        assertEqual(result.isErr(), true, "should reject when guild has no liquidity");
+        assertEqual(
+          result.isErr(),
+          true,
+          "should reject when guild has no liquidity",
+        );
         const error = result.error as StoreError;
-        assertEqual(error.code, "GUILD_LIQUIDITY_INSUFFICIENT", "error should be GUILD_LIQUIDITY_INSUFFICIENT");
+        assertEqual(
+          error.code,
+          "GUILD_LIQUIDITY_INSUFFICIENT",
+          "error should be GUILD_LIQUIDITY_INSUFFICIENT",
+        );
       },
     },
 

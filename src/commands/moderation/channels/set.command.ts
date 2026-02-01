@@ -26,10 +26,12 @@ import { Guard } from "@/middlewares/guards/decorator";
 import { CoreChannelNames } from "@/modules/guild-channels/constants";
 import { ensureTicketMessage } from "@/systems/tickets";
 
-const nameChoices = Object.entries(CORE_CHANNEL_DEFINITIONS).map(([name, label]) => ({
-  name: `${name} (${label})`,
-  value: name,
-}));
+const nameChoices = Object.entries(CORE_CHANNEL_DEFINITIONS).map(
+  ([name, label]) => ({
+    name: `${name} (${label})`,
+    value: name,
+  }),
+);
 
 const options = {
   name: createStringOption({
@@ -83,4 +85,3 @@ export default class ChannelSetCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

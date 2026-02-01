@@ -16,8 +16,16 @@ export type AuditOperationType =
   | "item_remove"
   | "item_purchase"
   | "item_sell"
+  | "item_equip"
+  | "item_unequip"
   | "config_update"
-  | "daily_claim";
+  | "daily_claim"
+  | "work_claim"
+  | "perk_purchase"
+  | "xp_grant"
+  | "rollback"
+  | "craft"
+  | "quest_complete";
 
 /** Audit log entry for economy operations. */
 export interface EconomyAuditEntry {

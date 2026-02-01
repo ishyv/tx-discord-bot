@@ -134,7 +134,9 @@ export interface StoreRepo {
 }
 
 class StoreRepoImpl implements StoreRepo {
-  async findByGuildId(guildId: GuildId): Promise<Result<StoreCatalog | null, Error>> {
+  async findByGuildId(
+    guildId: GuildId,
+  ): Promise<Result<StoreCatalog | null, Error>> {
     const guildResult = await GuildStore.get(guildId);
     if (guildResult.isErr()) {
       return ErrResult(guildResult.error);
@@ -152,7 +154,9 @@ class StoreRepoImpl implements StoreRepo {
 
     const parsed = StoreCatalogDataSchema.safeParse(raw);
     if (!parsed.success) {
-      console.warn(`[StoreRepo] Invalid store data for guild ${guildId}, using defaults`);
+      console.warn(
+        `[StoreRepo] Invalid store data for guild ${guildId}, using defaults`,
+      );
       return OkResult(buildDefaultCatalog(guildId));
     }
 
@@ -194,7 +198,9 @@ class StoreRepoImpl implements StoreRepo {
 
       return OkResult(defaults);
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -222,13 +228,17 @@ class StoreRepoImpl implements StoreRepo {
       );
 
       if (!result) {
-        return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to update item"));
+        return ErrResult(
+          new StoreError("TRANSACTION_FAILED", "Failed to update item"),
+        );
       }
 
       const raw = (result as any).store;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -256,13 +266,17 @@ class StoreRepoImpl implements StoreRepo {
       );
 
       if (!result) {
-        return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to remove item"));
+        return ErrResult(
+          new StoreError("TRANSACTION_FAILED", "Failed to remove item"),
+        );
       }
 
       const raw = (result as any).store;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -290,13 +304,17 @@ class StoreRepoImpl implements StoreRepo {
       );
 
       if (!result) {
-        return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to update stock"));
+        return ErrResult(
+          new StoreError("TRANSACTION_FAILED", "Failed to update stock"),
+        );
       }
 
       const raw = (result as any).store;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -315,7 +333,9 @@ class StoreRepoImpl implements StoreRepo {
 
     const item = currentCatalog.items[itemId];
     if (!item) {
-      return ErrResult(new StoreError("ITEM_NOT_FOUND", "Item not found in store"));
+      return ErrResult(
+        new StoreError("ITEM_NOT_FOUND", "Item not found in store"),
+      );
     }
 
     // Unlimited stock (-1) doesn't need decrement
@@ -324,7 +344,9 @@ class StoreRepoImpl implements StoreRepo {
     }
 
     if (item.stock < quantity) {
-      return ErrResult(new StoreError("INSUFFICIENT_STOCK", "Not enough stock"));
+      return ErrResult(
+        new StoreError("INSUFFICIENT_STOCK", "Not enough stock"),
+      );
     }
 
     try {
@@ -332,7 +354,10 @@ class StoreRepoImpl implements StoreRepo {
       const now = new Date();
 
       const result = await col.findOneAndUpdate(
-        { _id: guildId, [`store.items.${itemId}.stock`]: { $gte: quantity } } as any,
+        {
+          _id: guildId,
+          [`store.items.${itemId}.stock`]: { $gte: quantity },
+        } as any,
         {
           $inc: { [`store.items.${itemId}.stock`]: -quantity } as any,
           $set: {
@@ -349,7 +374,9 @@ class StoreRepoImpl implements StoreRepo {
       const raw = (result as any).store;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -376,13 +403,17 @@ class StoreRepoImpl implements StoreRepo {
       );
 
       if (!result) {
-        return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to update store"));
+        return ErrResult(
+          new StoreError("TRANSACTION_FAILED", "Failed to update store"),
+        );
       }
 
       const raw = (result as any).store;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
@@ -418,13 +449,17 @@ class StoreRepoImpl implements StoreRepo {
       );
 
       if (!result) {
-        return ErrResult(new StoreError("TRANSACTION_FAILED", "Failed to update config"));
+        return ErrResult(
+          new StoreError("TRANSACTION_FAILED", "Failed to update config"),
+        );
       }
 
       const raw = (result as any).store;
       return OkResult(toDomain(guildId, raw));
     } catch (error) {
-      return ErrResult(error instanceof Error ? error : new Error(String(error)));
+      return ErrResult(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 }

@@ -1,9 +1,5 @@
 import { UserStore } from "@/db/repositories/users";
-import {
-  ItemId,
-  InventoryItem,
-  DEFAULT_MAX_STACK,
-} from "./definitions";
+import { ItemId, InventoryItem, DEFAULT_MAX_STACK } from "./definitions";
 import { getItemDefinition } from "./items";
 export type ItemInventory = Record<ItemId, InventoryItem | undefined>;
 
@@ -37,7 +33,7 @@ export function addItem(
   inv: ItemInventory,
   itemId: ItemId,
   quantity: number,
-  allowDebt: boolean = false
+  allowDebt: boolean = false,
 ): ItemInventory {
   const amount = Number.isFinite(quantity) ? Math.trunc(quantity) : 0;
   if (amount === 0) return inv;
@@ -49,7 +45,9 @@ export function addItem(
   const nextQuantity = (existing?.quantity ?? 0) + amount;
   // If allowDebt is true, we don't clamp to maxStack for negative values (technically undefined behavior for add, but safe)
   // For standard add, we clamp.
-  const clampedQuantity = allowDebt ? nextQuantity : Math.min(nextQuantity, maxStack);
+  const clampedQuantity = allowDebt
+    ? nextQuantity
+    : Math.min(nextQuantity, maxStack);
 
   if (clampedQuantity === 0) {
     const { [itemId]: _, ...rest } = inv as Record<string, InventoryItem>;
@@ -69,7 +67,7 @@ export function removeItem(
   inv: ItemInventory,
   itemId: ItemId,
   quantity: number,
-  allowDebt: boolean = false
+  allowDebt: boolean = false,
 ): ItemInventory {
   const amount = Number.isFinite(quantity) ? Math.trunc(quantity) : 0;
   if (amount <= 0) return inv;
@@ -120,10 +118,16 @@ export function hasItem(
 /**
  * Saves the user inventory to the database.
  */
-export async function saveInventory(userID: string, inv: ItemInventory): Promise<void> {
+export async function saveInventory(
+  userID: string,
+  inv: ItemInventory,
+): Promise<void> {
   const userResult = await UserStore.ensure(userID);
   if (userResult.isErr()) {
-    console.warn("saveInventory: failed to ensure user; ignoring save.", userResult.error);
+    console.warn(
+      "saveInventory: failed to ensure user; ignoring save.",
+      userResult.error,
+    );
     return;
   }
   const saved = await UserStore.patch(userID, { inventory: inv } as any);
@@ -137,10 +141,12 @@ export async function saveInventory(userID: string, inv: ItemInventory): Promise
 export async function loadInventory(userID: string): Promise<ItemInventory> {
   const userResult = await UserStore.ensure(userID);
   if (userResult.isErr()) {
-    console.warn("loadInventory: failed to ensure user; returning empty inventory.", userResult.error);
+    console.warn(
+      "loadInventory: failed to ensure user; returning empty inventory.",
+      userResult.error,
+    );
     return createEmptyInventory();
   }
   const user = userResult.unwrap();
   return normalizeInventory(user?.inventory);
 }
-

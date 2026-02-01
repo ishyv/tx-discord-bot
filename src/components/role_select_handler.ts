@@ -10,19 +10,19 @@ import { ComponentCommand, type ComponentContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 
 export default class UIRoleSelectHandler extends ComponentCommand {
-    componentType = "RoleSelect" as const;
+  componentType = "RoleSelect" as const;
 
-    filter(ctx: ComponentContext<"RoleSelect">) {
-        return id_exists(ctx.customId);
-    }
+  filter(ctx: ComponentContext<"RoleSelect">) {
+    return id_exists(ctx.customId);
+  }
 
-    async run(ctx: ComponentContext<"RoleSelect">) {
-        const ok = await resolveAndInvoke(ctx.customId, ctx);
-        if (!ok) {
-            await ctx.write({
-                content: "Este menú de selección de roles ya no está activo.",
-                flags: MessageFlags.Ephemeral,
-            });
-        }
+  async run(ctx: ComponentContext<"RoleSelect">) {
+    const ok = await resolveAndInvoke(ctx.customId, ctx);
+    if (!ok) {
+      await ctx.write({
+        content: "Este menú de selección de roles ya no está activo.",
+        flags: MessageFlags.Ephemeral,
+      });
     }
+  }
 }

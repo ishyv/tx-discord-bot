@@ -14,37 +14,42 @@ import { isFeatureEnabled, Features } from "@/modules/features";
 import { fetchStoredChannel } from "@/utils/channelGuard";
 
 onMessageCreate(async (message, client) => {
-    if (message.author.bot) return;
-    if (!message.guildId) return;
+  if (message.author.bot) return;
+  if (!message.guildId) return;
 
-    const detectionEnabled = await isFeatureEnabled(
-        message.guildId,
-        Features.ReputationDetection,
+  const detectionEnabled = await isFeatureEnabled(
+    message.guildId,
+    Features.ReputationDetection,
+  );
+  if (!detectionEnabled) return;
+
+  const { configStore, ConfigurableModule } = await import("@/configuration");
+  const { keywords } = await configStore.get(
+    message.guildId,
+    ConfigurableModule.Reputation,
+  );
+
+  if (!keywords || keywords.length === 0) {
+    return;
+  }
+
+  const content = message.content.toLowerCase();
+  const hasKeyword = keywords.some((keyword: string) =>
+    content.includes(keyword.toLowerCase()),
+  );
+
+  if (hasKeyword) {
+    const guildChannels = await getGuildChannels(message.guildId);
+    const repChannelId = guildChannels?.core?.repRequests?.channelId ?? null;
+    const fetched = await fetchStoredChannel(client, repChannelId, () =>
+      updateGuildPaths(message.guildId!, {
+        "channels.core.repRequests": null,
+      }),
     );
-    if (!detectionEnabled) return;
+    const repChannel = fetched.channel;
+    if (!repChannel || !fetched.channelId) return;
+    if (!repChannel.isTextGuild()) return;
 
-    const { configStore, ConfigurableModule } = await import("@/configuration");
-    const { keywords } = await configStore.get(message.guildId, ConfigurableModule.Reputation);
-
-    if (!keywords || keywords.length === 0) {
-        return;
-    }
-
-    const content = message.content.toLowerCase();
-    const hasKeyword = keywords.some((keyword: string) => content.includes(keyword.toLowerCase()));
-
-    if (hasKeyword) {
-        const guildChannels = await getGuildChannels(message.guildId);
-        const repChannelId = guildChannels?.core?.repRequests?.channelId ?? null;
-        const fetched = await fetchStoredChannel(client, repChannelId, () =>
-            updateGuildPaths(message.guildId!, {
-                "channels.core.repRequests": null,
-            }),
-        );
-        const repChannel = fetched.channel;
-        if (!repChannel || !fetched.channelId) return;
-        if (!repChannel.isTextGuild()) return;
-
-        await sendReputationRequest(repChannel, message, message.author, true);
-    }
+    await sendReputationRequest(repChannel, message, message.author, true);
+  }
 });

@@ -81,7 +81,10 @@ export default class OfferCreateCommand extends SubCommand {
 
         if (result.isErr()) {
           const error = result.error;
-          const message = error instanceof Error ? error.message : "Error desconocido creando la oferta.";
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Error desconocido creando la oferta.";
 
           await ctx.followup?.({
             content:

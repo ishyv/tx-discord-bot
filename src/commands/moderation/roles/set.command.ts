@@ -75,11 +75,15 @@ export default class RoleSetCommand extends SubCommand {
         { name: "Clave", value: key },
         {
           name: "Rol",
-          value: role?.discordRoleId ? `<@&${role.discordRoleId}>` : "Sin asignar",
+          value: role?.discordRoleId
+            ? `<@&${role.discordRoleId}>`
+            : "Sin asignar",
         },
         {
           name: "Limites configurados",
-          value: String(Object.keys((role?.limits ?? {}) as Record<string, unknown>).length),
+          value: String(
+            Object.keys((role?.limits ?? {}) as Record<string, unknown>).length,
+          ),
         },
       ],
     });
@@ -87,4 +91,3 @@ export default class RoleSetCommand extends SubCommand {
     await ctx.write({ embeds: [embed] });
   }
 }
-

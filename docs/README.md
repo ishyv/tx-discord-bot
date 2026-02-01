@@ -22,7 +22,7 @@ TypeScript reference file containing:
 ### ECONOMY_CHANGELOG.md
 Implementation changelog covering:
 - Phase 3 features (pagination, filtering, safety edges)
-- New commands (`/bank`, `/profile`)
+- New commands (`/bank`, `/profile`, `/progress`)
 - Enhanced commands (`/balance`, `/inventory`)
 - Technical architecture details
 - Database changes
@@ -35,6 +35,7 @@ Implementation changelog covering:
 |---------|-------------|
 | `/bank` | Bank breakdown with safety rating |
 | `/profile` | Complete economy profile summary |
+| `/progress` | XP + level progression for the guild |
 
 ### Enhanced Commands
 | Command | New Features |
@@ -52,6 +53,7 @@ Implementation changelog covering:
 ```
 src/modules/economy/
 ├── account/     # Account lifecycle, status, formatting
+├── progression/ # XP + level progression
 ├── views/       # View builders (balance, bank, inventory, profile)
 ├── currencies/  # Currency implementations
 └── ...          # Core currency system

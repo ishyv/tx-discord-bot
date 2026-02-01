@@ -16,7 +16,9 @@ export class CurrencyRegistry {
 
   register(currency: Currency<unknown>): void {
     if (this.currencies.has(currency.id)) {
-      console.warn(`Currency already registered: ${currency.id}. Ignoring duplicate registration.`);
+      console.warn(
+        `Currency already registered: ${currency.id}. Ignoring duplicate registration.`,
+      );
       return;
     }
     this.currencies.set(currency.id, currency);

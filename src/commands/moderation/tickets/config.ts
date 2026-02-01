@@ -14,21 +14,24 @@ import { defineConfig, z } from "@/configuration/definitions";
 import { ConfigurableModule } from "@/configuration/constants";
 
 // WHY: allow undefined (missing) and null (explicit reset) to keep commands flexible.
-const CoreChannelSchema = z.object({ channelId: z.string() }).nullable().optional();
+const CoreChannelSchema = z
+  .object({ channelId: z.string() })
+  .nullable()
+  .optional();
 
 // Define Tickets schema mapping to channels.core structure
 export const ticketsConfig = defineConfig(
-    ConfigurableModule.Tickets,
-    z.object({
-        tickets: CoreChannelSchema,
-        ticketLogs: CoreChannelSchema,
-        ticketCategory: CoreChannelSchema,
-    }),
-    { path: "channels.core" },
+  ConfigurableModule.Tickets,
+  z.object({
+    tickets: CoreChannelSchema,
+    ticketLogs: CoreChannelSchema,
+    ticketCategory: CoreChannelSchema,
+  }),
+  { path: "channels.core" },
 );
 
 declare module "@/configuration/definitions" {
-    export interface ConfigDefinitions {
-        [ConfigurableModule.Tickets]: z.infer<typeof ticketsConfig>;
-    }
+  export interface ConfigDefinitions {
+    [ConfigurableModule.Tickets]: z.infer<typeof ticketsConfig>;
+  }
 }

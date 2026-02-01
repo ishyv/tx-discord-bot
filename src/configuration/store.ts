@@ -16,26 +16,26 @@
  * Gotchas:
  * - If a key is not registered, `get` returns `{}` and `set` no-ops.
  * - Fallback data is cached; changes in schemas require process restart.
- * 
+ *
  * Cache Invalidation Strategy
  * ===========================
- * 
+ *
  * TTL-based: Each cache entry expires after 30 seconds (CACHE_TTL_MS).
- * 
+ *
  * Invalidation scenarios:
  * 1. **Automatic (TTL)**: Entry expires, next `get()` fetches from DB.
  * 2. **Write-through**: On `set()`, cache is updated immediately.
  * 3. **Overflow eviction**: When > 2000 entries, oldest are removed (FIFO, not LRU).
- * 
+ *
  * Known limitations:
  * - No cross-process invalidation (each process has its own cache).
  * - No manual `invalidate(guildId, key)` method exposed.
  * - Stale reads possible for up to 30s after external DB changes.
- * 
+ *
  * When to use manual invalidation (not currently supported):
  * - Admin console makes direct DB changes
  * - Migration scripts update configs
- * 
+ *
  * @see CACHE_TTL_MS for TTL duration
  * @see MAX_CACHE_ENTRIES for cache size limit
  */
@@ -51,15 +51,21 @@ const MAX_CACHE_ENTRIES = 2_000;
  * Runtime config access with caching and validation.
  */
 export class ConfigStore {
-  constructor(private provider: ConfigProvider) { }
+  constructor(private provider: ConfigProvider) {}
 
-  private readonly cache = new Map<string, { expiresAt: number; value: unknown }>();
+  private readonly cache = new Map<
+    string,
+    { expiresAt: number; value: unknown }
+  >();
 
   private cacheKey(guildId: string, key: string): string {
     return `${guildId}:${key}`;
   }
 
-  private readCache<K extends ConfigKey>(guildId: string, key: K): ConfigOf<K> | null {
+  private readCache<K extends ConfigKey>(
+    guildId: string,
+    key: K,
+  ): ConfigOf<K> | null {
     const entry = this.cache.get(this.cacheKey(guildId, key));
     if (!entry) return null;
 
@@ -101,7 +107,10 @@ export class ConfigStore {
    * @sideEffects Reads from provider and updates the in-memory cache.
    * @errors None thrown; failures log and return defaults/empty.
    */
-  async get<K extends ConfigKey>(guildId: string, key: K): Promise<ConfigOf<K>> {
+  async get<K extends ConfigKey>(
+    guildId: string,
+    key: K,
+  ): Promise<ConfigOf<K>> {
     const cached = this.readCache(guildId, key);
     if (cached !== null) return cached;
 
@@ -138,9 +147,7 @@ export class ConfigStore {
     // WHY: prefer schema defaults over throwing to keep runtime stable.
     // RISK: silently masking malformed data; logs are the only signal.
     const fallback = schema.safeParse({});
-    const value = fallback.success
-      ? fallback.data
-      : (rawConfig as ConfigOf<K>);
+    const value = fallback.success ? fallback.data : (rawConfig as ConfigOf<K>);
 
     this.writeCache(guildId, key, value);
     return value;

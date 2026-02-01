@@ -6,16 +6,16 @@ import { ErrResult, OkResult, type Result } from "@/utils/result";
 import { UserStore } from "./users";
 
 /**
- * Repositorio especializado para `openTickets` por usuario.
+ * Specialized repository for `openTickets` per user.
  *
- * Propósito: encapsular lecturas/parches sobre el array de tickets abiertos con
- * sanitización y límites; evita que cada feature haga `$push` directo.
- * Invariantes: `openTickets` siempre es array de strings únicos; todas las
- * operaciones devuelven `Result` y no lanzan.
- * Dependencias: `UserStore.ensure` para inicializar documentos; `getDb` para
- * colección real; `sanitizeTickets` quita duplicados y entradas no string.
- * Gotchas: `addWithLimit` depende de `$expr` y tamaño; si cambia el shape de
- * `openTickets`, ajustar el filtro; `ensure` puede rellenar defaults silenciosos.
+ * Purpose: Encapsulate reads/patches on the open tickets array with
+ * sanitization and limits; prevents each feature from doing direct `$push`.
+ * Invariants: `openTickets` is always an array of unique strings; all
+ * operations return `Result` and do not throw.
+ * Dependencies: `UserStore.ensure` to initialize documents; `getDb` for
+ * the actual collection; `sanitizeTickets` removes duplicates and non-string entries.
+ * Gotchas: `addWithLimit` depends on `$expr` and size; if the shape of
+ * `openTickets` changes, adjust the filter; `ensure` can fill silent defaults.
  */
 
 const usersCollection = async () => (await getDb()).collection<User>("users");
@@ -25,9 +25,9 @@ const sanitizeTickets = (list: string[]) =>
 
 export const UserTicketsRepo = {
   /**
-   * Devuelve los tickets abiertos normalizados para un usuario.
-   * Side effects: garantiza el documento vía `UserStore.ensure`.
-   * Errores: retorna `Result` erróneo si falla ensure; no lanza.
+   * Returns normalized open tickets for a user.
+   * Side effects: Guarantees the document via `UserStore.ensure`.
+   * Errors: Returns an error `Result` if ensure fails; does not throw.
    */
   async listOpen(userId: string): Promise<Result<string[]>> {
     const res = await UserStore.ensure(userId);
@@ -36,8 +36,8 @@ export const UserTicketsRepo = {
   },
 
   /**
-   * Reemplaza el array de `openTickets` (sanitizado) para un usuario.
-   * Uso: migraciones o reparaciones; no aplica límite.
+   * Replaces the `openTickets` array (sanitized) for a user.
+   * Usage: Migrations or repairs; does not apply limit.
    */
   async setOpen(userId: string, tickets: string[]): Promise<Result<string[]>> {
     try {
@@ -53,8 +53,8 @@ export const UserTicketsRepo = {
   },
 
   /**
-   * Agrega un ticket abierto sin validar límite (usa $addToSet).
-   * Se usa cuando el límite ya fue chequeado en capas superiores.
+   * Adds an open ticket without validating limit (uses $addToSet).
+   * Used when the limit has already been checked in upper layers.
    */
   async addOpen(userId: string, channelId: string): Promise<Result<string[]>> {
     try {
@@ -77,8 +77,8 @@ export const UserTicketsRepo = {
   },
 
   /**
-   * Elimina un ticket concreto del array de un usuario (con updatedAt).
-   * Uso: cierres individuales cuando conocemos al autor.
+   * Removes a specific ticket from a user's array (with updatedAt).
+   * Usage: Individual closures when the author is known.
    */
   async removeOpen(
     userId: string,
@@ -104,13 +104,13 @@ export const UserTicketsRepo = {
   },
 
   /**
-   * Agrega un ticket solo si no supera `maxPerUser`.
+   * Adds a ticket only if it does not exceed `maxPerUser`.
    *
-   * Estrategia: usa `$expr` para comparar tamaño de `openTickets` y evita race
-   * conditions simples sin transacciones. Permite reinsertar el mismo canal
-   * (idempotencia) gracias a `$addToSet`.
-   * RISK: cambios en la forma de `openTickets` o índices pueden invalidar el
-   * filtro. No lanza; retorna `false` si el límite se supera.
+   * Strategy: Uses `$expr` to compare `openTickets` size and avoids simple
+   * race conditions without transactions. Allows re-inserting the same channel
+   * (idempotency) thanks to `$addToSet`.
+   * RISK: Changes in the shape of `openTickets` or indexes may invalidate the
+   * filter. Does not throw; returns `false` if the limit is exceeded.
    */
   async addWithLimit(
     userId: string,
@@ -157,8 +157,8 @@ export const UserTicketsRepo = {
   },
 
   /**
-   * Limpia todas las referencias a un canal de ticket eliminado.
-   * Uso: cierres forzados o limpieza cuando el canal desapareció.
+   * Clears all references to a deleted ticket channel.
+   * Usage: Forced closures or cleanup when the channel disappeared.
    */
   async removeByChannel(channelId: string): Promise<Result<void>> {
     try {

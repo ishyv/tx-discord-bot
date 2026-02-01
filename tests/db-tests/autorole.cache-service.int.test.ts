@@ -15,12 +15,7 @@ import {
 } from "../../src/db/repositories/autorole.cache-service";
 import { getGuildRules, getTally } from "../../src/modules/autorole/cache";
 import { AutoRoleRulesRepo } from "../../src/db/repositories/autorole.repo";
-import {
-  assert,
-  assertEqual,
-  ops,
-  type Suite,
-} from "./_utils";
+import { assert, assertEqual, ops, type Suite } from "./_utils";
 
 export const suite: Suite = {
   name: "autorole cache-service",
@@ -65,7 +60,10 @@ export const suite: Suite = {
         );
 
         const refreshed = await refreshGuildRules(guildId);
-        assert(refreshed.some((rule) => rule.name === ruleName), "refreshGuildRules should return rule");
+        assert(
+          refreshed.some((rule) => rule.name === ruleName),
+          "refreshGuildRules should return rule",
+        );
 
         await disableRule(guildId, ruleName);
         const cacheAfterDisable = getGuildRules(guildId);
@@ -104,28 +102,49 @@ export const suite: Suite = {
       name: "tally cache operations",
       ops: [ops.create, ops.update, ops.read, ops.cache],
       run: async ({ factory }) => {
-        const key = { guildId: factory.guildId(), messageId: factory.messageId(), emojiKey: "smile" };
+        const key = {
+          guildId: factory.guildId(),
+          messageId: factory.messageId(),
+          emojiKey: "smile",
+        };
         const userId = factory.userId();
 
         const snapshot = await incrementReactionTally(key, userId);
         assertEqual(snapshot.count, 1, "incrementReactionTally should count");
 
         const cached = getTally(key);
-        assert(cached !== null && cached.count === 1, "incrementReactionTally should cache");
+        assert(
+          cached !== null && cached.count === 1,
+          "incrementReactionTally should cache",
+        );
 
         const read = await readReactionTally(key);
-        assert(read !== null && read.count === 1, "readReactionTally should return cached");
+        assert(
+          read !== null && read.count === 1,
+          "readReactionTally should return cached",
+        );
 
         const dec = await decrementReactionTally(key);
-        assert(dec !== null && dec.count === 0, "decrementReactionTally should reduce to zero");
+        assert(
+          dec !== null && dec.count === 0,
+          "decrementReactionTally should reduce to zero",
+        );
 
         const cachedAfterDec = getTally(key);
-        assertEqual(cachedAfterDec, null, "decrementReactionTally should drop cache");
+        assertEqual(
+          cachedAfterDec,
+          null,
+          "decrementReactionTally should drop cache",
+        );
 
         await incrementReactionTally(key, userId);
         await removeReactionTally(key);
         const cachedAfterRemove = getTally(key);
-        assertEqual(cachedAfterRemove, null, "removeReactionTally should clear cache");
+        assertEqual(
+          cachedAfterRemove,
+          null,
+          "removeReactionTally should clear cache",
+        );
       },
     },
     {
@@ -148,9 +167,20 @@ export const suite: Suite = {
         await incrementReactionTally(tallyKeyTwo, factory.userId());
 
         const drained = await drainMessageState(guildId, messageId);
-        assertEqual(drained.presence.length, 1, "drainMessageState should return presence");
-        assert(drained.tallies.length >= 2, "drainMessageState should return tallies");
-        assertEqual(getTally(tallyKeyOne), null, "drainMessageState should clear cache");
+        assertEqual(
+          drained.presence.length,
+          1,
+          "drainMessageState should return presence",
+        );
+        assert(
+          drained.tallies.length >= 2,
+          "drainMessageState should return tallies",
+        );
+        assertEqual(
+          getTally(tallyKeyOne),
+          null,
+          "drainMessageState should clear cache",
+        );
 
         const messageIdTwo = factory.messageId();
         const presenceKeyTwo = {
@@ -163,7 +193,11 @@ export const suite: Suite = {
         clearTrackedPresence(presenceKeyTwo);
 
         const drainedEmpty = await drainMessageState(guildId, messageIdTwo);
-        assertEqual(drainedEmpty.presence.length, 0, "clearTrackedPresence should remove presence");
+        assertEqual(
+          drainedEmpty.presence.length,
+          0,
+          "clearTrackedPresence should remove presence",
+        );
       },
     },
   ],

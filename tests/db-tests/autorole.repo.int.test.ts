@@ -36,16 +36,25 @@ export const suite: Suite = {
         assertEqual(inserted.name, ruleName, "insert should persist rule");
 
         const fetched = await AutoRoleRulesRepo.fetchOne(guildId, ruleName);
-        assert(fetched !== null && fetched.name === ruleName, "fetchOne should return rule");
+        assert(
+          fetched !== null && fetched.name === ruleName,
+          "fetchOne should return rule",
+        );
 
         const byGuild = await AutoRoleRulesRepo.fetchByGuild(guildId);
-        assert(byGuild.some((rule) => rule.name === ruleName), "fetchByGuild should include rule");
+        assert(
+          byGuild.some((rule) => rule.name === ruleName),
+          "fetchByGuild should include rule",
+        );
 
         const names = await AutoRoleRulesRepo.listNames(guildId);
         assert(names.includes(ruleName), "listNames should include rule");
 
         const all = await AutoRoleRulesRepo.fetchAll();
-        assert(all.some((rule) => rule.name === ruleName), "fetchAll should include rule");
+        assert(
+          all.some((rule) => rule.name === ruleName),
+          "fetchAll should include rule",
+        );
 
         await AutoRoleRulesRepo.delete({ guildId, name: ruleName });
       },
@@ -128,7 +137,10 @@ export const suite: Suite = {
           name: ruleName,
           enabled: false,
         });
-        assert(disabled !== null && disabled.enabled === false, "updateEnabled should toggle");
+        assert(
+          disabled !== null && disabled.enabled === false,
+          "updateEnabled should toggle",
+        );
 
         await AutoRoleGrantsRepo.upsert({
           guildId,
@@ -139,7 +151,10 @@ export const suite: Suite = {
           expiresAt: null,
         });
 
-        const deleted = await AutoRoleRulesRepo.delete({ guildId, name: ruleName });
+        const deleted = await AutoRoleRulesRepo.delete({
+          guildId,
+          name: ruleName,
+        });
         assertEqual(deleted, true, "delete should remove rule");
 
         const grants = await AutoRoleGrantsRepo.listForRule(guildId, ruleName);
@@ -182,19 +197,32 @@ export const suite: Suite = {
           ruleName,
           "LIVE",
         );
-        assert(found !== null && found.userId === userId, "find should return grant");
+        assert(
+          found !== null && found.userId === userId,
+          "find should return grant",
+        );
 
         const listMember = await AutoRoleGrantsRepo.listForMemberRole(
           guildId,
           userId,
           roleId,
         );
-        assert(listMember.length >= 1, "listForMemberRole should return grants");
+        assert(
+          listMember.length >= 1,
+          "listForMemberRole should return grants",
+        );
 
-        const listRule = await AutoRoleGrantsRepo.listForRule(guildId, ruleName);
+        const listRule = await AutoRoleGrantsRepo.listForRule(
+          guildId,
+          ruleName,
+        );
         assert(listRule.length >= 1, "listForRule should return grants");
 
-        const count = await AutoRoleGrantsRepo.countForRole(guildId, userId, roleId);
+        const count = await AutoRoleGrantsRepo.countForRole(
+          guildId,
+          userId,
+          roleId,
+        );
         assert(count >= 1, "countForRole should count grants");
 
         const timedUser = factory.userId();
@@ -208,7 +236,10 @@ export const suite: Suite = {
         });
         const due = await AutoRoleGrantsRepo.listDueTimed(new Date());
         assert(
-          due.some((grant) => grant.userId === timedUser && grant.ruleName === ruleName),
+          due.some(
+            (grant) =>
+              grant.userId === timedUser && grant.ruleName === ruleName,
+          ),
           "listDueTimed should include expired grants",
         );
 
@@ -293,7 +324,10 @@ export const suite: Suite = {
           expiresAt: null,
         });
 
-        const purgedRole = await AutoRoleGrantsRepo.purgeForGuildRole(guildId, roleIdTwo);
+        const purgedRole = await AutoRoleGrantsRepo.purgeForGuildRole(
+          guildId,
+          roleIdTwo,
+        );
         assert(purgedRole >= 1, "purgeForGuildRole should remove grants");
 
         await AutoRoleRulesRepo.delete({ guildId, name: ruleName });
@@ -308,23 +342,38 @@ export const suite: Suite = {
         const messageId = factory.messageId();
         const tallyKey = { guildId, messageId, emojiKey: "smile" };
 
-        const first = await AutoRoleTalliesRepo.increment(tallyKey, factory.userId());
+        const first = await AutoRoleTalliesRepo.increment(
+          tallyKey,
+          factory.userId(),
+        );
         assertEqual(first.count, 1, "increment should start at 1");
 
-        const second = await AutoRoleTalliesRepo.increment(tallyKey, factory.userId());
+        const second = await AutoRoleTalliesRepo.increment(
+          tallyKey,
+          factory.userId(),
+        );
         assertEqual(second.count, 2, "increment should bump count");
 
         const read = await AutoRoleTalliesRepo.read(tallyKey);
         assert(read !== null && read.count === 2, "read should return tally");
 
-        const list = await AutoRoleTalliesRepo.listForMessage(guildId, messageId);
+        const list = await AutoRoleTalliesRepo.listForMessage(
+          guildId,
+          messageId,
+        );
         assert(list.length >= 1, "listForMessage should include tally");
 
         const afterDec = await AutoRoleTalliesRepo.decrement(tallyKey);
-        assert(afterDec !== null && afterDec.count === 1, "decrement should reduce count");
+        assert(
+          afterDec !== null && afterDec.count === 1,
+          "decrement should reduce count",
+        );
 
         const afterDecTwo = await AutoRoleTalliesRepo.decrement(tallyKey);
-        assert(afterDecTwo !== null && afterDecTwo.count === 0, "decrement should reach zero");
+        assert(
+          afterDecTwo !== null && afterDecTwo.count === 0,
+          "decrement should reach zero",
+        );
 
         const afterDelete = await AutoRoleTalliesRepo.read(tallyKey);
         assertEqual(afterDelete, null, "decrement to zero should delete tally");
@@ -334,11 +383,24 @@ export const suite: Suite = {
           messageId,
           emojiKey: "missing",
         });
-        assertEqual(deletedMissing, false, "deleteOne should return false when missing");
+        assertEqual(
+          deletedMissing,
+          false,
+          "deleteOne should return false when missing",
+        );
 
-        await AutoRoleTalliesRepo.increment({ guildId, messageId, emojiKey: "heart" }, factory.userId());
-        const removedForMessage = await AutoRoleTalliesRepo.deleteForMessage(guildId, messageId);
-        assert(removedForMessage >= 1, "deleteForMessage should remove tallies");
+        await AutoRoleTalliesRepo.increment(
+          { guildId, messageId, emojiKey: "heart" },
+          factory.userId(),
+        );
+        const removedForMessage = await AutoRoleTalliesRepo.deleteForMessage(
+          guildId,
+          messageId,
+        );
+        assert(
+          removedForMessage >= 1,
+          "deleteForMessage should remove tallies",
+        );
       },
     },
   ],

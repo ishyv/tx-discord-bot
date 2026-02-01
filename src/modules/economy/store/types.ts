@@ -60,6 +60,32 @@ export const DEFAULT_STORE_CONFIG = {
   active: true,
 };
 
+/** Store rotation configuration (Phase 9d). */
+export interface StoreFeaturedConfig {
+  /** Number of daily featured items. */
+  readonly dailyFeaturedCount: number;
+  /** Whether to enable legendary weekly slot. */
+  readonly hasLegendarySlot: boolean;
+  /** Discount percentage for featured items (0-1). */
+  readonly featuredDiscountPct: number;
+  /** Scarcity markup percentage (0-1). */
+  readonly scarcityMarkupPct: number;
+  /** Stock threshold for scarcity markup. */
+  readonly scarcityThreshold: number;
+  /** Rotation mode. */
+  readonly rotationMode: "manual" | "auto" | "disabled";
+}
+
+/** Default featured configuration. */
+export const DEFAULT_FEATURED_CONFIG: StoreFeaturedConfig = {
+  dailyFeaturedCount: 5,
+  hasLegendarySlot: true,
+  featuredDiscountPct: 0.15,
+  scarcityMarkupPct: 0.25,
+  scarcityThreshold: 10,
+  rotationMode: "auto",
+};
+
 /** Buy transaction input. */
 export interface BuyItemInput {
   /** Buyer user ID. */
@@ -146,7 +172,8 @@ export type StoreErrorCode =
   | "REQUIRED_ROLE_MISSING"
   | "INVALID_QUANTITY"
   | "INVALID_PRICE"
-  | "TRANSACTION_FAILED";
+  | "TRANSACTION_FAILED"
+  | "FEATURE_DISABLED";
 
 /** Error class for store operations. */
 export class StoreError extends Error {
@@ -191,12 +218,18 @@ export interface StoreTransactionAudit {
 }
 
 /** Calculate sell price from base value. */
-export function calculateSellPrice(baseValue: number, sellMultiplier = 0.85): number {
+export function calculateSellPrice(
+  baseValue: number,
+  sellMultiplier = 0.85,
+): number {
   return Math.max(1, Math.floor(baseValue * sellMultiplier));
 }
 
 /** Calculate buy price with optional markup. */
-export function calculateBuyPrice(baseValue: number, buyMultiplier = 1.0): number {
+export function calculateBuyPrice(
+  baseValue: number,
+  buyMultiplier = 1.0,
+): number {
   return Math.max(1, Math.floor(baseValue * buyMultiplier));
 }
 
@@ -220,10 +253,7 @@ export function calculatePriceWithTax(
 }
 
 /** Check if stock is sufficient. */
-export function checkStock(
-  stock: number,
-  requested: number,
-): StockCheckResult {
+export function checkStock(stock: number, requested: number): StockCheckResult {
   const unlimited = stock < 0;
   return {
     available: unlimited || stock >= requested,
