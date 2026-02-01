@@ -18,6 +18,7 @@ import { Embed } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import type { APIEmbedField } from "seyfert/lib/types";
 import { formatNumber } from "./formatting";
+import { UIColors } from "@/modules/ui/design-system";
 
 // ============================================================================
 // Types
@@ -123,7 +124,7 @@ export function buildResultEmbed(params: {
   } = params;
 
   const embed = new Embed()
-    .setColor(EmbedColors.Green)
+    .setColor(UIColors.success)
     .setTitle(`${emoji} ${title}`);
 
   if (description) {
@@ -141,7 +142,7 @@ export function buildResultEmbed(params: {
 
   // Net change
   fields.push({
-    name: "📈 Cambio",
+    name: "📈 Change",
     value: formatChange(change.delta, change.display),
     inline: true,
   });
@@ -149,7 +150,7 @@ export function buildResultEmbed(params: {
   // Breakdown if provided
   if (breakdown) {
     fields.push({
-      name: "📊 Desglose",
+      name: "📊 Breakdown",
       value: buildBreakdownLines(breakdown),
       inline: false,
     });
@@ -345,16 +346,16 @@ export function buildDailyClaimEmbed(params: {
 
   // Streak info
   extraFields.push({
-    name: "🔥 Racha",
-    value: `${formatNumber(streak)} días (mejor: ${formatNumber(bestStreak)})`,
+    name: "🔥 Streak",
+    value: `${formatNumber(streak)} days (best: ${formatNumber(bestStreak)})`,
     inline: true,
   });
 
   // Level up notification
   if (levelUp && newLevel) {
     extraFields.push({
-      name: "🎉 ¡Subiste de nivel!",
-      value: `Nivel ${formatNumber(newLevel)}`,
+      name: "🎉 Level Up!",
+      value: `Level ${formatNumber(newLevel)}`,
       inline: true,
     });
   }
@@ -362,6 +363,7 @@ export function buildDailyClaimEmbed(params: {
   return buildResultEmbed({
     title: "Daily Claimed",
     emoji: "🎁",
+    description: `◈ **+${formatNumber(netAmount)} coins** collected from the void`,
     change: {
       before: balanceBefore,
       after: balanceAfter,
@@ -374,6 +376,7 @@ export function buildDailyClaimEmbed(params: {
     options: {
       correlationId,
       showCorrelationId: true,
+      footerText: "💡 Return in 24h to continue your streak",
     },
   });
 }
@@ -424,7 +427,7 @@ export function buildWorkClaimEmbed(params: {
 
   // Daily progress
   extraFields.push({
-    name: "📅 Hoy",
+    name: "📅 Today's Progress",
     value: `${formatNumber(dailyCap - remainingToday)}/${formatNumber(dailyCap)}`,
     inline: true,
   });
@@ -432,8 +435,8 @@ export function buildWorkClaimEmbed(params: {
   // Level up notification
   if (levelUp && newLevel) {
     extraFields.push({
-      name: "🎉 ¡Subiste de nivel!",
-      value: `Nivel ${formatNumber(newLevel)}`,
+      name: "🎉 Level Up!",
+      value: `Level ${formatNumber(newLevel)}`,
       inline: true,
     });
   }
@@ -495,8 +498,8 @@ export function buildCoinflipEmbed(params: {
   } = params;
 
   const emoji = won ? "🎉" : "😢";
-  const title = won ? "¡Ganaste!" : "Perdiste";
-  const description = `Elegiste **${choice}**, salió **${outcome}**`;
+  const title = won ? "You Won!" : "You Lost";
+  const description = `🪙 You chose **${choice}** — It landed on **${outcome}**`;
 
   const extraFields: APIEmbedField[] = [];
 
@@ -510,14 +513,14 @@ export function buildCoinflipEmbed(params: {
     };
 
     extraFields.push({
-      name: "💰 Ganancia bruta",
+      name: "💰 Gross Winnings",
       value: display(winnings + houseFee),
       inline: true,
     });
 
     if (houseFee > 0) {
       extraFields.push({
-        name: "🏦 Comisión",
+        name: "🏦 House Fee",
         value: `-${display(houseFee)}`,
         inline: true,
       });
@@ -538,6 +541,7 @@ export function buildCoinflipEmbed(params: {
       options: {
         correlationId,
         showCorrelationId: true,
+        footerText: "💡 /coinflip <amount> to play again",
       },
     });
   } else {
@@ -556,6 +560,7 @@ export function buildCoinflipEmbed(params: {
       options: {
         correlationId,
         showCorrelationId: true,
+        footerText: "💡 Better luck next time!",
       },
     });
   }
@@ -588,21 +593,21 @@ export function buildTriviaEmbed(params: {
   } = params;
 
   const emoji = correct ? "✅" : "❌";
-  const title = correct ? "¡Correcto!" : "Incorrecto";
+  const title = correct ? "Correct!" : "Incorrect";
 
   const extraFields: APIEmbedField[] = [
     {
-      name: "❓ Pregunta",
+      name: "❓ Question",
       value: question.length > 100 ? question.slice(0, 100) + "..." : question,
       inline: false,
     },
     {
-      name: "Tu respuesta",
+      name: "Your Answer",
       value: selectedAnswer,
       inline: true,
     },
     {
-      name: "Correcta",
+      name: "Correct Answer",
       value: correctAnswer,
       inline: true,
     },
@@ -633,9 +638,10 @@ export function buildTriviaEmbed(params: {
     });
   } else {
     return buildEconomyErrorEmbed({
-      title: "Respuesta Incorrecta",
-      message: `La respuesta correcta era: **${correctAnswer}**`,
+      title: "Incorrect Answer",
+      message: `The correct answer was: **${correctAnswer}**`,
       emoji: "❌",
+      suggestion: "Try again with /trivia",
       options: {
         correlationId,
         showCorrelationId: true,
@@ -669,9 +675,9 @@ export function buildRobEmbed(params: {
 
   if (success) {
     return buildResultEmbed({
-      title: "¡Robo Exitoso!",
+      title: "Heist Successful!",
       emoji: "🦹",
-      description: `Has robado a <@${targetId}>`,
+      description: `You stole from <@${targetId}> in the shadows...`,
       change: {
         before: robberBalanceAfter - amountStolen,
         after: robberBalanceAfter,
@@ -687,9 +693,10 @@ export function buildRobEmbed(params: {
   } else {
     const lostAmount = fineAmount || 0;
     return buildEconomyErrorEmbed({
-      title: "¡Te Atraparon!",
-      message: `Intentaste robar a <@${targetId}> pero fallaste.${lostAmount > 0 ? ` Multa: ${display(lostAmount)}` : ""}`,
+      title: "Caught Red-Handed!",
+      message: `You tried to rob <@${targetId}> but were caught!${lostAmount > 0 ? `\n\n💸 Fine paid: ${display(lostAmount)}` : ""}`,
       emoji: "🚔",
+      suggestion: "Increase your Luck stat for better success rates.",
       options: {
         correlationId,
         showCorrelationId: true,
@@ -711,21 +718,21 @@ export function buildVoteEmbed(params: {
   const { type, targetId, loveCount, hateCount, correlationId } = params;
 
   const emoji = type === "love" ? "💖" : "😤";
-  const title = type === "love" ? "Love Enviado" : "Hate Enviado";
-  const color = type === "love" ? EmbedColors.Green : EmbedColors.Red;
+  const title = type === "love" ? "Love Sent" : "Hate Sent";
+  const color = type === "love" ? UIColors.success : UIColors.error;
 
   const embed = new Embed()
     .setColor(color)
     .setTitle(`${emoji} ${title}`)
-    .setDescription(`Has votado a <@${targetId}>`)
+    .setDescription(`You voted for <@${targetId}>`)
     .setFields([
       {
-        name: "📊 Estadísticas",
+        name: "📊 Reputation Stats",
         value: `💖 ${formatNumber(loveCount)}  •  😤 ${formatNumber(hateCount)}`,
         inline: false,
       },
     ])
-    .setFooter({ text: `ID: ${correlationId}` });
+    .setFooter({ text: `Ref: ${correlationId}` });
 
   return embed;
 }
@@ -755,20 +762,20 @@ export function buildCraftEmbed(params: {
   return buildEconomyInfoEmbed({
     title: "Crafting Complete",
     emoji: "🔨",
-    description: `Has crafteado **${recipeName}** x${formatNumber(quantity)}`,
+    description: `Crafted **${recipeName}** ×${formatNumber(quantity)}`,
     fields: [
       {
-        name: "📥 Materiales",
-        value: inputLines || "Ninguno",
+        name: "📥 Materials Used",
+        value: inputLines || "None",
         inline: true,
       },
       {
-        name: "📤 Resultado",
-        value: outputLines || "Ninguno",
+        name: "📤 Items Created",
+        value: outputLines || "None",
         inline: true,
       },
       {
-        name: "⭐ XP",
+        name: "⭐ XP Gained",
         value: `+${formatNumber(xpGained)}`,
         inline: true,
       },
@@ -776,6 +783,7 @@ export function buildCraftEmbed(params: {
     options: {
       correlationId,
       showCorrelationId: true,
+      footerText: "💡 /craft to craft more items",
     },
   });
 }
@@ -803,9 +811,9 @@ export function buildPerkPurchaseEmbed(params: {
   } = params;
 
   return buildResultEmbed({
-    title: "Perk Adquirido",
+    title: "Perk Acquired",
     emoji: "⭐",
-    description: `**${perkName}** → Nivel ${formatNumber(level)}`,
+    description: `**${perkName}** → Level ${formatNumber(level)}`,
     change: {
       before: balanceBefore,
       after: balanceAfter,
@@ -816,6 +824,7 @@ export function buildPerkPurchaseEmbed(params: {
     options: {
       correlationId,
       showCorrelationId: true,
+      footerText: "💡 /perks list to see all perks",
     },
   });
 }
@@ -833,12 +842,12 @@ export function buildEquipmentEmbed(params: {
   const { action, itemName, slot, stats, correlationId } = params;
 
   const emoji = action === "equip" ? "🗡️" : "📦";
-  const title = action === "equip" ? "Item Equipado" : "Item Desequipado";
-  const color = action === "equip" ? EmbedColors.Green : EmbedColors.Blue;
+  const title = action === "equip" ? "Item Equipped" : "Item Unequipped";
+  const color = action === "equip" ? UIColors.success : UIColors.info;
 
   const fields: APIEmbedField[] = [
     {
-      name: "Slot",
+      name: "🎯 Slot",
       value: slot,
       inline: true,
     },
@@ -846,7 +855,7 @@ export function buildEquipmentEmbed(params: {
 
   if (stats && stats.length > 0) {
     fields.push({
-      name: "Stats",
+      name: "📊 Stats",
       value: stats.map((s) => `• ${s.stat}: ${s.value}`).join("\n"),
       inline: false,
     });
@@ -857,7 +866,7 @@ export function buildEquipmentEmbed(params: {
     .setTitle(`${emoji} ${title}`)
     .setDescription(`**${itemName}**`)
     .setFields(fields)
-    .setFooter({ text: `ID: ${correlationId}` });
+    .setFooter({ text: `Ref: ${correlationId} • 💡 /equip to manage loadout` });
 
   return embed;
 }

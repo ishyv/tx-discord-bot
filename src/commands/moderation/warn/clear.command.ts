@@ -1,28 +1,26 @@
 /**
- * Motivación: registrar el comando "moderation / warn / clear" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Warn Clear Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Clear all warnings for a user.
  */
 import { clearWarns, listWarns } from "@/db/repositories";
 import type { GuildCommandContext } from "seyfert";
 import { createUserOption, Declare, Embed, Options, SubCommand } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
-    description: "Usuario cuyos warns se limpiaran",
+    description: "User whose warnings will be cleared",
     required: true,
   }),
 };
 
 @Declare({
   name: "clear",
-  description: "Eliminar todos los warns de un usuario",
+  description: "Clear all warnings from a user",
   defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
@@ -33,7 +31,7 @@ export default class ClearWarnCommand extends SubCommand {
     if (!guildId) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "Este comando solo funciona dentro de un servidor.",
+        content: "This command only works in a server.",
       });
       return;
     }
@@ -44,7 +42,7 @@ export default class ClearWarnCommand extends SubCommand {
     if (warnsResult.isErr()) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "No se pudieron leer los warns del usuario.",
+        content: "Could not read user warnings.",
       });
       return;
     }
@@ -52,7 +50,7 @@ export default class ClearWarnCommand extends SubCommand {
     if (warns.length === 0) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "No hay warns registrados para este usuario.",
+        content: "No warnings recorded for this user.",
       });
       return;
     }
@@ -61,17 +59,17 @@ export default class ClearWarnCommand extends SubCommand {
     if (cleared.isErr()) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "No se pudo limpiar los warns del usuario.",
+        content: "Could not clear user warnings.",
       });
       return;
     }
 
     const embed = new Embed({
-      title: "Warns eliminados",
-      description: `Se eliminaron ${warns.length} warns del usuario **${user.username}**.`,
-      color: EmbedColors.Green,
+      title: "Warnings Cleared",
+      description: `Removed ${warns.length} warnings from user **${user.username}**.`,
+      color: UIColors.success,
       footer: {
-        text: `Accion ejecutada por ${ctx.author.username}`,
+        text: `Action executed by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
       },
     });
@@ -82,10 +80,10 @@ export default class ClearWarnCommand extends SubCommand {
     });
 
     await logModerationAction(ctx.client, guildId, {
-      title: "Warns eliminados",
-      description: `Se limpiaron ${warns.length} warns de <@${user.id}>`,
+      title: "Warnings Cleared",
+      description: `Cleared ${warns.length} warnings from <@${user.id}>`,
       fields: [
-        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+        { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
       ],
       actorId: ctx.author.id,
     });

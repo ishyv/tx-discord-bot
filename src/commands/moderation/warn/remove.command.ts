@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / warn / remove" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Warn Remove Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Remove a specific warning from a user.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -14,8 +12,8 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import { isValidWarnId } from "@/utils/warnId";
 import { listWarns, removeWarn } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";
@@ -23,18 +21,18 @@ import { logModerationAction } from "@/utils/moderationLogger";
 
 const options = {
   user: createUserOption({
-    description: "Usuario al que se le removera el warn",
+    description: "User to remove warning from",
     required: true,
   }),
   warn_id: createStringOption({
-    description: "ID del warn (ej. pyebt)",
+    description: "Warning ID (e.g. pyebt)",
     required: true,
   }),
 };
 
 @Declare({
   name: "remove",
-  description: "Remover un warn a un usuario",
+  description: "Remove a warning from a user",
   defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
@@ -45,7 +43,7 @@ export default class RemoveWarnCommand extends SubCommand {
     if (!guildId) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "Este comando solo funciona dentro de un servidor.",
+        content: "This command only works in a server.",
       });
       return;
     }
@@ -57,7 +55,7 @@ export default class RemoveWarnCommand extends SubCommand {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "El ID del warn no es valido. Debe tener 5 caracteres alfanumericos sin confusiones (ej. pyebt).",
+          "Invalid warn ID. It must be 5 alphanumeric characters (e.g. pyebt).",
       });
       return;
     }
@@ -66,7 +64,7 @@ export default class RemoveWarnCommand extends SubCommand {
     if (warnsResult.isErr()) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "No se pudieron leer los warns del usuario.",
+        content: "Could not read user warnings.",
       });
       return;
     }
@@ -75,7 +73,7 @@ export default class RemoveWarnCommand extends SubCommand {
     if (warns.length === 0) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "El usuario no tiene warns para remover.",
+        content: "The user has no warnings to remove.",
       });
       return;
     }
@@ -84,27 +82,27 @@ export default class RemoveWarnCommand extends SubCommand {
     if (!exists) {
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: `No se encontro un warn con el ID ${warnId.toUpperCase()}.`,
+        content: `No warning found with ID ${warnId.toUpperCase()}.`,
       });
       return;
     }
 
     const removeResult = await removeWarn(user.id, warnId);
     if (removeResult.isErr()) {
-      const message = removeResult.error?.message ?? "Error desconocido";
+      const message = removeResult.error?.message ?? "Unknown error";
       await ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: `Error al remover el warn: ${message}`,
+        content: `Error removing warning: ${message}`,
       });
       return;
     }
 
     const successEmbed = new Embed({
-      title: "Warn eliminado",
-      description: `Se removio el warn **${warnId.toUpperCase()}** del usuario **${user.username}**.`,
-      color: EmbedColors.Green,
+      title: "Warning Removed",
+      description: `Removed warning **${warnId.toUpperCase()}** from user **${user.username}**.`,
+      color: UIColors.success,
       footer: {
-        text: `Warn eliminado por ${ctx.author.username}`,
+        text: `Warning removed by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
       },
     });
@@ -115,10 +113,10 @@ export default class RemoveWarnCommand extends SubCommand {
     });
 
     await logModerationAction(ctx.client, guildId, {
-      title: "Warn eliminado",
-      description: `Warn ${warnId.toUpperCase()} removido de <@${user.id}>`,
+      title: "Warning Removed",
+      description: `Warning ${warnId.toUpperCase()} removed from <@${user.id}>`,
       fields: [
-        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+        { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
         { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
       ],
       actorId: ctx.author.id,

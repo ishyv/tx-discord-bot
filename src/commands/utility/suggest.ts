@@ -1,14 +1,12 @@
 /**
- * Motivación: registrar el comando "utility / suggest" dentro de la categoría utility para ofrecer la acción de forma consistente y reutilizable.
+ * Suggest Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Allow users to submit suggestions for the server.
  */
 import type { CommandContext, GuildCommandContext, UsingClient } from "seyfert";
 import { Command, createStringOption, Declare, Embed, Options } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { CHANNELS_ID } from "@/constants/guild";
 import { updateGuildPaths } from "@/db/repositories/guilds";
@@ -18,15 +16,15 @@ import { fetchStoredChannel } from "@/utils/channelGuard";
 
 const options = {
   suggest: createStringOption({
-    description: "¿qué tienes en mente para el servidor?",
+    description: "What do you have in mind for the server?",
     min_length: 16,
     required: true,
   }),
 };
 
 @Declare({
-  name: "sugerir",
-  description: "Sugerir mejoras para el servidor",
+  name: "suggest",
+  description: "Submit a suggestion for the server",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -44,7 +42,7 @@ export default class SuggestCommand extends Command {
     const suggestion = ctx.options.suggest?.trim();
     if (!suggestion) {
       await ctx.write({
-        content: "Necesitas escribir una sugerencia antes de enviarla.",
+        content: "You need to write a suggestion before submitting.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -53,7 +51,7 @@ export default class SuggestCommand extends Command {
     const guildId = ctx.guildId;
     if (!guildId) {
       await ctx.write({
-        content: "Este comando solo funciona dentro de un servidor.",
+        content: "This command only works in a server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -63,22 +61,22 @@ export default class SuggestCommand extends Command {
     if (!suggestChannelId) {
       await ctx.write({
         content:
-          "No hay un canal de sugerencias configurado. Un administrador puede configurarlo en el panel.",
+          "No suggestion channel configured. An administrator can set one up in the panel.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const suggestEmbed = new Embed({
-      title: "Nueva sugerencia !",
+      title: "New Suggestion!",
       author: {
         name: ctx.author.username,
         icon_url: ctx.author.avatarURL(),
       },
       description: suggestion,
-      color: EmbedColors.Aqua,
+      color: UIColors.info,
       footer: {
-        text: "Puedes votar a favor o en contra de esta sugerencia.",
+        text: "You can vote for or against this suggestion.",
       },
     });
 
@@ -94,7 +92,7 @@ export default class SuggestCommand extends Command {
         message.channelId,
         message.id,
         {
-          name: `Sugerencia de ${ctx.author.username}`,
+          name: `Suggestion by ${ctx.author.username}`,
         },
       );
 
@@ -103,12 +101,12 @@ export default class SuggestCommand extends Command {
       });
 
       await ctx.write({
-        content: "✅ Sugerencia enviada correctamente.",
+        content: "✅ Suggestion sent successfully.",
       });
     } catch (error) {
-      console.error("[Suggest] Error creando hilo de sugerencia:", error);
+      console.error("[Suggest] Error creating suggestion thread:", error);
       await ctx.editOrReply({
-        content: "⚠️ Ocurrió un problema al crear el hilo de la sugerencia.",
+        content: "⚠️ There was a problem creating the suggestion thread.",
         flags: MessageFlags.Ephemeral,
       });
     }

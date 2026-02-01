@@ -23,21 +23,21 @@ const choices = currencyRegistry.list().map((currencyId) => {
 
 const options = {
   currency: createStringOption({
-    description: "Moneda a retirar",
+    description: "Currency to withdraw",
     required: true,
     choices,
   }),
   amount: createIntegerOption({
-    description: "Cantidad a retirar",
+    description: "Amount to withdraw",
     required: true,
     min_value: 1,
   }),
   target: createUserOption({
-    description: "Usuario a quien se le retirará la moneda",
+    description: "User to withdraw currency from",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón del retiro",
+    description: "Reason for withdrawal",
     required: false,
   }),
 };
@@ -59,7 +59,7 @@ function buildCostValue(currencyId: string, amount: number) {
 
 @Declare({
   name: "remove-currency",
-  description: "Retirar moneda a un usuario (permite deuda)",
+  description: "Withdraw currency from a user (allows debt)",
   defaultMemberPermissions: ["ManageGuild"],
 })
 @Options(options)
@@ -70,7 +70,7 @@ export default class RemoveCurrencyCommand extends Command {
     const currencyObj = currencyRegistry.get(currency);
     if (!currencyObj) {
       await ctx.write({
-        content: "La moneda especificada no existe.",
+        content: "The specified currency does not exist.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -80,7 +80,7 @@ export default class RemoveCurrencyCommand extends Command {
       const totalResult = await adjustUserReputation(target.id, -amount);
       if (totalResult.isErr()) {
         await ctx.write({
-          content: "No se pudo actualizar la reputacion.",
+          content: "Could not update reputation.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -103,23 +103,23 @@ export default class RemoveCurrencyCommand extends Command {
       }
 
       await ctx.write({
-        content: `Se han retirado **${currencyObj.display(amount as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
+        content: `Removed **${currencyObj.display(amount as any)}** from ${target.toString()}. Current balance: \`${currencyObj.display(newBalance as any)}\`.`,
       });
 
       const logger = new GuildLogger();
       await logger.init(ctx.client, ctx.guildId);
       await logger.generalLog({
-        title: "Moneda retirada",
-        description: `El staff ${ctx.author.toString()} ha retirado moneda a ${target.toString()}.`,
+        title: "Currency Withdrawn",
+        description: `Staff ${ctx.author.toString()} has withdrawn currency from ${target.toString()}.`,
         fields: [
-          { name: "Moneda", value: currency, inline: true },
-          { name: "Cantidad", value: `${amount}`, inline: true },
+          { name: "Currency", value: currency, inline: true },
+          { name: "Amount", value: `${amount}`, inline: true },
           {
-            name: "Nuevo Saldo",
+            name: "New Balance",
             value: currencyObj.display(newBalance as any),
             inline: true,
           },
-          { name: "Razon", value: reason ?? "No especificada", inline: false },
+          { name: "Reason", value: reason ?? "Not specified", inline: false },
         ],
         color: "Red",
       });
@@ -142,7 +142,7 @@ export default class RemoveCurrencyCommand extends Command {
 
     if (result.isErr()) {
       await ctx.write({
-        content: "No se pudo actualizar el inventario de monedas.",
+        content: "Could not update the currency inventory.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -151,23 +151,23 @@ export default class RemoveCurrencyCommand extends Command {
     const newBalance = result.unwrap()[currency] ?? currencyObj.zero();
 
     await ctx.write({
-      content: `Se han retirado **${currencyObj.display(costValue as any)}** a ${target.toString()}. Saldo actual: ${currencyObj.display(newBalance as any)}.`,
+      content: `Removed **${currencyObj.display(costValue as any)}** from ${target.toString()}. Current balance: \`${currencyObj.display(newBalance as any)}\`.`,
     });
 
     const logger = new GuildLogger();
     await logger.init(ctx.client, ctx.guildId);
     await logger.generalLog({
-      title: "Moneda retirada",
-      description: `El staff ${ctx.author.toString()} ha retirado moneda a ${target.toString()}.`,
+      title: "Currency Withdrawn",
+      description: `Staff ${ctx.author.toString()} has withdrawn currency from ${target.toString()}.`,
       fields: [
-        { name: "Moneda", value: currency, inline: true },
-        { name: "Cantidad", value: `${amount}`, inline: true },
+        { name: "Currency", value: currency, inline: true },
+        { name: "Amount", value: `${amount}`, inline: true },
         {
-          name: "Nuevo Saldo",
+          name: "New Balance",
           value: currencyObj.display(newBalance as any),
           inline: true,
         },
-        { name: "Razón", value: reason ?? "No especificada", inline: false },
+        { name: "Reason", value: reason ?? "Not specified", inline: false },
       ],
       color: "Red",
     });

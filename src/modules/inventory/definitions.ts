@@ -41,23 +41,23 @@ export const DEFAULT_INVENTORY_CAPACITY = {
 };
 
 export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
-  palo: {
-    id: "palo",
-    name: "Palo de Madera",
-    description: "Un palo comun y corriente. Tal vez sirva para craftear algo.",
+  stick: {
+    id: "stick",
+    name: "Wooden Stick",
+    description: "An ordinary stick. Maybe it can be used to craft something.",
     emoji: ":wood:",
     maxStack: DEFAULT_MAX_STACK,
     weight: 1,
     canStack: true,
     onUse: async ({ item, userId }) => {
-      console.log(`[inventory] Usuario ${userId} uso el item ${item.id}`);
+      console.log(`[inventory] User ${userId} used item ${item.id}`);
       // TODO: add real item behavior/persistence hook here.
     },
   },
-  espada: {
-    id: "espada",
-    name: "Espada de Hierro",
-    description: "Una espada básica para combatir.",
+  sword: {
+    id: "sword",
+    name: "Iron Sword",
+    description: "A basic sword for combat.",
     emoji: ":crossed_swords:",
     maxStack: 1,
     weight: 5,

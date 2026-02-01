@@ -29,32 +29,32 @@ const itemChoices = Object.values(ITEM_DEFINITIONS).map((item) => ({
 
 const options = {
   item: createStringOption({
-    description: "El item a dar",
+    description: "Item to give",
     required: true,
     choices: itemChoices,
   }),
   quantity: createIntegerOption({
-    description: "Cantidad de items",
+    description: "Number of items",
     required: true,
     min_value: 1,
   }),
   user: createUserOption({
-    description: "El usuario a quien dar el item",
+    description: "User to give the item to",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón del ajuste",
+    description: "Reason for the adjustment",
     required: false,
   }),
   force: createBooleanOption({
-    description: "Forzar entrega ignorando límites de capacidad",
+    description: "Force delivery ignoring capacity limits",
     required: false,
   }),
 };
 
 @Declare({
   name: "give-item",
-  description: "Dar un item a un usuario (mod-only)",
+  description: "Give an item to a user (mod-only)",
   defaultMemberPermissions: ["ManageGuild"],
 })
 @Options(options)
@@ -68,7 +68,7 @@ export default class GiveItemCommand extends Command {
     const itemId = sanitizeItemId(rawItemId);
     if (!itemId) {
       await ctx.write({
-        content: "⚠️ ID de item inválido.",
+        content: "⚠️ Invalid item ID.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -77,7 +77,7 @@ export default class GiveItemCommand extends Command {
     const itemDef = ITEM_DEFINITIONS[itemId];
     if (!itemDef) {
       await ctx.write({
-        content: "El item especificado no existe.",
+        content: "The specified item does not exist.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -105,20 +105,20 @@ export default class GiveItemCommand extends Command {
 
       const errorMessages: Record<string, string> = {
         INSUFFICIENT_PERMISSIONS:
-          "❌ No tienes permisos para realizar esta acción.",
-        ITEM_NOT_FOUND: "El item especificado no existe.",
-        TARGET_NOT_FOUND: "El usuario objetivo no existe.",
+          "❌ You don't have permission to perform this action.",
+        ITEM_NOT_FOUND: "The specified item does not exist.",
+        TARGET_NOT_FOUND: "The target user does not exist.",
         TARGET_BLOCKED:
-          "⛔ La cuenta del usuario tiene restricciones temporales.",
+          "⛔ The user's account has temporary restrictions.",
         TARGET_BANNED:
-          "🚫 La cuenta del usuario tiene restricciones permanentes.",
-        INVALID_QUANTITY: "❌ Cantidad inválida.",
-        CAPACITY_EXCEEDED: `❌ Límite de capacidad excedido. Usa \`force: true\` para forzar.`,
-        UPDATE_FAILED: "❌ Error al actualizar el inventario.",
+          "🚫 The user's account has permanent restrictions.",
+        INVALID_QUANTITY: "❌ Invalid quantity.",
+        CAPACITY_EXCEEDED: `❌ Capacity limit exceeded. Use \`force: true\` to force.`,
+        UPDATE_FAILED: "❌ Error updating inventory.",
       };
 
       const message =
-        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+        errorMessages[error.code] ?? "❌ An unexpected error occurred.";
 
       await ctx.write({
         content: message,
@@ -133,15 +133,15 @@ export default class GiveItemCommand extends Command {
     // Build response with capacity info
     let capacityWarning = "";
     if (capacity.weightExceeded || capacity.slotsExceeded) {
-      capacityWarning = "\n⚠️ **Advertencia:** Límites de capacidad excedidos.";
+      capacityWarning = "\n⚠️ **Warning:** Capacity limits exceeded.";
     }
 
-    const capacityInfo = `📦 Capacidad: ${capacity.currentSlots}/${capacity.maxSlots} slots, ${capacity.currentWeight}/${capacity.maxWeight} peso`;
+    const capacityInfo = `📦 Capacity: ${capacity.currentSlots}/${capacity.maxSlots} slots, ${capacity.currentWeight}/${capacity.maxWeight} weight`;
 
     await ctx.write({
       content:
-        `✅ Se han añadido **${quantity}x ${itemDef.name}** al inventario de ${user.toString()}.\n` +
-        `📊 Nueva cantidad: ${adjustment.afterQuantity}\n` +
+        `✅ Added **${quantity}x ${itemDef.name}** to ${user.toString()}'s inventory.\n` +
+        `📊 New quantity: ${adjustment.afterQuantity}\n` +
         `${capacityInfo}${capacityWarning}`,
     });
   }

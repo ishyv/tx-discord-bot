@@ -13,23 +13,23 @@ import {
   Embed,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { votingService } from "@/modules/economy/voting";
 
 const leaderboardOptions = {
   type: createStringOption({
-    description: "Tipo de leaderboard",
+    description: "Leaderboard type",
     required: false,
     choices: [
-      { name: "💖 Más Love", value: "love" },
-      { name: "😤 Más Hate", value: "hate" },
-      { name: "⭐ Mejor Ratio", value: "net" },
+      { name: "💖 Most Love", value: "love" },
+      { name: "😤 Most Hate", value: "hate" },
+      { name: "⭐ Best Ratio", value: "net" },
     ],
   }),
   limit: createIntegerOption({
-    description: "Cantidad de usuarios a mostrar (5-20)",
+    description: "Number of users to show (5-20)",
     required: false,
     min_value: 5,
     max_value: 20,
@@ -38,7 +38,7 @@ const leaderboardOptions = {
 
 @Declare({
   name: "vote-leaderboard",
-  description: "Ver ranking de votos del servidor",
+  description: "View voting rankings for this server",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -55,7 +55,7 @@ export default class VoteLeaderboardCommand extends Command {
 
     if (!guildId) {
       await ctx.write({
-        content: "❌ Este comando solo funciona en servidores.",
+        content: "❌ This command only works in servers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -68,7 +68,7 @@ export default class VoteLeaderboardCommand extends Command {
 
     if (result.isErr()) {
       await ctx.write({
-        content: "❌ Error al cargar el leaderboard.",
+        content: "❌ Error loading the leaderboard.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -78,16 +78,16 @@ export default class VoteLeaderboardCommand extends Command {
 
     if (leaderboard.length === 0) {
       await ctx.write({
-        content: "📊 Aún no hay votos registrados en este servidor.",
+        content: "📊 No votes have been recorded in this server yet.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const titleMap = {
-      love: "💖 Top Love Recibidos",
-      hate: "😤 Top Hate Recibidos",
-      net: "⭐ Mejor Ratio (Love - Hate)",
+      love: "💖 Top Love Received",
+      hate: "😤 Top Hate Received",
+      net: "⭐ Best Ratio (Love - Hate)",
     };
 
     const emojiMap = {
@@ -113,14 +113,14 @@ export default class VoteLeaderboardCommand extends Command {
     const embed = new Embed()
       .setColor(
         type === "love"
-          ? EmbedColors.Green
+          ? UIColors.success
           : type === "hate"
-            ? EmbedColors.Red
-            : EmbedColors.Gold,
+            ? UIColors.error
+            : UIColors.gold,
       )
       .setTitle(titleMap[type])
       .setDescription(description)
-      .setFooter({ text: `Mostrando top ${leaderboard.length}` });
+      .setFooter({ text: `Showing top ${leaderboard.length}` });
 
     await ctx.write({
       embeds: [embed],

@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / tickets / config" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Ticket Config Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Setup the ticket system channels and category.
  */
 import {
   createChannelOption,
@@ -20,23 +18,23 @@ import { Guard } from "@/middlewares/guards/decorator";
 import { ensureTicketMessage } from "@/systems/tickets";
 
 const options = {
-  // Canal de tickets
+  // Ticket channel
   channel: createChannelOption({
-    description: "Canal donde se enviara el mensaje de tickets",
+    description: "Channel where the ticket message will be sent",
     required: true,
     channel_types: [ChannelType.GuildText],
   }),
 
-  // Categoría donde se crearán los tickets
+  // Category where tickets will be created
   category: createChannelOption({
-    description: "Categoría donde se crearán los tickets",
+    description: "Category where tickets will be created",
     required: true,
     channel_types: [ChannelType.GuildCategory],
   }),
 
-  // Canal de logs de tickets
+  // Ticket logs channel
   logchannel: createChannelOption({
-    description: "Canal donde se enviaran los logs de los tickets",
+    description: "Channel where ticket logs will be sent",
     required: true,
     channel_types: [ChannelType.GuildText],
   }),
@@ -44,7 +42,7 @@ const options = {
 
 @Declare({
   name: "config",
-  description: "Configurar el sistema de tickets",
+  description: "Configure the ticket system",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -79,18 +77,18 @@ export default class ConfigTicketsCommand extends SubCommand {
     // Debug: read back stored values
     const config = await configStore.get(guildId, ConfigurableModule.Tickets);
 
-    console.log("Datos guardados en la base de datos:");
-    console.log("Canal de tickets:", config.tickets);
-    console.log("Canal de logs de tickets:", config.ticketLogs);
-    console.log("Categoría de tickets:", config.ticketCategory);
+    console.log("Data saved in the database:");
+    console.log("Ticket channel:", config.tickets);
+    console.log("Ticket logs channel:", config.ticketLogs);
+    console.log("Ticket category:", config.ticketCategory);
 
-    // Cuando se actualiza el canal de tickets, asegurarse de que el mensaje de tickets exista.
+    // When the ticket channel is updated, ensure the ticket message exists.
     await ensureTicketMessage(ctx.client).catch(() => {
-      // no hacer nada si falla; el mensaje se intentará crear en el próximo reinicio o reconfiguración
+      // do nothing if it fails; the message will be attempted to be created on the next restart or reconfiguration
     });
 
     await ctx.write({
-      content: "Configuración de tickets guardada correctamente.",
+      content: "Ticket configuration saved successfully.",
     });
   }
 }

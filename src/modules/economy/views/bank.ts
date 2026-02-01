@@ -75,28 +75,28 @@ export function getBankSafetyRating(percentInBank: number): {
 } {
   if (percentInBank >= 80) {
     return {
-      rating: "Muy Seguro",
+      rating: "Very Secure",
       emoji: "🔒",
-      advice: "¡Excelente! La mayoría de tus coins están protegidas.",
+      advice: "Excellent! Most of your coins are protected.",
     };
   }
   if (percentInBank >= 50) {
     return {
-      rating: "Seguro",
+      rating: "Secure",
       emoji: "🛡️",
-      advice: "Buen balance. Considera guardar más en el banco.",
+      advice: "Good balance. Consider saving more in the bank.",
     };
   }
   if (percentInBank >= 20) {
     return {
-      rating: "Moderado",
+      rating: "Moderate",
       emoji: "⚠️",
-      advice: "Podrías perder coins en eventos. Deposita más en el banco.",
+      advice: "You could lose coins in events. Deposit more in the bank.",
     };
   }
   return {
-    rating: "Riesgoso",
+    rating: "Risky",
     emoji: "🚨",
-    advice: "¡Cuidado! Tus coins están en riesgo. Usa /deposit ahora.",
+    advice: "Watch out! Your coins are at risk. Use /deposit now.",
   };
 }

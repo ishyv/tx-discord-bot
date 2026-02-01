@@ -11,7 +11,7 @@ import {
   Options,
   Middlewares,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import {
   getFeatureFlags,
@@ -86,7 +86,7 @@ export default class FeatureDashboardCommand extends Command {
         title: value
           ? "All features enabled"
           : "All features disabled",
-        color: value ? EmbedColors.Green : EmbedColors.Red,
+        color: value ? UIColors.success : UIColors.error,
         fields: GUILD_FEATURES.map((f) => ({
           name: f,
           value: updated[f] ? "✅ Active" : "⛔ Inactive",
@@ -101,7 +101,7 @@ export default class FeatureDashboardCommand extends Command {
       const features = await getFeatureFlags(guildId);
       const embed = new Embed({
         title: "Features Dashboard",
-        color: EmbedColors.Blurple,
+        color: UIColors.info,
         description:
           "Summary of the current state of each system. Use `/features feature:<name> enabled:<true|false>` to update.",
         fields: GUILD_FEATURES.map((f) => ({
@@ -119,7 +119,7 @@ export default class FeatureDashboardCommand extends Command {
 
     const embed = new Embed({
       title: "Feature updated",
-      color: enabledInput ? EmbedColors.Green : EmbedColors.Red,
+      color: enabledInput ? UIColors.success : UIColors.error,
       description: `\`${feature}\` is now ${enabledInput ? "enabled" : "disabled"}.`,
       fields: GUILD_FEATURES.map((f) => ({
         name: f,
@@ -152,7 +152,7 @@ export default class FeatureDashboardCommand extends Command {
       }
 
       ctx.client.logger?.info?.(
-        "[dashboard] autoroles deshabilitado: reglas apagadas",
+        "[dashboard] autoroles disabled: rules turned off",
         {
           guildId,
           disabledRules: enabledRules.length,
@@ -160,7 +160,7 @@ export default class FeatureDashboardCommand extends Command {
       );
     } catch (error) {
       ctx.client.logger?.error?.(
-        "[dashboard] no se pudieron deshabilitar reglas de autoroles",
+        "[dashboard] could not disable autorole rules",
         {
           guildId,
           error,

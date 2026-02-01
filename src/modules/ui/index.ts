@@ -1,11 +1,17 @@
 /**
- * Motivación: ofrecer primitivas de interfaz (index) para manejar el registro y ejecución de componentes interactivos.
+ * UI Module Index.
  *
- * Idea/concepto: mantiene un sistema de señales/sesiones y augmentations para que los handlers de Seyfert resuelvan customIds.
+ * Purpose: Provide interface primitives for managing registration and execution
+ * of interactive components.
  *
- * Alcance: organiza la infraestructura de UI; no define el contenido de cada componente ni sus reglas de negocio.
+ * Concept: Maintains a system of signals/sessions and augmentations so Seyfert
+ * handlers can resolve customIds.
+ *
+ * Scope: Organizes UI infrastructure; does not define component content or
+ * business rules.
  */
 export * from "./ui";
 export * from "./signals";
 export * from "./sessions";
+export * from "./design-system";
 export { Button } from "seyfert";

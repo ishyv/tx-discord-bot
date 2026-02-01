@@ -5,24 +5,25 @@ import {
   createStringOption,
   type CommandContext,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+
 import { MessageFlags } from "seyfert/lib/types";
 import { UserStore } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { parseAmountOrReply, replyMissingUser, normalizeInt } from "./shared";
 import { currencyTransaction } from "@/modules/economy";
 
 const options = {
   amount: createStringOption({
-    description: "Cantidad de coins a retirar (ej: 100, all, 50%)",
+    description: "Amount of coins to withdraw (e.g. 100, all, 50%)",
     required: true,
   }),
 };
 
 @Declare({
   name: "withdraw",
-  description: "Retira coins del banco a tu mano",
+  description: "Withdraw coins from the bank to your hand",
 })
 @Options(options)
 @Cooldown({
@@ -59,7 +60,7 @@ export default class WithdrawCommand extends Command {
     if (amount > bank) {
       await ctx.write({
         content:
-          "No tienes suficientes coins en el banco para retirar esa cantidad.",
+          "You don't have enough coins in the bank to withdraw that amount.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -82,7 +83,7 @@ export default class WithdrawCommand extends Command {
 
     if (result.isErr()) {
       await ctx.write({
-        content: "Ocurrió un error al procesar el retiro.",
+        content: "An error occurred while processing the withdrawal.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -98,8 +99,8 @@ export default class WithdrawCommand extends Command {
     await ctx.write({
       embeds: [
         {
-          color: EmbedColors.Green,
-          description: `✅ Has retirado **${amount}** coins.\n\n💳 **Banco:** ${updatedBank}\n🖐️ **Mano:** ${updatedHand}`,
+          color: UIColors.success,
+          description: `✅ You have withdrawn **${amount}** coins.\n\n💳 **Bank:** ${updatedBank}\n🖐️ **Hand:** ${updatedHand}`,
         },
       ],
     });

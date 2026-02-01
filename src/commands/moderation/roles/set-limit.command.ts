@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / set limit" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Set Limit Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Configure usage limits (rate limits) for moderation actions on managed roles.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -14,7 +12,7 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import {
@@ -27,20 +25,20 @@ import {
 
 const options = {
   key: createStringOption({
-    description: "Clave del rol administrado",
+    description: "Managed role key",
     required: true,
   }),
   action: createStringOption({
-    description: "Accion de moderacion (kick, ban, warn, timeout, purge)",
+    description: "Moderation action (kick, ban, warn, timeout, purge)",
     required: true,
   }),
   uses: createIntegerOption({
-    description: "Cantidad de usos permitidos en la ventana",
+    description: "Amount of allowed uses in the window",
     required: true,
     min_value: 1,
   }),
   window: createStringOption({
-    description: "Ventana de tiempo (p. ej. 10m, 1h, 6h, 24h, 7d)",
+    description: "Time window (e.g. 10m, 1h, 6h, 24h, 7d)",
     required: true,
     min_length: 1,
   }),
@@ -48,7 +46,7 @@ const options = {
 
 @Declare({
   name: "set-limit",
-  description: "Configurar un limite de uso para una accion",
+  description: "Configure a usage limit for an action",
 })
 @Options(options)
 export default class RoleSetLimitCommand extends SubCommand {
@@ -59,9 +57,9 @@ export default class RoleSetLimitCommand extends SubCommand {
     const key = ctx.options.key.trim();
     if (!key) {
       const embed = new Embed({
-        title: "Clave invalida",
-        description: "Indica la clave del rol administrado que deseas editar.",
-        color: EmbedColors.Red,
+        title: "Invalid key",
+        description: "Indicate the managed role key you want to edit.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -70,9 +68,9 @@ export default class RoleSetLimitCommand extends SubCommand {
     const actionResult = resolveActionInput(ctx.options.action);
     if ("error" in actionResult) {
       const embed = new Embed({
-        title: "Accion invalida",
+        title: "Invalid action",
         description: actionResult.error,
-        color: EmbedColors.Red,
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -82,9 +80,9 @@ export default class RoleSetLimitCommand extends SubCommand {
     const parsedWindow = parseLimitWindowInput(ctx.options.window);
     if (!parsedWindow) {
       const embed = new Embed({
-        title: "Ventana invalida",
-        description: "Usa un formato valido como 10m, 1h, 6h, 24h o 7d.",
-        color: EmbedColors.Red,
+        title: "Invalid window",
+        description: "Use a valid format like 10m, 1h, 6h, 24h or 7d.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -95,10 +93,10 @@ export default class RoleSetLimitCommand extends SubCommand {
     const roleRec = rolesRes.isOk() ? (rolesRes.unwrap() as any)[key] : null;
     if (!roleRec) {
       const embed = new Embed({
-        title: "Rol no encontrado",
+        title: "Role not found",
         description:
-          "No existe una configuracion registrada con esa clave. Verifica el nombre e intentalo nuevamente.",
-        color: EmbedColors.Red,
+          "There is no registered configuration with that key. Check the name and try again.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -123,13 +121,13 @@ export default class RoleSetLimitCommand extends SubCommand {
     ).length;
 
     const embed = new Embed({
-      title: "Limite actualizado",
-      color: EmbedColors.Blurple,
+      title: "Limit updated",
+      color: UIColors.info,
       fields: [
-        { name: "Rol", value: key },
-        { name: "Accion", value: action.key },
-        { name: "Limite", value: formatLimitRecord(limitRecord) },
-        { name: "Limites configurados", value: configuredLimits.toString() },
+        { name: "Role", value: key },
+        { name: "Action", value: action.key },
+        { name: "Limit", value: formatLimitRecord(limitRecord) },
+        { name: "Configured limits", value: configuredLimits.toString() },
       ],
     });
 

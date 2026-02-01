@@ -17,7 +17,7 @@ import { Features } from "@/modules/features";
 
 const options = {
   message_link: createStringOption({
-    description: "Enlace al mensaje por el cual solicitas reputacion",
+    description: "Link to the message for which you are requesting reputation",
     required: true,
   }),
 };
@@ -30,7 +30,7 @@ const options = {
  */
 @Declare({
   name: "request",
-  description: "Solicitar una revision de reputacion al staff",
+  description: "Request a reputation review from the staff",
 })
 @Options(options)
 @Guard({
@@ -66,7 +66,7 @@ export default class RepRequestCommand extends SubCommand {
     if (!fetched.channelId || !repChannel) {
       await ctx.editResponse({
         content:
-          "Las solicitudes de reputacion no estan configuradas en este servidor.",
+          "Reputation requests are not configured in this server.",
       });
       return;
     }
@@ -74,7 +74,7 @@ export default class RepRequestCommand extends SubCommand {
     if (!repChannel.isTextGuild()) {
       await ctx.editResponse({
         content:
-          "El canal de solicitudes de reputacion no es valido o no es de texto.",
+          "The reputation request channel is not valid or is not a text channel.",
       });
       return;
     }
@@ -88,7 +88,7 @@ export default class RepRequestCommand extends SubCommand {
     if (!linkMatch) {
       await ctx.editResponse({
         content:
-          "El enlace proporcionado no es valido. Usa el enlace directo al mensaje.",
+          "The provided link is not valid. Use the direct link to the message.",
       });
       return;
     }
@@ -97,7 +97,7 @@ export default class RepRequestCommand extends SubCommand {
 
     if (guildIdFromLink !== guildId) {
       await ctx.editResponse({
-        content: "El enlace no pertenece a este servidor.",
+        content: "The link does not belong to this server.",
       });
       return;
     }
@@ -105,7 +105,7 @@ export default class RepRequestCommand extends SubCommand {
     const targetChannel = await ctx.client.channels.fetch(channelIdFromLink);
     if (!targetChannel || !targetChannel.isTextGuild()) {
       await ctx.editResponse({
-        content: "No se pudo acceder al canal del mensaje proporcionado.",
+        content: "Could not access the channel of the provided message.",
       });
       return;
     }
@@ -117,12 +117,12 @@ export default class RepRequestCommand extends SubCommand {
 
       await ctx.editResponse({
         content:
-          "Tu solicitud de reputacion ha sido enviada al equipo de moderacion.",
+          "Your reputation request has been sent to the moderation team.",
       });
     } catch (error) {
       await ctx.editResponse({
         content:
-          "No se pudo encontrar el mensaje o no tengo permisos para leerlo.",
+          "Could not find the message or I don't have permission to read it.",
       });
     }
   }

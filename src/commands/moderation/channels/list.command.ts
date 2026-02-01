@@ -1,13 +1,11 @@
 /**
- * Motivación: registrar el comando "moderation / channels / list" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Channel List Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: List current core and optional channels.
  */
 import type { GuildCommandContext } from "seyfert";
 import { Declare, Embed, SubCommand, Middlewares } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import {
   CORE_CHANNEL_DEFINITIONS,
   getGuildChannels,
@@ -16,13 +14,12 @@ import {
 import { Guard } from "@/middlewares/guards/decorator";
 
 function formatChannelMention(channelId: string): string {
-  return channelId ? `<#${channelId}>` : "Sin canal";
+  return channelId ? `<#${channelId}>` : "No channel";
 }
 
-// Lista los canales core y opcionales actualmente vinculados.
 @Declare({
   name: "list",
-  description: "Mostrar el estado de los canales configurados",
+  description: "Show the status of configured channels",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -34,7 +31,7 @@ export default class ChannelListCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const guildId = ctx.guildId;
 
-    // Remueve los canales invalidos antes de proceder.
+    // Remove invalid channels before proceeding.
     await removeInvalidChannels(guildId, ctx.client);
 
     const guild_channels_record = await getGuildChannels(guildId);
@@ -46,7 +43,7 @@ export default class ChannelListCommand extends SubCommand {
           | null
           | undefined;
         if (!entry) {
-          return `**${name}** (${label}) -> Sin canal`;
+          return `**${name}** (${label}) -> No channel`;
         }
         return `**${name}** (${label}) -> ${formatChannelMention(entry.channelId)}`;
       })
@@ -57,23 +54,23 @@ export default class ChannelListCommand extends SubCommand {
     ) as any[];
     const managedLines = managedEntries.length
       ? managedEntries
-          .map(
-            (entry) =>
-              `**${entry.id}** (${entry.label}) -> ${formatChannelMention(entry.channelId)}`,
-          )
-          .join("\n")
-      : "Sin canales opcionales configurados.";
+        .map(
+          (entry) =>
+            `**${entry.id}** (${entry.label}) -> ${formatChannelMention(entry.channelId)}`,
+        )
+        .join("\n")
+      : "No optional channels configured.";
 
     const embed = new Embed({
-      title: "Configuracion de canales",
-      color: EmbedColors.Blurple,
+      title: "Channels Configuration",
+      color: UIColors.info,
       fields: [
         {
-          name: "Canales requeridos",
+          name: "Required Channels",
           value: coreLines,
         },
         {
-          name: "Canales opcionales",
+          name: "Optional Channels",
           value: managedLines,
         },
       ],

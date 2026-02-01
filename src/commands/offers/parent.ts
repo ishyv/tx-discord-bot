@@ -1,17 +1,15 @@
 /**
- * Motivación: registrar el comando "offers / parent" dentro de la categoría offers para ofrecer la acción de forma consistente y reutilizable.
+ * Offers Parent Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Register the parent command for job offer management.
  */
 import { AutoLoad, Command, Declare } from "seyfert";
 
 @Declare({
-  name: "oferta",
-  description: "Gestionar ofertas laborales moderadas",
+  name: "offer",
+  description: "Manage moderated job offers",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
 @AutoLoad()
-export default class OffersParent extends Command {}
+export default class OffersParent extends Command { }

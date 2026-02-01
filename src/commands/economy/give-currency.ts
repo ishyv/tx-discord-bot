@@ -29,27 +29,27 @@ const choices = currencyRegistry.list().map((currencyId) => {
 
 const options = {
   currency: createStringOption({
-    description: "Moneda a ajustar",
+    description: "Currency to adjust",
     required: true,
     choices,
   }),
   amount: createIntegerOption({
-    description: "Cantidad a ajustar (puede ser negativa)",
+    description: "Amount to adjust (can be negative)",
     required: true,
   }),
   target: createUserOption({
-    description: "Usuario objetivo",
+    description: "Target user",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón del ajuste",
+    description: "Reason for adjustment",
     required: false,
   }),
 };
 
 @Declare({
   name: "give-currency",
-  description: "Ajustar balance de moneda de un usuario (mod-only)",
+  description: "Adjust a user's currency balance (mod-only)",
   defaultMemberPermissions: ["ManageGuild"],
 })
 @Options(options)
@@ -64,7 +64,7 @@ export default class GiveCurrencyCommand extends Command {
     if (!currencyId) {
       await ctx.write({
         content:
-          "⚠️ ID de moneda inválido. Solo se permiten letras, números, guiones y guiones bajos.",
+          "⚠️ Invalid currency ID. Only letters, numbers, hyphens, and underscores are allowed.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -74,7 +74,7 @@ export default class GiveCurrencyCommand extends Command {
     const currencyObj = currencyRegistry.get(currencyId);
     if (!currencyObj) {
       await ctx.write({
-        content: "La moneda especificada no existe.",
+        content: "The specified currency does not exist.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -103,19 +103,19 @@ export default class GiveCurrencyCommand extends Command {
       // Map error codes to user-friendly messages
       const errorMessages: Record<string, string> = {
         INSUFFICIENT_PERMISSIONS:
-          "❌ No tienes permisos para realizar esta acción.",
-        CURRENCY_NOT_FOUND: "La moneda especificada no existe.",
-        TARGET_NOT_FOUND: "El usuario objetivo no existe.",
+          "❌ You don't have permission to perform this action.",
+        CURRENCY_NOT_FOUND: "The specified currency does not exist.",
+        TARGET_NOT_FOUND: "The target user does not exist.",
         TARGET_BLOCKED:
-          "⛔ La cuenta del usuario tiene restricciones temporales.",
+          "⛔ The user's account has temporary restrictions.",
         TARGET_BANNED:
-          "🚫 La cuenta del usuario tiene restricciones permanentes.",
+          "🚫 The user's account has permanent restrictions.",
         UPDATE_FAILED:
-          "❌ No se pudo actualizar el balance. Intenta nuevamente.",
+          "❌ Could not update the balance. Please try again.",
       };
 
       const message =
-        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+        errorMessages[error.code] ?? "❌ An unexpected error occurred.";
 
       await ctx.write({
         content: message,
@@ -143,12 +143,12 @@ export default class GiveCurrencyCommand extends Command {
     }
 
     // Build response message
-    const actionStr = amount >= 0 ? "añadido" : "removido";
+    const actionStr = amount >= 0 ? "added" : "removed";
 
     await ctx.write({
       content:
-        `✅ Se ha ${actionStr} **${currencyObj.display(amount as any)}** a ${target.toString()}.\n` +
-        `📊 Nuevo balance: ${currencyObj.display(adjustment.after as any)}`,
+        `✅ Successfully ${actionStr} **${currencyObj.display(amount as any)}** to ${target.toString()}.\n` +
+        `📊 New balance: \`${currencyObj.display(adjustment.after as any)}\``,
     });
 
     // Note: Audit logging is handled by the service layer

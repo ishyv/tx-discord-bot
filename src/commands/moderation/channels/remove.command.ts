@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / channels / remove" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Channel Remove Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Remove a previously registered optional channel.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -14,7 +12,7 @@ import {
   createStringOption,
   Middlewares,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import {
   removeInvalidChannels,
   removeManagedChannel,
@@ -23,15 +21,14 @@ import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
   id: createStringOption({
-    description: "Identificador del canal opcional",
+    description: "Optional channel identifier",
     required: true,
   }),
 };
 
-// Elimina un canal opcional previamente registrado.
 @Declare({
   name: "remove",
-  description: "Eliminar un canal opcional",
+  description: "Remove an optional channel",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -47,27 +44,27 @@ export default class ChannelRemoveCommand extends SubCommand {
     const identifier = ctx.options.id.trim();
     if (!identifier) {
       await ctx.write({
-        content: "[!] Debes indicar un identificador valido.",
+        content: "[!] You must specify a valid identifier.",
       });
       return;
     }
 
-    // Remueve los canales invalidos antes de proceder.
+    // Remove invalid channels before proceeding.
     await removeInvalidChannels(guildId, ctx.client);
 
     const removed = await removeManagedChannel(guildId, identifier);
 
     if (!removed) {
       await ctx.write({
-        content: "[!] No se encontro un canal con ese identificador.",
+        content: "[!] No channel found with that identifier.",
       });
       return;
     }
 
     const embed = new Embed({
-      title: "Canal opcional eliminado",
-      description: `Se elimino la referencia **${identifier}**`,
-      color: EmbedColors.Red,
+      title: "Optional channel removed",
+      description: `Reference **${identifier}** was removed`,
+      color: UIColors.error,
     });
 
     await ctx.write({ embeds: [embed] });

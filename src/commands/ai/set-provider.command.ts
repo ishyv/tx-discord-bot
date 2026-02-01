@@ -1,9 +1,7 @@
 /**
- * Motivacion: permitir elegir el proveedor de IA por guild.
+ * AI Set Provider Command.
  *
- * Idea/concepto: usa autocomplete para mostrar proveedores disponibles.
- *
- * Alcance: actualiza provider y modelo en la configuracion por guild.
+ * Purpose: Allow selecting an AI provider per guild using autocomplete.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -25,7 +23,7 @@ import { respondProviderAutocomplete } from "./shared";
 
 const options = {
   provider: createStringOption({
-    description: "Proveedor de IA",
+    description: "AI provider",
     required: true,
     autocomplete: respondProviderAutocomplete,
   }),
@@ -33,7 +31,7 @@ const options = {
 
 @Declare({
   name: "set-provider",
-  description: "Configurar el proveedor de IA",
+  description: "Configure the AI provider",
   defaultMemberPermissions: ["ManageGuild"],
   contexts: ["Guild"],
 })
@@ -48,7 +46,7 @@ export default class AiSetProviderCommand extends SubCommand {
 
     const providerId = ctx.options.provider?.trim();
     if (!providerId) {
-      await ctx.write({ content: "Debes indicar un proveedor valido." });
+      await ctx.write({ content: "You must specify a valid provider." });
       return;
     }
 
@@ -57,7 +55,7 @@ export default class AiSetProviderCommand extends SubCommand {
         .map((entry) => `\`${entry.id}\``)
         .join(", ");
       await ctx.write({
-        content: `Proveedor no reconocido. Disponibles: ${available}`,
+        content: `Provider not recognized. Available: ${available}`,
       });
       return;
     }
@@ -65,7 +63,7 @@ export default class AiSetProviderCommand extends SubCommand {
     const current = await configStore.get(guildId, ConfigurableModule.AI);
     if (current.provider === providerId) {
       await ctx.write({
-        content: `El proveedor ya esta configurado en \`${providerId}\`.`,
+        content: `Provider is already set to \`${providerId}\`.`,
       });
       return;
     }
@@ -77,7 +75,7 @@ export default class AiSetProviderCommand extends SubCommand {
     });
 
     await ctx.write({
-      content: `Proveedor actualizado a \`${providerId}\`. Modelo por defecto: \`${defaultModel}\`.`,
+      content: `Provider updated to \`${providerId}\`. Default model: \`${defaultModel}\`.`,
     });
   }
 }

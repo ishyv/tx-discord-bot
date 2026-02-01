@@ -13,15 +13,15 @@ import { Guard } from "@/middlewares/guards/decorator";
 import { Features } from "@/modules/features";
 
 const options = {
-  palabras: createStringOption({
-    description: "Lista de palabras separadas por comas",
+  keywords: createStringOption({
+    description: "List of keywords separated by commas",
     required: true,
   }),
 };
 
 @Declare({
   name: "keywords",
-  description: "Configurar palabras clave de reputacion",
+  description: "Configure reputation keywords",
 })
 @Options(options)
 @Guard({
@@ -34,8 +34,8 @@ export default class RepConfigKeywordsCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
 
-    const { palabras } = ctx.options;
-    const keywords = palabras
+    const { keywords: keywordsInput } = ctx.options;
+    const keywords = keywordsInput
       .split(",")
       .map((w) => w.trim())
       .filter(Boolean);
@@ -44,7 +44,7 @@ export default class RepConfigKeywordsCommand extends SubCommand {
     await configStore.set(guildId, ConfigurableModule.Reputation, { keywords });
 
     await ctx.write({
-      content: `Se han actualizado las palabras clave de reputacion: ${keywords.map((k) => `\`${k}\``).join(", ")}`,
+      content: `Reputation keywords have been updated: ${keywords.map((k) => `\`${k}\``).join(", ")}`,
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -52,14 +52,14 @@ export default class RepConfigKeywordsCommand extends SubCommand {
 
 const detectionOptions = {
   enabled: createBooleanOption({
-    description: "Habilitar o deshabilitar la deteccion automatica",
+    description: "Enable or disable automatic detection",
     required: true,
   }),
 };
 
 @Declare({
   name: "detection",
-  description: "Configurar deteccion automatica de reputacion",
+  description: "Configure automatic reputation detection",
 })
 @Options(detectionOptions)
 @Guard({
@@ -76,7 +76,7 @@ export class RepConfigDetectionCommand extends SubCommand {
     await setFeatureFlag(guildId, Features.ReputationDetection, enabled);
 
     await ctx.write({
-      content: `La deteccion automatica de reputacion ha sido **${enabled ? "habilitada" : "deshabilitada"}**.`,
+      content: `Automatic reputation detection has been **${enabled ? "enabled" : "disabled"}**.`,
       flags: MessageFlags.Ephemeral,
     });
   }

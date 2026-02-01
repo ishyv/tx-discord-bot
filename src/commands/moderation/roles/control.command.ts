@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / control" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Control Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Configure moderation overrides for managed roles.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -14,7 +12,7 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import {
   DEFAULT_MODERATION_ACTIONS,
@@ -143,7 +141,7 @@ function buildSummaryEmbed(
 ): Embed {
   return createSummaryEmbed(
     `Moderation Policies - ${key}`,
-    EmbedColors.Blurple,
+    UIColors.info,
     roleId,
     overrides,
   );
@@ -158,10 +156,10 @@ function buildUpdateEmbed(
 ): Embed {
   const color =
     override === "deny"
-      ? EmbedColors.Red
+      ? UIColors.error
       : override === "allow"
-        ? EmbedColors.Green
-        : EmbedColors.Yellow;
+        ? UIColors.success
+        : UIColors.warning;
 
   return createSummaryEmbed(
     `Override Updated - ${key}`,
@@ -211,7 +209,7 @@ export default class RoleControlCommand extends SubCommand {
         const embed = new Embed({
           title: "Invalid action",
           description: res.error,
-          color: EmbedColors.Red,
+          color: UIColors.error,
         });
         await ctx.write({ embeds: [embed] });
         return;
@@ -225,7 +223,7 @@ export default class RoleControlCommand extends SubCommand {
         const overrides = await getRoleOverrides(context.guildId, key);
         const embed = createSummaryEmbed(
           "Overrides reset",
-          EmbedColors.Green,
+          UIColors.success,
           roleId,
           overrides,
         );
@@ -268,7 +266,7 @@ export default class RoleControlCommand extends SubCommand {
         const embed = new Embed({
           title: `Current Override - ${resolvedAction.definition.label}`,
           description: `The override for **${resolvedAction.key}** is **${current}**.`,
-          color: EmbedColors.Blurple,
+          color: UIColors.info,
           fields: [{ name: "Summary", value: formatOverrideList(overrides) }],
           footer: { text: OPTIONS_FOOTER },
         });
@@ -285,7 +283,7 @@ export default class RoleControlCommand extends SubCommand {
       const embed = new Embed({
         title: "Error updating overrides",
         description: error instanceof Error ? error.message : String(error),
-        color: EmbedColors.Red,
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
     }

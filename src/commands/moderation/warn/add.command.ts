@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / warn / add" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Warn Add Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Add a warning to a user.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -14,30 +12,30 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import type { Warn } from "@/db/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
 import { addWarn, listWarns } from "@/db/repositories";
 import { registerCase } from "@/modules/moderation/service";
 import { BindDisabled, Features } from "@/modules/features";
 import { logModerationAction } from "@/utils/moderationLogger";
-import { MessageFlags } from "seyfert/lib/types";
 import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   user: createUserOption({
-    description: "Usuario al que se le aplicara un warn",
+    description: "User to warn",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razon del warn",
+    description: "Reason for the warning",
     required: false,
   }),
 };
 
 @Declare({
   name: "add",
-  description: "Anadir un warn a un usuario",
+  description: "Add a warning to a user",
   defaultMemberPermissions: ["KickMembers"],
 })
 @Options(options)
@@ -47,14 +45,14 @@ export default class AddWarnCommand extends SubCommand {
     const guildId = ctx.guildId;
     if (!guildId) {
       await ctx.editOrReply({
-        content: "Este comando solo funciona dentro de un servidor.",
+        content: "This command only works in a server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
     if (!isSnowflake(guildId) || !isSnowflake(ctx.options.user.id)) {
       await ctx.editOrReply({
-        content: "IDs inválidos. Intenta nuevamente.",
+        content: "Invalid IDs. Try again.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -64,7 +62,7 @@ export default class AddWarnCommand extends SubCommand {
     const warnsResult = await listWarns(user.id);
     if (warnsResult.isErr()) {
       await ctx.editOrReply({
-        content: "No se pudieron leer los warns del usuario.",
+        content: "Could not read user warnings.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -77,7 +75,7 @@ export default class AddWarnCommand extends SubCommand {
       warnId = generateWarnId();
     }
 
-    const finalReason = reason || "Razon no especificada";
+    const finalReason = reason || "No reason specified";
 
     const warn: Warn = {
       reason: finalReason,
@@ -89,23 +87,23 @@ export default class AddWarnCommand extends SubCommand {
     const addResult = await addWarn(user.id, warn);
     if (addResult.isErr()) {
       await ctx.editOrReply({
-        content: "No se pudo registrar el warn.",
+        content: "Could not register the warning.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const successEmbed = new Embed({
-      title: "Warn aplicado",
+      title: "Warning Applied",
       description: [
-        `Se anadio un warn al usuario **${user.username}**.`,
+        `A warning was added to user **${user.username}**.`,
         "",
-        `**Razon:** ${finalReason}`,
-        `**ID del warn:** ${warnId.toUpperCase()}`,
+        `**Reason:** ${finalReason}`,
+        `**Warn ID:** ${warnId.toUpperCase()}`,
       ].join("\n"),
-      color: EmbedColors.Green,
+      color: UIColors.success,
       footer: {
-        text: `Warn aplicado por ${ctx.author.username}`,
+        text: `Warning applied by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
       },
     });
@@ -118,12 +116,12 @@ export default class AddWarnCommand extends SubCommand {
     await registerCase(user.id, guildId, "WARN", finalReason);
 
     await logModerationAction(ctx.client, guildId, {
-      title: "Warn aplicado",
-      description: `Se agregó un warn a <@${user.id}>`,
+      title: "Warning Applied",
+      description: `A warning was added to <@${user.id}>`,
       fields: [
-        { name: "ID del warn", value: warnId.toUpperCase(), inline: true },
-        { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
-        { name: "Razón", value: finalReason },
+        { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
+        { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
+        { name: "Reason", value: finalReason },
       ],
       actorId: ctx.author.id,
     });

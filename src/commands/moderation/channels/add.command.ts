@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / channels / add" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Channel Add Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Register an auxiliary channel defined by the staff.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -15,7 +13,7 @@ import {
   createStringOption,
   Middlewares,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import {
   addManagedChannel,
   removeInvalidChannels,
@@ -24,19 +22,18 @@ import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
   label: createStringOption({
-    description: "Descripcion corta del canal",
+    description: "Short description of the channel",
     required: true,
   }),
   channel: createChannelOption({
-    description: "Canal de Discord a registrar",
+    description: "Discord channel to register",
     required: true,
   }),
 };
 
-// Registra un canal auxiliar definido por el staff.
 @Declare({
   name: "add",
-  description: "Registrar un canal opcional",
+  description: "Register an optional channel",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -49,7 +46,7 @@ export default class ChannelAddCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
 
-    // Remueve los canales invalidos antes de proceder.
+    // Remove invalid channels before proceeding.
     await removeInvalidChannels(guildId, ctx.client);
 
     const label = ctx.options.label;
@@ -58,12 +55,12 @@ export default class ChannelAddCommand extends SubCommand {
     const record = await addManagedChannel(guildId, label, channelId);
 
     const embed = new Embed({
-      title: "Canal opcional registrado",
-      description: `Se asigno <#${record.channelId}> con etiqueta **${record.label}**`,
-      color: EmbedColors.Green,
+      title: "Optional channel registered",
+      description: `Assigned <#${record.channelId}> with label **${record.label}**`,
+      color: UIColors.success,
       fields: [
         {
-          name: "Identificador",
+          name: "Identifier",
           value: record.id,
         },
       ],

@@ -17,18 +17,18 @@ import { Features } from "@/modules/features";
 
 const options = {
   user: createUserOption({
-    description: "Usuario al que dar reputacion",
+    description: "User to give reputation to",
     required: true,
   }),
   amount: createNumberOption({
-    description: "Cantidad de reputacion a dar",
+    description: "Amount of reputation to give",
     required: true,
   }),
 };
 
 @Declare({
   name: "add",
-  description: "Dar reputacion a un usuario",
+  description: "Give reputation to a user",
 })
 @Options(options)
 @Guard({
@@ -43,7 +43,7 @@ export default class RepAddCommand extends SubCommand {
     const amount = normalizeRepAmount(ctx.options.amount);
     if (amount == null) {
       await ctx.write({
-        content: "La cantidad debe ser un numero entero mayor que 0.",
+        content: "The amount must be an integer greater than 0.",
       });
       return;
     }
@@ -51,7 +51,7 @@ export default class RepAddCommand extends SubCommand {
     const target = ctx.options.user;
     const totalResult = await adjustUserReputation(target.id, amount);
     if (totalResult.isErr()) {
-      await ctx.write({ content: "No se pudo actualizar la reputación." });
+      await ctx.write({ content: "Could not update reputation." });
       return;
     }
     const total = totalResult.unwrap();
@@ -71,11 +71,11 @@ export default class RepAddCommand extends SubCommand {
       ctx.client,
       guildId,
       {
-        title: "Reputación agregada",
-        description: `Se agregaron ${amount} puntos a <@${target.id}>`,
+        title: "Reputation added",
+        description: `Added ${amount} points to <@${target.id}>`,
         fields: [
           { name: "Total", value: `${total}`, inline: true },
-          { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+          { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
         ],
         actorId: ctx.author.id,
       },

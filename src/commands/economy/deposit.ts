@@ -8,21 +8,21 @@ import {
 import { MessageFlags } from "seyfert/lib/types";
 import { UserStore } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { parseAmountOrReply, replyMissingUser } from "./shared";
 import { currencyTransaction } from "@/modules/economy";
 
 const options = {
   amount: createStringOption({
-    description: "Cantidad de coins a depositar (ej: 100, all, 50%)",
+    description: "Amount of coins to deposit (e.g. 100, all, 50%)",
     required: true,
   }),
 };
 
 @Declare({
   name: "deposit",
-  description: "Deposita coins de tu mano al banco",
+  description: "Deposit coins from your hand to the bank",
 })
 @Options(options)
 @Cooldown({
@@ -55,7 +55,7 @@ export default class DepositCommand extends Command {
     if (amount > coins.hand) {
       await ctx.write({
         content:
-          "No tienes suficientes coins en mano para depositar esa cantidad.",
+          "You don't have enough coins in hand to deposit that amount.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -78,7 +78,7 @@ export default class DepositCommand extends Command {
 
     if (result.isErr()) {
       await ctx.write({
-        content: "Ocurrió un error al procesar el depósito.",
+        content: "An error occurred while processing the deposit.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -88,8 +88,8 @@ export default class DepositCommand extends Command {
     await ctx.write({
       embeds: [
         {
-          color: EmbedColors.Green,
-          description: `✅ Has depositado **${amount}** coins.\n\n💳 **Banco:** ${updated_coins.bank}\n🖐️ **Mano:** ${updated_coins.hand}`,
+          color: UIColors.success,
+          description: `✅ You have deposited **${amount}** coins.\n\n💳 **Bank:** ${updated_coins.bank}\n🖐️ **Hand:** ${updated_coins.hand}`,
         },
       ],
     });

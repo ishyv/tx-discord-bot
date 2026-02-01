@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / tickets / close All" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Ticket Close All Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Forcefully close and delete all active ticket channels in the guild.
  */
 import {
   Declare,
@@ -18,7 +16,7 @@ import { Guard } from "@/middlewares/guards/decorator";
 
 @Declare({
   name: "close-all",
-  description: "Cerrar todos los tickets abiertos en el servidor",
+  description: "Close all open tickets in the server",
   contexts: ["Guild"],
 })
 @Guard({
@@ -53,8 +51,8 @@ export default class ConfigTicketsCommand extends SubCommand {
       } catch (error) {
         const code =
           typeof error === "object" &&
-          error &&
-          "code" in (error as Record<string, unknown>)
+            error &&
+            "code" in (error as Record<string, unknown>)
             ? Number((error as { code?: number }).code)
             : undefined;
 
@@ -77,7 +75,7 @@ export default class ConfigTicketsCommand extends SubCommand {
     }
 
     await ctx.write({
-      content: "Todos los tickets abiertos han sido cerrados.",
+      content: "All open tickets have been closed.",
     });
   }
 }

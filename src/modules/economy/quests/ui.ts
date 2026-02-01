@@ -42,30 +42,30 @@ export function buildQuestBoardEmbed(
   activeTab: QuestRotationType = "daily",
 ): Embed {
   const embed = new Embed()
-    .setTitle("📜 Tablón de Misiones")
+    .setTitle("📜 Quest Board")
     .setDescription(
-      `¡Bienvenido al Tablón de Misiones, **${username}**!\n\nCompleta misiones para ganar recompensas exclusivas.`,
+      `Welcome to the Quest Board, **${username}**!\n\nComplete quests to earn exclusive rewards.`,
     )
     .setColor(0xf39c12)
     .setFooter({
-      text: `Tokens: ${board.questTokens} | Completadas: ${board.totalCompleted}`,
+      text: `Tokens: ${board.questTokens} | Completed: ${board.totalCompleted}`,
     });
 
   // Add tab content based on active tab
   switch (activeTab) {
     case "daily":
-      embed.addFields(buildRotationFields(board.daily, "Diarias", "⏰"));
+      embed.addFields(buildRotationFields(board.daily, "Daily", "⏰"));
       break;
     case "weekly":
-      embed.addFields(buildRotationFields(board.weekly, "Semanales", "📅"));
+      embed.addFields(buildRotationFields(board.weekly, "Weekly", "📅"));
       break;
     case "featured":
       if (board.featured) {
         embed.addFields(buildQuestDetailFields(board.featured, true));
       } else {
         embed.addFields({
-          name: "⭐ Misión Destacada",
-          value: "No hay misión destacada disponible actualmente.",
+          name: "⭐ Featured Quest",
+          value: "No featured quest available currently.",
           inline: false,
         });
       }
@@ -75,13 +75,13 @@ export function buildQuestBoardEmbed(
   // Add featured preview if not on featured tab
   if (activeTab !== "featured" && board.featured) {
     const featuredStatus = board.featured.progress?.isCompleted
-      ? "✅ Completada"
+      ? "✅ Completed"
       : board.featured.progress?.percentComplete
         ? `🔄 ${board.featured.progress.percentComplete}%`
-        : "🆕 Nueva";
+        : "🆕 New";
 
     embed.addFields({
-      name: "⭐ Misión Destacada (Preview)",
+      name: "⭐ Featured Quest (Preview)",
       value: `${DIFFICULTY_EMOJI[board.featured.difficulty]} **${board.featured.name}**\n${featuredStatus} | Multiplicador: **${board.featured.rewardMultiplier}x**`,
       inline: false,
     });
@@ -100,8 +100,8 @@ function buildRotationFields(
 
   if (!rotation.isActive || rotation.quests.length === 0) {
     fields.push({
-      name: `${emoji} Misiones ${title}`,
-      value: "No hay misiones disponibles actualmente.",
+      name: `${emoji} ${title} Quests`,
+      value: "No quests available currently.",
       inline: false,
     });
     return fields;
@@ -110,7 +110,7 @@ function buildRotationFields(
   const timeRemaining = formatTimeRemaining(rotation.expiresAt);
 
   fields.push({
-    name: `${emoji} Misiones ${title} (Expira en: ${timeRemaining})`,
+    name: `${emoji} ${title} Quests (Expires in: ${timeRemaining})`,
     value: rotation.quests.map((q) => formatQuestLine(q)).join("\n"),
     inline: false,
   });
@@ -149,10 +149,10 @@ function buildQuestDetailFields(
 ): { name: string; value: string; inline: boolean }[] {
   const fields: { name: string; value: string; inline: boolean }[] = [];
 
-  const featuredText = isFeatured ? "⭐ DESTACADA | " : "";
+  const featuredText = isFeatured ? "⭐ FEATURED | " : "";
   const multiplierText =
     quest.rewardMultiplier > 1
-      ? ` (**${quest.rewardMultiplier}x** recompensas)`
+      ? ` (**${quest.rewardMultiplier}x** rewards)`
       : "";
 
   fields.push({
@@ -164,8 +164,8 @@ function buildQuestDetailFields(
   // Requirements
   const reqLines = quest.requirements.map((r) => formatRequirement(r));
   fields.push({
-    name: "📋 Requisitos",
-    value: reqLines.join("\n") || "Ninguno",
+    name: "📋 Requirements",
+    value: reqLines.join("\n") || "None",
     inline: false,
   });
 
@@ -185,7 +185,7 @@ function buildQuestDetailFields(
     }
   });
   fields.push({
-    name: "🎁 Recompensas",
+    name: "🎁 Rewards",
     value: rewardLines.join("\n"),
     inline: false,
   });
@@ -193,13 +193,13 @@ function buildQuestDetailFields(
   // Progress
   if (quest.progress) {
     const progressText = quest.progress.isClaimed
-      ? "✅ Completada y reclamada"
+      ? "✅ Completed and claimed"
       : quest.progress.isCompleted
-        ? "🎁 ¡Lista para reclamar!"
-        : `🔄 Progreso: ${quest.progress.percentComplete}%`;
+        ? "🎁 Ready to claim!"
+        : `🔄 Progress: ${quest.progress.percentComplete}%`;
 
     fields.push({
-      name: "📊 Estado",
+      name: "📊 Status",
       value: progressText,
       inline: false,
     });
@@ -207,7 +207,7 @@ function buildQuestDetailFields(
 
   // Expiration
   fields.push({
-    name: "⏰ Expira",
+    name: "⏰ Expires",
     value: `<t:${Math.floor(quest.expiresAt.getTime() / 1000)}:R>`,
     inline: true,
   });
@@ -228,7 +228,7 @@ function formatTimeRemaining(date: Date): string {
   const now = new Date();
   const diff = date.getTime() - now.getTime();
 
-  if (diff <= 0) return "Expirado";
+  if (diff <= 0) return "Expired";
 
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -287,15 +287,15 @@ export function buildClaimResultEmbed(
   correlationId: string,
 ): Embed {
   const embed = new Embed()
-    .setTitle("🎉 ¡Recompensas Reclamadas!")
-    .setDescription(`Has completado la misión **${questName}** y recibido:`)
+    .setTitle("🎉 Rewards Claimed!")
+    .setDescription(`You have completed the quest **${questName}** and received:`)
     .setColor(0x2ecc71)
     .setFooter({ text: `ID: ${correlationId}` });
 
   const rewardLines = rewards.map((r) => `• ${r.description}`);
   embed.addFields({
-    name: "🎁 Recompensas",
-    value: rewardLines.join("\n") || "Ninguna",
+    name: "🎁 Rewards",
+    value: rewardLines.join("\n") || "None",
     inline: false,
   });
 

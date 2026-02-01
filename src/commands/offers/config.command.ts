@@ -1,9 +1,9 @@
 /**
- * Configuración de canales para el sistema de ofertas.
+ * Offers Channel Configuration.
  *
- * Este comando actualiza `channels.core` vía `configStore`:
- * - `offersReview`: canal donde se envían ofertas a revisión (obligatorio).
- * - `approvedOffers`: canal donde se publican ofertas aprobadas (opcional en el sistema, pero recomendado).
+ * This command updates `channels.core` via `configStore`:
+ * - `offersReview`: channel where offers are sent for review (required).
+ * - `approvedOffers`: channel where approved offers are published (optional but recommended).
  */
 import "./config";
 
@@ -21,12 +21,12 @@ import { ensureGuildContext } from "./shared";
 
 const options = {
   revision: createChannelOption({
-    description: "Canal donde se enviarán las ofertas para revisión",
+    description: "Channel where offers will be sent for review",
     required: true,
     channel_types: [ChannelType.GuildText],
   }),
-  aprobadas: createChannelOption({
-    description: "Canal donde se publicarán las ofertas aprobadas",
+  approved: createChannelOption({
+    description: "Channel where approved offers will be published",
     required: true,
     channel_types: [ChannelType.GuildText],
   }),
@@ -34,7 +34,7 @@ const options = {
 
 @Declare({
   name: "config",
-  description: "Configurar el sistema de ofertas",
+  description: "Configure the offers system",
   defaultMemberPermissions: ["ManageChannels"],
 })
 @Options(options)
@@ -43,22 +43,22 @@ export default class OfferConfigCommand extends SubCommand {
     const guildId = await ensureGuildContext(ctx);
     if (!guildId) return;
 
-    const { revision, aprobadas } = ctx.options;
+    const { revision, approved } = ctx.options;
 
-    // Asegura el documento del guild para persistir `channels.core`.
+    // Ensure guild document to persist `channels.core`.
     await GuildStore.ensure(guildId);
 
     const { configStore, ConfigurableModule } = await import("@/configuration");
     await configStore.set(guildId, ConfigurableModule.Offers, {
       offersReview: { channelId: revision.id },
-      approvedOffers: { channelId: aprobadas.id },
+      approvedOffers: { channelId: approved.id },
     });
 
     await ctx.write({
       content: [
-        "Configuración de ofertas guardada:",
-        `- Revisión: <#${revision.id}>`,
-        `- Aprobadas: <#${aprobadas.id}>`,
+        "Offers configuration saved:",
+        `- Review: <#${revision.id}>`,
+        `- Approved: <#${approved.id}>`,
       ].join("\n"),
       flags: MessageFlags.Ephemeral,
     });

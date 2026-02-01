@@ -29,6 +29,7 @@ import {
   type CurrencyBalanceView,
   ACCOUNT_STATUS_DISPLAY,
 } from "./types";
+import { UIColors } from "@/modules/ui/design-system";
 
 // ============================================================================
 // Utility Formatters
@@ -37,6 +38,16 @@ import {
 /** Format a number with locale separators. */
 export function formatNumber(n: number): string {
   return Math.trunc(n).toLocaleString("en-US");
+}
+
+/** Format a number with code block styling for embeds. */
+export function formatMoney(n: number): string {
+  return `\`${formatNumber(n)}\``;
+}
+
+/** Format coins with unit. */
+export function formatCoins(n: number): string {
+  return `\`${formatNumber(n)}\` coins`;
 }
 
 /** Format a relative time (days ago). */
@@ -51,7 +62,13 @@ export function formatPercent(n: number): string {
   return `${n.toFixed(1)}%`;
 }
 
-/** Create a progress bar visualization. */
+/**
+ * Create a progress bar visualization.
+ * @param percent 0-100 value
+ * @param length Number of bar characters (default 10 per style guide)
+ * @param filled Character for filled portion (default █)
+ * @param empty Character for empty portion (default ░)
+ */
 export function renderProgressBar(
   percent: number,
   length = 10,
@@ -62,6 +79,12 @@ export function renderProgressBar(
   const filledCount = Math.round((clamped / 100) * length);
   const emptyCount = length - filledCount;
   return filled.repeat(filledCount) + empty.repeat(emptyCount);
+}
+
+/** Format a delta with +/- sign. */
+export function formatDelta(n: number): string {
+  const sign = n >= 0 ? "+" : "";
+  return `${sign}${formatNumber(n)}`;
 }
 
 // ============================================================================
@@ -156,14 +179,14 @@ export function buildBalanceFields(view: BalanceView): APIEmbedField[] {
   return fields;
 }
 
-/** Build a balance embed. */
+/** Build a balance embed with VOID ARCHIVE styling. */
 export function buildBalanceEmbed(
   view: BalanceView,
   username: string,
   avatarUrl?: string,
 ): Embed {
   const embed = new Embed()
-    .setColor(EmbedColors.Blurple)
+    .setColor(UIColors.gold)
     .setTitle("💰 Your Balance")
     .setFields(buildBalanceFields(view));
 
@@ -172,6 +195,9 @@ export function buildBalanceEmbed(
   } else {
     embed.setAuthor({ name: username });
   }
+
+  // Add navigation hint in footer
+  embed.setFooter({ text: "💡 /deposit • /withdraw • /bank for transactions" });
 
   return embed;
 }
@@ -223,16 +249,18 @@ export function buildBankFields(view: BankBreakdownView): APIEmbedField[] {
   ];
 }
 
-/** Build a bank breakdown embed. */
+/** Build a bank breakdown embed with VOID ARCHIVE styling. */
 export function buildBankEmbed(
   view: BankBreakdownView,
   username: string,
   avatarUrl?: string,
 ): Embed {
   const embed = new Embed()
-    .setColor(view.isEmpty ? EmbedColors.Grey : EmbedColors.Gold)
-    .setTitle("🏦 Bank Breakdown")
-    .setFields(buildBankFields(view));
+    .setColor(view.isEmpty ? UIColors.neutral : UIColors.gold)
+    .setTitle("🏦 Bank Overview")
+    .setDescription("Your coins are safer in the bank. Protected from theft.");
+
+  embed.setFields(buildBankFields(view));
 
   if (avatarUrl) {
     embed.setAuthor({ name: username, iconUrl: avatarUrl });
@@ -240,11 +268,11 @@ export function buildBankEmbed(
     embed.setAuthor({ name: username });
   }
 
-  if (!view.isEmpty) {
-    embed.setFooter({
-      text: `Bank security: ${formatPercent(view.percentInBank)}`,
-    });
-  }
+  // Footer with security info and navigation hint
+  const footerText = !view.isEmpty
+    ? `Security: ${formatPercent(view.percentInBank)} saved • 💡 Higher % = safer from /rob`
+    : "💡 /deposit <amount> to save coins";
+  embed.setFooter({ text: footerText });
 
   return embed;
 }
@@ -346,7 +374,10 @@ export interface ProfileAchievementsData {
   totalCount: number;
 }
 
-/** Build a profile summary embed. */
+/**
+ * Build a profile summary embed with VOID ARCHIVE styling.
+ * Uses compact 3-column grids and code-formatted numbers.
+ */
 export function buildProfileEmbed(
   view: ProfileSummaryView,
   username: string,
@@ -355,10 +386,7 @@ export function buildProfileEmbed(
 ): Embed {
   const embed = new Embed()
     .setColor(getStatusColor(view.account.status))
-    .setTitle("👤 Economy Profile")
-    .setDescription(
-      `Account ${getStatusDisplay(view.account.status).toLowerCase()}`,
-    );
+    .setTitle("👤 Economy Profile");
 
   if (avatarUrl) {
     embed.setAuthor({ name: username, iconUrl: avatarUrl });
@@ -366,29 +394,9 @@ export function buildProfileEmbed(
     embed.setAuthor({ name: username });
   }
 
-  const fields: APIEmbedField[] = [];
+  // Build header description with title and badges
+  let headerLines: string[] = [];
 
-  // Account info
-  fields.push({
-    name: "📅 Account created",
-    value: formatDaysAgo(view.account.daysSinceCreated),
-    inline: true,
-  });
-
-  fields.push({
-    name: "⏰ Last activity",
-    value: formatDaysAgo(view.account.daysSinceActivity),
-    inline: true,
-  });
-
-  // Reputation
-  fields.push({
-    name: "⭐ Reputation",
-    value: formatNumber(view.reputation),
-    inline: true,
-  });
-
-  // Equipped Title
   if (achievementsData?.equippedTitle) {
     let titleDisplay = achievementsData.equippedTitle.displayName;
     if (achievementsData.equippedTitle.prefix) {
@@ -397,90 +405,83 @@ export function buildProfileEmbed(
     if (achievementsData.equippedTitle.suffix) {
       titleDisplay = `${titleDisplay}${achievementsData.equippedTitle.suffix}`;
     }
+    headerLines.push(`🎖️ ${titleDisplay}`);
+  }
+
+  if (achievementsData && achievementsData.equippedBadges.length > 0) {
+    const badgeDisplay = achievementsData.equippedBadges
+      .map((b) => b.emoji)
+      .join(" ");
+    headerLines.push(badgeDisplay);
+  }
+
+  headerLines.push(`Account ${getStatusDisplay(view.account.status).toLowerCase()} • Member since ${formatDaysAgo(view.account.daysSinceCreated)}`);
+
+  embed.setDescription(headerLines.join("\n"));
+
+  const fields: APIEmbedField[] = [];
+
+  // Row 1: Level, Balance, Bank (3-column grid)
+  const levelValue = view.progression
+    ? `\`Lv.${view.progression.level}\``
+    : "`Lv.0`";
+
+  const balanceValue = view.balances.primaryCurrency
+    ? `\`${view.balances.primaryCurrency.display}\``
+    : "`0` coins";
+
+  const bankValue = view.bank && !view.bank.isEmpty
+    ? `\`${formatNumber(view.bank.total)}\` coins`
+    : "*Empty*";
+
+  fields.push(
+    { name: "📊 Level", value: levelValue, inline: true },
+    { name: "💰 Balance", value: balanceValue, inline: true },
+    { name: "🏦 Bank", value: bankValue, inline: true },
+  );
+
+  // Progress bar (full width)
+  if (view.progression) {
+    const progress = view.progression;
+    const bar = renderProgressBar(progress.progressPercent);
+    const xpNeeded = (progress.nextLevelXP ?? 0) - progress.currentLevelXP;
+    const nextStep = progress.isMaxLevel
+      ? "Max level reached"
+      : `\`${formatNumber(progress.progressToNext)}\` / \`${formatNumber(xpNeeded)}\` XP to next`;
+
     fields.push({
-      name: "🏷️ Title",
-      value: titleDisplay,
+      name: "📈 Progress",
+      value: `${bar} ${formatPercent(progress.progressPercent)} — ${nextStep}`,
       inline: false,
     });
   }
 
-  // Equipped Badges (1-3)
-  if (achievementsData && achievementsData.equippedBadges.length > 0) {
-    const badgeDisplay = achievementsData.equippedBadges
-      .map((b) => `${b.emoji} ${b.name}`)
-      .join("\n");
-    fields.push({
-      name: "🎖️ Badges",
-      value: badgeDisplay,
-      inline: true,
-    });
-  }
+  // Row 2: Rep, Inventory, Achievements (3-column grid)
+  const repSign = view.reputation >= 0 ? "+" : "";
+  const repValue = `\`${repSign}${view.reputation}\``;
 
-  // Achievements summary
+  const invValue = !view.inventory.isEmpty
+    ? `${view.inventory.uniqueItems} items`
+    : "*Empty*";
+
+  let achieveValue = "0/0";
   if (achievementsData) {
     const percent = Math.round(
       (achievementsData.unlockedCount / achievementsData.totalCount) * 100,
     );
-    fields.push({
-      name: "🏆 Achievements",
-      value: `${achievementsData.unlockedCount}/${achievementsData.totalCount} (${percent}%)\nUse /achievements to see more`,
-      inline: true,
-    });
+    achieveValue = `${achievementsData.unlockedCount}/${achievementsData.totalCount} (${percent}%)`;
   }
 
-  if (view.progression) {
-    const progress = view.progression;
-    const bar = renderProgressBar(progress.progressPercent);
-    const nextStep = progress.isMaxLevel
-      ? "Nivel máximo alcanzado"
-      : `${formatNumber(progress.progressToNext)} / ${formatNumber(
-        (progress.nextLevelXP ?? 0) - progress.currentLevelXP,
-      )} XP para subir`;
-
-    fields.push({
-      name: "📈 Progress",
-      value:
-        `Level **${formatNumber(progress.level)}** • ${formatNumber(progress.totalXP)} XP\n` +
-        `${bar} ${formatPercent(progress.progressPercent)}\n` +
-        nextStep,
-      inline: false,
-    });
-  }
-
-  // Primary balance (if any)
-  if (view.balances.primaryCurrency) {
-    fields.push({
-      name: "💰 Primary balance",
-      value: view.balances.primaryCurrency.display,
-      inline: false,
-    });
-  }
-
-  // Bank info (if has coins)
-  if (view.bank && !view.bank.isEmpty) {
-    fields.push({
-      name: "🏦 Total in bank",
-      value: `${formatNumber(view.bank.total)} coins (${formatPercent(view.bank.percentInBank)} safe)`,
-      inline: true,
-    });
-  }
-
-  // Inventory summary
-  if (!view.inventory.isEmpty) {
-    fields.push({
-      name: "🎒 Inventory",
-      value: `${formatNumber(view.inventory.uniqueItems)} unique items`,
-      inline: true,
-    });
-  }
+  fields.push(
+    { name: "⭐ Reputation", value: repValue, inline: true },
+    { name: "🎒 Inventory", value: invValue, inline: true },
+    { name: "🏆 Achievements", value: achieveValue, inline: true },
+  );
 
   embed.setFields(fields);
 
-  const footerText = view.balances.hasMultipleCurrencies
-    ? `Use /balance to see all your ${view.balances.currencies.length} currencies`
-    : "PyE Economy";
-
-  embed.setFooter({ text: footerText });
+  // Footer with navigation hints
+  embed.setFooter({ text: "💡 /balance • /inventory • /achievements for details" });
 
   return embed;
 }

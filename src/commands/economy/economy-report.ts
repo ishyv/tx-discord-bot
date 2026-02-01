@@ -13,8 +13,8 @@ import {
   Options,
   type CommandContext,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import { economyReportService } from "@/modules/economy/reports";
 import type { EconomyReportWithRecommendations } from "@/modules/economy/reports";
 
@@ -129,7 +129,7 @@ export default class EconomyReportCommand extends Command {
     embeds.push(summaryEmbed);
 
     // Top sources and sinks embed
-    const flowsEmbed = new Embed().setColor(EmbedColors.Blue).setTitle("📊 Flow Breakdown");
+    const flowsEmbed = new Embed().setColor(UIColors.info).setTitle("📊 Flow Breakdown");
 
     if (report.topSources.length > 0) {
       const sourceLines = report.topSources.map(
@@ -189,7 +189,7 @@ export default class EconomyReportCommand extends Command {
     const actionableRecs = recommendations.filter((r) => r.type !== "healthy");
     if (actionableRecs.length > 0) {
       const recsEmbed = new Embed()
-        .setColor(EmbedColors.Yellow)
+        .setColor(UIColors.warning)
         .setTitle("⚠️ Recommendations");
 
       for (const rec of actionableRecs.slice(0, 3)) {
@@ -210,7 +210,7 @@ export default class EconomyReportCommand extends Command {
       embeds.push(recsEmbed);
     } else if (recommendations.some((r) => r.type === "healthy")) {
       const healthyEmbed = new Embed()
-        .setColor(EmbedColors.Green)
+        .setColor(UIColors.success)
         .setTitle("✅ Economy Health")
         .setDescription("Economy appears balanced with healthy currency flows.");
       embeds.push(healthyEmbed);
@@ -218,7 +218,7 @@ export default class EconomyReportCommand extends Command {
 
     // Balance knobs checklist embed
     const knobsEmbed = new Embed()
-      .setColor(EmbedColors.Grey)
+      .setColor(0x808080)
       .setTitle("🎛️ Balance Knobs Checklist")
       .setDescription("Use these commands to tune the economy based on report findings:")
       .addFields(
@@ -264,13 +264,13 @@ export default class EconomyReportCommand extends Command {
   private getHealthColor(health: "healthy" | "attention" | "critical"): number {
     switch (health) {
       case "healthy":
-        return EmbedColors.Green;
+        return UIColors.success;
       case "attention":
-        return EmbedColors.Yellow;
+        return UIColors.warning;
       case "critical":
-        return EmbedColors.Red;
+        return UIColors.error;
       default:
-        return EmbedColors.Blue;
+        return UIColors.info;
     }
   }
 }

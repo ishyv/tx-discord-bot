@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "fun / joke" dentro de la categoría fun para ofrecer la acción de forma consistente y reutilizable.
+ * Joke Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Generate a joke using AI.
  */
 import type { CommandContext } from "seyfert";
 import { Command, Declare } from "seyfert";

@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / dashboard" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Dashboard Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Visual dashboard for managing moderated roles.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -44,7 +42,7 @@ interface DashboardState extends Record<string, unknown> {
   roles: DashboardRole[];
 }
 
-const FEEDBACK_NONE = "Selecciona uno o mas roles para empezar.";
+const FEEDBACK_NONE = "Select one or more roles to get started.";
 
 const normKey = (k: string) =>
   k
@@ -71,11 +69,11 @@ function formatOverrideLabel(
 ): string {
   switch (override) {
     case "allow":
-      return "Permitir";
+      return "Allow";
     case "deny":
-      return "Denegar";
+      return "Deny";
     default:
-      return "Heredar";
+      return "Inherit";
   }
 }
 
@@ -104,13 +102,13 @@ function windowToSeconds(window: LimitWindow): number {
 
 function formatLimit(limit: RoleLimitRecord | undefined): string {
   if (!limit || !Number.isFinite(limit.limit) || limit.limit <= 0) {
-    return "Sin limite configurado";
+    return "No limit configured";
   }
   const count = Math.max(0, Math.floor(limit.limit));
   const windowLabel = limit.window
     ? secondsToTimeString(windowToSeconds(limit.window))
-    : "sin ventana fija";
-  return `${count} uso(s) - ${windowLabel}`;
+    : "no fixed window";
+  return `${count} use(s) - ${windowLabel}`;
 }
 
 function buildRoleSummary(role: DashboardRole): string {
@@ -152,7 +150,7 @@ async function fetchDashboardRoles(guildId: string): Promise<DashboardRole[]> {
 
 @Declare({
   name: "dashboard",
-  description: "Panel visual para administrar roles moderados",
+  description: "Visual dashboard to manage moderated roles",
 })
 export default class RolesDashboardCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
@@ -160,7 +158,7 @@ export default class RolesDashboardCommand extends SubCommand {
     if (!guildId) {
       await ctx.write({
         content:
-          "[!] Este comando solo puede ejecutarse dentro de un servidor.",
+          "[!] This command can only be executed within a server.",
       });
       return;
     }
@@ -176,7 +174,7 @@ export default class RolesDashboardCommand extends SubCommand {
         focusedAction: actions[0]?.key ?? "",
         feedback: initialRoles.length
           ? FEEDBACK_NONE
-          : "No hay roles configurados todavia.",
+          : "No roles configured yet.",
         roles: initialRoles,
       },
       (state) => {
@@ -188,12 +186,12 @@ export default class RolesDashboardCommand extends SubCommand {
           actions.find((item) => item.key === actionKey) ?? actions[0];
 
         const embed = new Embed({
-          title: "Panel de control de roles",
+          title: "Role Control Panel",
           color: 0x5865f2,
           description: [
-            "1. Elige uno o mas roles desde el menu superior.",
-            "2. Selecciona la accion de moderacion que quieres administrar.",
-            "3. Usa los botones para permitir, denegar o ajustar limites de uso.",
+            "1. Choose one or more roles from the top menu.",
+            "2. Select the moderation action you want to manage.",
+            "3. Use the buttons to allow, deny, or adjust usage limits.",
             "",
             state.feedback ?? FEEDBACK_NONE,
           ].join("\n"),
@@ -201,20 +199,20 @@ export default class RolesDashboardCommand extends SubCommand {
 
         if (state.roles.length) {
           embed.addFields({
-            name: "Roles configurados",
+            name: "Configured Roles",
             value: state.roles
               .map((role) =>
                 role.discordRoleId
                   ? `- ${role.label} (<@&${role.discordRoleId}>)`
-                  : `- ${role.label} (sin rol de Discord asignado)`,
+                  : `- ${role.label} (no Discord role assigned)`,
               )
               .join("\n"),
           });
         } else {
           embed.addFields({
-            name: "Sin configuraciones",
+            name: "No Configurations",
             value:
-              "Utiliza `/roles set` para registrar un rol administrado antes de usar el panel.",
+              "Use `/roles set` to register a managed role before using the dashboard.",
           });
         }
 
@@ -229,7 +227,7 @@ export default class RolesDashboardCommand extends SubCommand {
         }
 
         const roleSelect = new RoleSelectMenu()
-          .setPlaceholder("Selecciona roles a administrar")
+          .setPlaceholder("Select roles to manage")
           .setValuesLength({ min: 1, max: 10 })
           .setDisabled(state.roles.length === 0)
           .onSelect("roles_dashboard_roles", async (menuCtx) => {
@@ -248,15 +246,15 @@ export default class RolesDashboardCommand extends SubCommand {
             } else if (missingIds.length) {
               const mentions = missingIds.map((id) => `<@&${id}>`).join(", ");
               state.feedback = [
-                "Algunos roles seleccionados no estan configurados en el bot:",
+                "Some selected roles are not configured in the bot:",
                 mentions,
-                "Usa `/roles set` para vincularlos antes de aplicar cambios.",
+                "Use `/roles set` to link them before applying changes.",
               ].join("\n");
             } else {
               state.feedback =
                 values.length === 1
-                  ? "Rol seleccionado listo para editar sus permisos."
-                  : "Roles seleccionados listos para aplicar cambios en lote.";
+                  ? "Selected role ready to edit its permissions."
+                  : "Selected roles ready to apply changes in bulk.";
             }
           });
 
@@ -265,16 +263,15 @@ export default class RolesDashboardCommand extends SubCommand {
         }
 
         const actionSelect = new StringSelectMenu()
-          .setPlaceholder("Accion de moderacion")
+          .setPlaceholder("Moderation Action")
           .setValuesLength({ min: 1, max: 1 })
           .onSelect("roles_dashboard_action", async (menuCtx) => {
             await menuCtx.deferUpdate();
             const value = menuCtx.interaction.values?.[0];
             if (value) {
               state.focusedAction = value;
-              state.feedback = `Accion seleccionada: ${
-                actions.find((item) => item.key === value)?.label ?? value
-              }.`;
+              state.feedback = `Action selected: ${actions.find((item) => item.key === value)?.label ?? value
+                }.`;
             }
           });
 
@@ -283,7 +280,7 @@ export default class RolesDashboardCommand extends SubCommand {
             .setLabel(action.label)
             .setValue(action.key)
             .setDescription(
-              `Administrar permisos y limites para ${action.label}`,
+              `Manage permissions and limits for ${action.label}`,
             );
           if (action.key === activeAction?.key) option.setDefault(true);
           actionSelect.addOption(option);
@@ -309,7 +306,7 @@ export default class RolesDashboardCommand extends SubCommand {
               if (!targetRoles.length || !activeAction) {
                 await buttonCtx.write({
                   content:
-                    "Selecciona al menos un rol y una accion para continuar.",
+                    "Select at least one role and one action to continue.",
                   flags: MessageFlags.Ephemeral,
                 });
                 return;
@@ -325,29 +322,29 @@ export default class RolesDashboardCommand extends SubCommand {
                   );
                 }
                 state.roles = await fetchDashboardRoles(guildId);
-                state.feedback = `Override actualizado a ${formatOverrideLabel(override)} para ${targetRoles.length} rol(es) en ${activeAction.label}.`;
+                state.feedback = `Override updated to ${formatOverrideLabel(override)} for ${targetRoles.length} role(s) in ${activeAction.label}.`;
               } catch (error) {
                 console.error("roles dashboard override", error);
                 state.feedback =
-                  "No se pudo actualizar el override. Intentalo nuevamente.";
+                  "Could not update the override. Try again.";
               }
             });
 
         const allowButton = applyOverride(
           "roles_dashboard_allow",
-          "Permitir",
+          "Allow",
           ButtonStyle.Success,
           "allow",
         );
         const denyButton = applyOverride(
           "roles_dashboard_deny",
-          "Denegar",
+          "Deny",
           ButtonStyle.Danger,
           "deny",
         );
         const inheritButton = applyOverride(
           "roles_dashboard_inherit",
-          "Hereda Discord",
+          "Inherit Discord",
           ButtonStyle.Secondary,
           "inherit",
         );
@@ -358,21 +355,21 @@ export default class RolesDashboardCommand extends SubCommand {
 
         const limitInput = new TextInput()
           .setCustomId("limit_count")
-          .setLabel("Cantidad maxima de usos")
+          .setLabel("Maximum number of uses")
           .setStyle(TextInputStyle.Short)
-          .setPlaceholder("Ejemplo: 5 (usa 0 para quitar el limite)")
+          .setPlaceholder("Example: 5 (use 0 to remove the limit)")
           .setRequired(true);
 
         const windowInput = new TextInput()
           .setCustomId("limit_window")
-          .setLabel("Ventana de tiempo")
+          .setLabel("Time window")
           .setStyle(TextInputStyle.Short)
-          .setPlaceholder("10m, 1h, 6h, 24h o 7d. Deja vacio para sin ventana.")
+          .setPlaceholder("10m, 1h, 6h, 24h or 7d. Leave empty for no window.")
           .setRequired(false);
 
         const limitModal = new Modal()
           .setCustomId("roles_dashboard_limit_modal")
-          .setTitle(`Limite para ${action?.label ?? "accion"}`)
+          .setTitle(`Limit for ${action?.label ?? "action"}`)
           .addComponents(
             new ActionRow<TextInput>().setComponents([limitInput]),
             new ActionRow<TextInput>().setComponents([windowInput]),
@@ -388,7 +385,7 @@ export default class RolesDashboardCommand extends SubCommand {
             if (!refreshedRoles.length || !refreshedAction) {
               await modalCtx.write({
                 content:
-                  "Selecciona al menos un rol y una accion valida antes de configurar limites.",
+                  "Select at least one role and a valid action before configuring limits.",
                 flags: MessageFlags.Ephemeral,
               });
               return;
@@ -401,7 +398,7 @@ export default class RolesDashboardCommand extends SubCommand {
             if (!Number.isFinite(limitNumber) || limitNumber < 0) {
               await modalCtx.write({
                 content:
-                  "Ingresa un numero valido (0 o mayor) para el limite de usos.",
+                  "Enter a valid number (0 or greater) for the usage limit.",
                 flags: MessageFlags.Ephemeral,
               });
               return;
@@ -412,7 +409,7 @@ export default class RolesDashboardCommand extends SubCommand {
             if (nw === null && rawWindow.trim()) {
               await modalCtx.write({
                 content:
-                  "Ventana invalida. Usa un formato valido: 10m, 1h, 6h, 24h o 7d.",
+                  "Invalid window. Use a valid format: 10m, 1h, 6h, 24h or 7d.",
                 flags: MessageFlags.Ephemeral,
               });
               return;
@@ -437,7 +434,7 @@ export default class RolesDashboardCommand extends SubCommand {
                     return roles;
                   });
                 }
-                state.feedback = `Se removieron los limites de ${refreshedAction.label} para ${refreshedRoles.length} rol(es).`;
+                state.feedback = `Limits for ${refreshedAction.label} were removed for ${refreshedRoles.length} role(s).`;
               } else {
                 const limitRecord: RoleLimitRecord = {
                   limit: Math.max(0, Math.floor(limitNumber)),
@@ -453,37 +450,36 @@ export default class RolesDashboardCommand extends SubCommand {
                     limitRecord,
                   );
                 }
-                state.feedback = `Limite actualizado para ${refreshedAction.label}: ${limitRecord.limit} uso(s) ${
-                  limitRecord.window
-                    ? secondsToTimeString(windowSeconds!)
-                    : "sin ventana"
-                } (${refreshedRoles.length} rol(es)).`;
+                state.feedback = `Limit updated for ${refreshedAction.label}: ${limitRecord.limit} use(s) ${limitRecord.window
+                  ? secondsToTimeString(windowSeconds!)
+                  : "no window"
+                  } (${refreshedRoles.length} role(s)).`;
               }
 
               state.roles = await fetchDashboardRoles(guildId);
               await modalCtx.write({
-                content: "Limite actualizado correctamente.",
+                content: "Limit updated successfully.",
                 flags: MessageFlags.Ephemeral,
               });
             } catch (error) {
               console.error("roles dashboard limit", error);
               state.feedback =
-                "No se pudo guardar el limite. Intentalo nuevamente.";
+                "Could not save the limit. Try again.";
               await modalCtx.write({
-                content: "Ocurrio un error al guardar el limite.",
+                content: "An error occurred while saving the limit.",
                 flags: MessageFlags.Ephemeral,
               });
             }
           });
 
         const configureLimitButton = new Button()
-          .setLabel("Configurar limite")
+          .setLabel("Configure limit")
           .setStyle(ButtonStyle.Primary)
           .setDisabled(controlsDisabled)
           .opens(limitModal);
 
         const clearLimitButton = new Button()
-          .setLabel("Quitar limite")
+          .setLabel("Remove limit")
           .setStyle(ButtonStyle.Danger)
           .setDisabled(controlsDisabled)
           .onClick("roles_dashboard_clear_limit", async (buttonCtx) => {
@@ -497,7 +493,7 @@ export default class RolesDashboardCommand extends SubCommand {
             if (!targetRoles.length || !a) {
               await buttonCtx.write({
                 content:
-                  "Selecciona al menos un rol y una accion para quitar el limite.",
+                  "Select at least one role and one action to remove the limit.",
                 flags: MessageFlags.Ephemeral,
               });
               return;
@@ -515,11 +511,11 @@ export default class RolesDashboardCommand extends SubCommand {
                 });
               }
               state.roles = await fetchDashboardRoles(guildId);
-              state.feedback = `Limite eliminado para ${a.label} en ${targetRoles.length} rol(es).`;
+              state.feedback = `Limit removed for ${a.label} in ${targetRoles.length} role(s).`;
             } catch (error) {
               console.error("roles dashboard clear limit", error);
               state.feedback =
-                "No se pudo eliminar el limite. Intentalo nuevamente.";
+                "Could not remove the limit. Try again.";
             }
           });
 

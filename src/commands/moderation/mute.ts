@@ -1,9 +1,8 @@
 /**
- * Motivación: registrar el comando "moderation / mute" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Mute Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Register the "moderation/mute" command to offer the action consistently.
+ * Uses the Seyfert command framework with typed options.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -15,9 +14,9 @@ import {
   InteractionGuildMember,
   Options,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
-import { isValid, parse } from "@/utils/ms";
+import { UIColors } from "@/modules/ui/design-system";
+import { parse, isValid } from "@/utils/ms";
 import { registerCase } from "@/modules/moderation/service";
 import { isSnowflake } from "@/utils/snowflake";
 
@@ -100,7 +99,7 @@ export default class MuteCommand extends Command {
         **Reason:** ${reason}  
         **Duration:** ${time}
       `,
-      color: EmbedColors.Green,
+      color: UIColors.success,
       footer: {
         text: `Muted by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL(),
@@ -116,7 +115,7 @@ export default class MuteCommand extends Command {
 
     await GuildLogger.banSanctionLog({
       title: "User muted",
-      color: EmbedColors.Orange,
+      color: UIColors.warning,
       thumbnail: await user.avatarURL(),
       fields: [
         {

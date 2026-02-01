@@ -1,9 +1,7 @@
 /**
- * Motivacion: permitir elegir el modelo de IA por guild.
+ * AI Set Model Command.
  *
- * Idea/concepto: el listado de modelos depende del proveedor configurado.
- *
- * Alcance: valida y persiste el modelo en la configuracion por guild.
+ * Purpose: Allow selecting an AI model per guild based on the configured provider.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -26,7 +24,7 @@ import { respondModelAutocomplete } from "./shared";
 
 const options = {
   model: createStringOption({
-    description: "Modelo de IA",
+    description: "AI model",
     required: true,
     autocomplete: respondModelAutocomplete,
   }),
@@ -34,7 +32,7 @@ const options = {
 
 @Declare({
   name: "set-model",
-  description: "Configurar el modelo de IA",
+  description: "Configure the AI model",
   defaultMemberPermissions: ["ManageGuild"],
   contexts: ["Guild"],
 })
@@ -49,7 +47,7 @@ export default class AiSetModelCommand extends SubCommand {
 
     const model = ctx.options.model?.trim();
     if (!model) {
-      await ctx.write({ content: "Debes indicar un modelo valido." });
+      await ctx.write({ content: "You must specify a valid model." });
       return;
     }
 
@@ -59,7 +57,7 @@ export default class AiSetModelCommand extends SubCommand {
     if (!isProviderAvailable(providerId)) {
       await ctx.write({
         content:
-          "El proveedor configurado no es valido. Usa /ai set-provider primero.",
+          "The configured provider is not valid. Use /ai set-provider first.",
       });
       return;
     }
@@ -70,7 +68,7 @@ export default class AiSetModelCommand extends SubCommand {
         .join(", ");
       const fallback = getDefaultModelForProvider(providerId);
       await ctx.write({
-        content: `Modelo no valido para \`${providerId}\`. Disponibles: ${available}. Por defecto: \`${fallback}\`.`,
+        content: `Invalid model for \`${providerId}\`. Available: ${available}. Default: \`${fallback}\`.`,
       });
       return;
     }
@@ -78,7 +76,7 @@ export default class AiSetModelCommand extends SubCommand {
     await configStore.set(guildId, ConfigurableModule.AI, { model });
 
     await ctx.write({
-      content: `Modelo actualizado a \`${model}\` (provider: \`${providerId}\`).`,
+      content: `Model updated to \`${model}\` (provider: \`${providerId}\`).`,
     });
   }
 }

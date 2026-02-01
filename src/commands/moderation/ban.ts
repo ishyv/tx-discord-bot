@@ -1,9 +1,8 @@
 /**
- * Motivación: registrar el comando "moderation / ban" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Ban Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Register the "moderation/ban" command to offer the action consistently.
+ * Uses the Seyfert command framework with typed options.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -15,8 +14,8 @@ import {
   InteractionGuildMember,
   Options,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import { registerCase } from "@/modules/moderation/service";
 import { isSnowflake } from "@/utils/snowflake";
 
@@ -85,7 +84,7 @@ export default class BanCommand extends Command {
 
         **Reason:** ${reason}
       `,
-      color: EmbedColors.Green,
+      color: UIColors.success,
       footer: {
         text: `Banned by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL(),
@@ -101,7 +100,7 @@ export default class BanCommand extends Command {
 
     await GuildLogger.banSanctionLog({
       title: "User banned",
-      color: EmbedColors.Red,
+      color: UIColors.error,
       thumbnail: await user.avatarURL(),
       fields: [
         {

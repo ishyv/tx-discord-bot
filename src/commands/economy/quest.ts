@@ -26,7 +26,7 @@ import {
 
 @Declare({
   name: "quest",
-  description: "📜 Gestiona tus misiones individuales",
+  description: "📜 Manage your individual quests",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -42,13 +42,13 @@ export default class QuestCommand extends Command {
     await ctx.write({
       embeds: [
         buildQuestSuccessEmbed(
-          "Comandos de Misiones",
-          "Usa las siguientes subcomandos:\n\n" +
-            "`/quest view <id>` - Ver detalles de una misión\n" +
-            "`/quest claim <id>` - Reclamar recompensas de una misión completada\n" +
-            "`/quest progress` - Ver tu progreso general\n" +
-            "`/quest list` - Listar misiones disponibles\n\n" +
-            "O usa `/quests` para el Tablón de Misiones interactivo.",
+          "Quest Commands",
+          "Use the following subcommands:\n\n" +
+          "`/quest view <id>` - View quest details\n" +
+          "`/quest claim <id>` - Claim rewards from a completed quest\n" +
+          "`/quest progress` - View your overall progress\n" +
+          "`/quest list` - List available quests\n\n" +
+          "Or use `/quests` for the interactive Quest Board.",
         ),
       ],
     });
@@ -58,14 +58,14 @@ export default class QuestCommand extends Command {
 // Subcommand: view
 const viewOptions = {
   id: createStringOption({
-    description: "ID de la misión a ver",
+    description: "ID of the quest to view",
     required: true,
   }),
 };
 
 @Declare({
   name: "view",
-  description: "Ver detalles de una misión específica",
+  description: "View details of a specific quest",
 })
 @Options(viewOptions)
 export class QuestViewSubCommand extends SubCommand {
@@ -78,7 +78,7 @@ export class QuestViewSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -115,7 +115,7 @@ export class QuestViewSubCommand extends SubCommand {
         await ctx.write({
           embeds: [
             buildQuestErrorEmbed(
-              `La misión "${template.name}" no está disponible en la rotación actual.`,
+              `The quest "${template.name}" is not available in the current rotation.`,
             ),
           ],
         });
@@ -123,7 +123,7 @@ export class QuestViewSubCommand extends SubCommand {
       }
 
       await ctx.write({
-        embeds: [buildQuestErrorEmbed("Misión no encontrada o no disponible.")],
+        embeds: [buildQuestErrorEmbed("Quest not found or not available.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -149,7 +149,7 @@ export class QuestViewSubCommand extends SubCommand {
     const quest = questViewResult.unwrap();
     if (!quest) {
       await ctx.write({
-        embeds: [buildQuestErrorEmbed("Misión no encontrada.")],
+        embeds: [buildQuestErrorEmbed("Quest not found.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -163,14 +163,14 @@ export class QuestViewSubCommand extends SubCommand {
 // Subcommand: claim
 const claimOptions = {
   id: createStringOption({
-    description: "ID de la misión a reclamar",
+    description: "ID of the quest to claim",
     required: true,
   }),
 };
 
 @Declare({
   name: "claim",
-  description: "Reclamar recompensas de una misión completada",
+  description: "Claim rewards from a completed quest",
 })
 @Options(claimOptions)
 export class QuestClaimSubCommand extends SubCommand {
@@ -183,7 +183,7 @@ export class QuestClaimSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -216,7 +216,7 @@ export class QuestClaimSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            "Esta misión no está disponible en la rotación actual.",
+            "This quest is not available in the current rotation.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -238,9 +238,9 @@ export class QuestClaimSubCommand extends SubCommand {
 
       // Provide helpful messages for common errors
       if (error.code === "QUEST_NOT_COMPLETED") {
-        message = "Aún no has completado todos los requisitos de esta misión.";
+        message = "You haven't completed all the requirements for this quest yet.";
       } else if (error.code === "REWARDS_ALREADY_CLAIMED") {
-        message = "Ya has reclamado las recompensas de esta misión.";
+        message = "You've already claimed the rewards for this quest.";
       }
 
       await ctx.write({
@@ -271,7 +271,7 @@ export class QuestClaimSubCommand extends SubCommand {
 // Subcommand: progress
 @Declare({
   name: "progress",
-  description: "Ver tu progreso general de misiones",
+  description: "View your overall quest progress",
 })
 export class QuestProgressSubCommand extends SubCommand {
   async run(ctx: CommandContext) {
@@ -282,7 +282,7 @@ export class QuestProgressSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -317,26 +317,26 @@ export class QuestProgressSubCommand extends SubCommand {
 
     const { Embed } = await import("seyfert");
     const embed = new Embed()
-      .setTitle("📊 Tu Progreso de Misiones")
+      .setTitle("📊 Your Quest Progress")
       .setColor(0x3498db)
       .addFields(
         {
-          name: "🎯 Total Completadas",
+          name: "🎯 Total Completed",
           value: stats.totalCompleted.toString(),
           inline: true,
         },
         {
-          name: "📅 Diarias Completadas",
+          name: "📅 Daily Completed",
           value: stats.dailyCompleted.toString(),
           inline: true,
         },
         {
-          name: "📆 Semanales Completadas",
+          name: "📆 Weekly Completed",
           value: stats.weeklyCompleted.toString(),
           inline: true,
         },
         {
-          name: "⭐ Destacadas Completadas",
+          name: "⭐ Featured Completed",
           value: stats.featuredCompleted.toString(),
           inline: true,
         },
@@ -346,12 +346,12 @@ export class QuestProgressSubCommand extends SubCommand {
           inline: true,
         },
         {
-          name: "🎁 Diarias por Reclamar",
+          name: "🎁 Daily Ready to Claim",
           value: dailyProgress.toString(),
           inline: true,
         },
         {
-          name: "🎁 Semanales por Reclamar",
+          name: "🎁 Weekly Ready to Claim",
           value: weeklyProgress.toString(),
           inline: true,
         },
@@ -364,7 +364,7 @@ export class QuestProgressSubCommand extends SubCommand {
 // Subcommand: list
 @Declare({
   name: "list",
-  description: "Listar todas las misiones disponibles",
+  description: "List all available quests",
 })
 export class QuestListSubCommand extends SubCommand {
   async run(ctx: CommandContext) {
@@ -374,7 +374,7 @@ export class QuestListSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -399,8 +399,8 @@ export class QuestListSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildQuestSuccessEmbed(
-            "Sin Misiones",
-            "No hay misiones configuradas en este servidor. Contacta a un administrador.",
+            "No Quests",
+            "No quests are configured in this server. Contact an administrator.",
           ),
         ],
       });
@@ -417,19 +417,19 @@ export class QuestListSubCommand extends SubCommand {
 
     const { Embed } = await import("seyfert");
     const embed = new Embed()
-      .setTitle("📜 Misiones Disponibles")
+      .setTitle("📜 Available Quests")
       .setDescription(
-        `Hay ${templates.length} misiones configuradas en este servidor.`,
+        `There are ${templates.length} quests configured in this server.`,
       )
       .setColor(0xf39c12);
 
     const difficultyOrder = ["easy", "medium", "hard", "expert", "legendary"];
     const difficultyNames: Record<string, string> = {
-      easy: "🟢 Fácil",
-      medium: "🔵 Medio",
-      hard: "🟠 Difícil",
-      expert: "🔴 Experto",
-      legendary: "🟣 Legendario",
+      easy: "🟢 Easy",
+      medium: "🔵 Medium",
+      hard: "🟠 Hard",
+      expert: "🔴 Expert",
+      legendary: "🟣 Legendary",
     };
 
     for (const diff of difficultyOrder) {

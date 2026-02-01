@@ -13,9 +13,9 @@ import {
   type GuildCommandContext,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
+import { UIColors } from "@/modules/ui/design-system";
 
 import {
   createEconomyAccountService,
@@ -58,7 +58,7 @@ const buyOptions = {
   interval: 3000,
   uses: { default: 1 },
 })
-export default class PerksParentCommand extends Command {}
+export default class PerksParentCommand extends Command { }
 
 @Declare({
   name: "list",
@@ -114,30 +114,30 @@ export class PerksListCommand extends SubCommand {
       return;
     }
 
-    // Build embed
+    // Build embed with VOID ARCHIVE styling
     const embed = new Embed()
-      .setColor(EmbedColors.Purple)
-      .setTitle("🎖️ Perks Disponibles")
-      .setDescription("Mejora tus habilidades comprando perks con coins.");
+      .setColor(UIColors.amethyst)
+      .setTitle("🎖️ Available Perks")
+      .setDescription("Enhance your abilities with permanent upgrades.");
 
     const selectOptions = perks
       .filter((p) => p.level < p.maxLevel)
       .slice(0, 25)
       .map((p) => ({
-        label: `${p.name} (Nv ${p.level + 1})`,
+        label: `${p.name} (Lv.${p.level + 1})`,
         value: p.id,
-        description: `Costo: ${p.nextCost?.amount ?? "?"} ${p.nextCost?.currencyId ?? "coins"}`,
+        description: `Cost: ${p.nextCost?.amount ?? "?"} ${p.nextCost?.currencyId ?? "coins"}`,
       }));
 
     for (const perk of perks) {
       const levelText =
         perk.level >= perk.maxLevel
           ? "✅ MAX"
-          : `Nv ${perk.level}/${perk.maxLevel}`;
+          : `Lv.${perk.level}/${perk.maxLevel}`;
 
       const costText = perk.nextCost
-        ? `➡️ Siguiente: ${perk.nextCost.amount} ${perk.nextCost.currencyId}${perk.nextCost.minLevel ? ` (requiere Nv ${perk.nextCost.minLevel})` : ""}`
-        : "✅ Nivel máximo alcanzado";
+        ? `➡️ Next: \`${perk.nextCost.amount}\` ${perk.nextCost.currencyId}${perk.nextCost.minLevel ? ` (requires Lv.${perk.nextCost.minLevel})` : ""}`
+        : "✅ Max level reached";
 
       const effectsText = perk.effects
         .map((e) => {
@@ -147,21 +147,24 @@ export class PerksListCommand extends SubCommand {
               : `+${e.value}`;
           switch (e.type) {
             case "weight_cap":
-              return `${valueText} peso`;
+              return `${valueText} weight`;
             case "slot_cap":
               return `${valueText} slots`;
             case "work_bonus_pct":
-              return `${valueText} trabajo`;
+              return `${valueText} work`;
             case "daily_bonus_cap":
-              return `${valueText} racha`;
+              return `${valueText} streak`;
             default:
               return "";
           }
         })
         .join(", ");
 
+      // Use design system markers
+      const marker = perk.level >= perk.maxLevel ? "◇" : "◈";
+
       embed.addFields({
-        name: `${perk.name} ${levelText}`,
+        name: `${marker} **${perk.name}** — ${levelText}`,
         value: `${perk.description}\n📊 ${effectsText}\n${costText}`,
         inline: false,
       });
@@ -172,7 +175,7 @@ export class PerksListCommand extends SubCommand {
     if (selectOptions.length > 0) {
       const selectMenu = createSelectMenu({
         customId: `perk_buy_select_${userId}`,
-        placeholder: "Selecciona un perk para comprar...",
+        placeholder: "Select a perk to purchase...",
         options: selectOptions,
       });
 
@@ -246,7 +249,7 @@ async function showConfirmation(
     await ctx.write({
       embeds: [
         buildErrorEmbed(
-          `${perk.name} ya está en nivel máximo (${perk.maxLevel}).`,
+          `${perk.name} is already at max level (${perk.maxLevel}).`,
         ),
       ],
       flags: MessageFlags.Ephemeral,
@@ -257,32 +260,32 @@ async function showConfirmation(
   const nextCost = perk.cost(currentLevel + 1);
 
   const embed = new Embed()
-    .setColor(EmbedColors.Yellow)
-    .setTitle(`🛒 Confirmar Compra`)
+    .setColor(UIColors.warning)
+    .setTitle(`🛒 Confirm Purchase`)
     .setDescription(
-      `¿Comprar **${perk.name}** Nv ${currentLevel + 1}?\n\n` +
-        `💰 Costo: **${nextCost.amount}** ${nextCost.currencyId}\n` +
-        (nextCost.minLevel ? `📈 Requiere nivel: ${nextCost.minLevel}\n` : "") +
-        `\n✨ Efectos: ${perk.effects
-          .map((e) => {
-            const valueText =
-              e.value < 1 && e.value > 0
-                ? `+${(e.value * 100).toFixed(0)}%`
-                : `+${e.value}`;
-            return `${valueText}`;
-          })
-          .join(", ")}`,
+      `Purchase **${perk.name}** Lv.${currentLevel + 1}?\n\n` +
+      `💰 Cost: **\`${nextCost.amount}\`** ${nextCost.currencyId}\n` +
+      (nextCost.minLevel ? `📈 Requires level: ${nextCost.minLevel}\n` : "") +
+      `\n✨ Effects: ${perk.effects
+        .map((e) => {
+          const valueText =
+            e.value < 1 && e.value > 0
+              ? `+${(e.value * 100).toFixed(0)}%`
+              : `+${e.value}`;
+          return `${valueText}`;
+        })
+        .join(", ")}`,
     );
 
   const confirmBtn = createButton({
     customId: `perk_confirm_${userId}_${perkId}`,
-    label: "✅ Comprar",
+    label: "✓ Buy",
     style: ButtonStyle.Success,
   });
 
   const cancelBtn = createButton({
     customId: `perk_cancel_${userId}`,
-    label: "❌ Cancelar",
+    label: "✕ Cancel",
     style: ButtonStyle.Secondary,
   });
 

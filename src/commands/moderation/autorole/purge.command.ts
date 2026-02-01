@@ -18,7 +18,7 @@ import { respondRuleAutocomplete, requireAutoroleContext } from "./shared";
 
 const options = {
   name: createStringOption({
-    description: "Nombre de la regla a purgar",
+    description: "Name of the rule to purge",
     required: true,
     autocomplete: respondRuleAutocomplete,
   }),
@@ -26,7 +26,7 @@ const options = {
 
 @Declare({
   name: "purge",
-  description: "Revocar roles otorgados por una regla",
+  description: "Revoke roles granted by a rule",
 })
 @Options(options)
 export default class AutorolePurgeCommand extends SubCommand {
@@ -40,7 +40,7 @@ export default class AutorolePurgeCommand extends SubCommand {
     const rule = res.isOk() ? res.unwrap() : null;
 
     if (!rule) {
-      await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
+      await ctx.write({ content: `No rule found named \`${slug}\`.` });
       return;
     }
 
@@ -52,10 +52,10 @@ export default class AutorolePurgeCommand extends SubCommand {
 
     await ctx.write({
       content:
-        `Se eliminaron ${result.removedGrants} motivos activos.` +
+        `Deleted ${result.removedGrants} active grants.` +
         (result.roleRevocations > 0
-          ? ` Se removieron ${result.roleRevocations} roles.`
-          : " Ningun rol debia ser removido."),
+          ? ` Removed ${result.roleRevocations} roles.`
+          : " No roles needed to be removed."),
     });
   }
 }

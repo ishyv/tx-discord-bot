@@ -134,7 +134,7 @@ export async function ensureTicketMessage(client: UsingClient): Promise<void> {
     const ticketsEnabled = await isFeatureEnabled(guildId, Features.Tickets);
     if (!ticketsEnabled) {
       client.logger?.info?.(
-        "[tickets] dashboard deshabilitado; no se mostrara mensaje",
+        "[tickets] dashboard disabled; message will not be shown",
         {
           guildId,
         },
@@ -292,7 +292,7 @@ export function buildTicketModal(category: TicketCategory): Modal {
         ),
       )
 
-      /* Cuando se envia el modal -- creacion de ticket */
+      /* When the modal is sent -- ticket creation */
       .run(async (ctx) => {
         const content = ctx.getInputValue(TICKET_DETAILS_INPUT_ID, true);
         const guildId = ctx.guildId;

@@ -1,9 +1,7 @@
 /**
- * Motivacion: configurar el rate limit de IA por guild.
+ * AI Rate Limit Command.
  *
- * Idea/concepto: subcomandos para habilitar, deshabilitar, configurar y mostrar el rate limit actual.
- *
- * Alcance: maneja la interfaz de configuración del usuario; delega la validación de consumo al servicio de rate limit.
+ * Purpose: Configure AI rate limits per guild.
  */
 import {
   Declare,
@@ -19,16 +17,16 @@ import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
   enabled: createBooleanOption({
-    description: "Habilitar o deshabilitar el rate limit",
+    description: "Enable or disable the rate limit",
     required: false,
   }),
   max: createIntegerOption({
-    description: "Maximo de solicitudes permitidas",
+    description: "Maximum allowed requests",
     required: false,
     min_value: 1,
   }),
   window: createIntegerOption({
-    description: "Ventana de tiempo en segundos",
+    description: "Time window in seconds",
     required: false,
     min_value: 10,
   }),
@@ -36,7 +34,7 @@ const options = {
 
 @Declare({
   name: "ratelimit",
-  description: "Configurar el rate limit de IA",
+  description: "Configure AI rate limit",
 })
 @Options(options)
 @Guard({
@@ -49,15 +47,15 @@ export default class AiRateLimitCommand extends SubCommand {
 
     const { enabled, max, window } = ctx.options;
 
-    // Si no se pasan opciones, mostramos la config actual
+    // If no options passed, show current config
     if (enabled === undefined && max === undefined && window === undefined) {
       const config = await configStore.get(guildId, ConfigurableModule.AI);
       await ctx.write({
         content:
-          `**Configuracion de Rate Limit de IA:**\n` +
-          `- Estado: ${config.rateLimitEnabled ? "✅ Habilitado" : "❌ Deshabilitado"}\n` +
-          `- Maximo: \`${config.rateLimitMax}\` solicitudes\n` +
-          `- Ventana: \`${config.rateLimitWindow}\` segundos`,
+          `**AI Rate Limit Configuration:**\n` +
+          `- Status: ${config.rateLimitEnabled ? "✅ Enabled" : "❌ Disabled"}\n` +
+          `- Maximum: \`${config.rateLimitMax}\` requests\n` +
+          `- Window: \`${config.rateLimitWindow}\` seconds`,
       });
       return;
     }
@@ -75,10 +73,10 @@ export default class AiRateLimitCommand extends SubCommand {
 
     await ctx.write({
       content:
-        `**Configuracion de Rate Limit actualizada:**\n` +
-        `- Estado: ${updated.rateLimitEnabled ? "✅ Habilitado" : "❌ Deshabilitado"}\n` +
-        `- Maximo: \`${updated.rateLimitMax}\` solicitudes\n` +
-        `- Ventana: \`${updated.rateLimitWindow}\` segundos`,
+        `**AI Rate Limit updated:**\n` +
+        `- Status: ${updated.rateLimitEnabled ? "✅ Enabled" : "❌ Disabled"}\n` +
+        `- Maximum: \`${updated.rateLimitMax}\` requests\n` +
+        `- Window: \`${updated.rateLimitWindow}\` seconds`,
     });
   }
 }

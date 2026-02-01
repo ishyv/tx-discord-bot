@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / autorole / delete" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Autorole Delete Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Delete an auto-role rule with optional active assignment purging.
  */
 import {
   ActionRow,
@@ -16,7 +14,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { ButtonStyle } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import {
   AutoRoleRulesStore,
@@ -35,7 +33,7 @@ import {
 
 const options = {
   name: createStringOption({
-    description: "Nombre de la regla a eliminar",
+    description: "Name of the rule to delete",
     required: true,
     autocomplete: respondRuleAutocomplete,
   }),
@@ -45,7 +43,7 @@ const TTL_MS = 60_000;
 
 @Declare({
   name: "delete",
-  description: "Eliminar una regla de auto-role",
+  description: "Delete an auto-role rule",
 })
 @Options(options)
 export default class AutoroleDeleteCommand extends SubCommand {
@@ -58,33 +56,33 @@ export default class AutoroleDeleteCommand extends SubCommand {
     const res = await AutoRoleRulesStore.get(id);
     const rule = res.isOk() ? res.unwrap() : null;
     if (!rule) {
-      await ctx.write({ content: `No existe una regla llamada \`${slug}\`.` });
+      await ctx.write({ content: `No rule found named \`${slug}\`.` });
       return;
     }
 
     const embed = new Embed()
-      .setTitle(`Eliminar regla de auto-role: ${rule.name}`)
-      .setColor(EmbedColors.Red)
+      .setTitle(`Delete auto-role rule: ${rule.name}`)
+      .setColor(UIColors.error)
       .setFields([
         {
-          name: "Disparador",
+          name: "Trigger",
           value: `\`${formatTrigger(rule.trigger)}\``,
           inline: false,
         },
         {
-          name: "Rol",
+          name: "Role",
           value: `<@&${rule.roleId}>`,
           inline: false,
         },
         {
-          name: "Modo",
+          name: "Mode",
           value: formatRuleMode(rule),
           inline: false,
         },
         {
-          name: "Nota",
+          name: "Note",
           value:
-            "Las asignaciones temporales no se revocan automaticamente. Usa **Purgar asignaciones activas** para retirar los roles actuales.",
+            "Temporary assignments are not automatically revoked. Use **Purge active assignments** to remove current roles.",
         },
       ]);
 
@@ -116,15 +114,15 @@ export default class AutoroleDeleteCommand extends SubCommand {
 function buildButtonRow(slug: string) {
   const confirm = new Button()
     .setCustomId(`autorole:delete:confirm:${slug}`)
-    .setLabel("Confirmar eliminacion")
+    .setLabel("Confirm Deletion")
     .setStyle(ButtonStyle.Danger);
   const purge = new Button()
     .setCustomId(`autorole:delete:purge:${slug}`)
-    .setLabel("Purgar asignaciones activas")
+    .setLabel("Purge Active Assignments")
     .setStyle(ButtonStyle.Primary);
   const cancel = new Button()
     .setCustomId(`autorole:delete:cancel:${slug}`)
-    .setLabel("Cancelar")
+    .setLabel("Cancel")
     .setStyle(ButtonStyle.Secondary);
 
   const row = new ActionRow<Button>().addComponents(confirm, purge, cancel);
@@ -151,14 +149,14 @@ function scheduleExpiry(
         .catch(() => null);
       const embedJson = current?.embeds?.[0]
         ? [
-            new Embed(current.embeds[0])
-              .setFooter({ text: "Expirado" })
-              .toJSON(),
-          ]
+          new Embed(current.embeds[0])
+            .setFooter({ text: "Expired" })
+            .toJSON(),
+        ]
         : undefined;
       await ctx.client.messages.edit(messageId, channelId, {
         components: [row],
-        content: "Expirado",
+        content: "Expired",
         embeds: embedJson,
       });
     } catch (error) {
@@ -173,17 +171,17 @@ function scheduleExpiry(
 function buildDisabledRow(slug: string): ActionRow<Button> {
   const confirm = new Button()
     .setCustomId(`autorole:delete:confirm:${slug}`)
-    .setLabel("Confirmar eliminacion")
+    .setLabel("Confirm Deletion")
     .setStyle(ButtonStyle.Danger)
     .setDisabled(true);
   const purge = new Button()
     .setCustomId(`autorole:delete:purge:${slug}`)
-    .setLabel("Purgar asignaciones activas")
+    .setLabel("Purge Active Assignments")
     .setStyle(ButtonStyle.Primary)
     .setDisabled(true);
   const cancel = new Button()
     .setCustomId(`autorole:delete:cancel:${slug}`)
-    .setLabel("Cancelar")
+    .setLabel("Cancel")
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(true);
 

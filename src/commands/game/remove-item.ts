@@ -28,28 +28,28 @@ const itemChoices = Object.values(ITEM_DEFINITIONS).map((item) => ({
 
 const options = {
   item: createStringOption({
-    description: "El item a retirar",
+    description: "Item to remove",
     required: true,
     choices: itemChoices,
   }),
   quantity: createIntegerOption({
-    description: "Cantidad de items a retirar",
+    description: "Number of items to remove",
     required: true,
     min_value: 1,
   }),
   user: createUserOption({
-    description: "El usuario a quien retirar el item",
+    description: "User to remove the item from",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón del retiro",
+    description: "Reason for removal",
     required: false,
   }),
 };
 
 @Declare({
   name: "remove-item",
-  description: "Retirar un item a un usuario (mod-only)",
+  description: "Remove an item from a user (mod-only)",
   defaultMemberPermissions: ["ManageGuild"],
 })
 @Options(options)
@@ -63,7 +63,7 @@ export default class RemoveItemCommand extends Command {
     const itemId = sanitizeItemId(rawItemId);
     if (!itemId) {
       await ctx.write({
-        content: "⚠️ ID de item inválido.",
+        content: "⚠️ Invalid item ID.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -72,7 +72,7 @@ export default class RemoveItemCommand extends Command {
     const itemDef = ITEM_DEFINITIONS[itemId];
     if (!itemDef) {
       await ctx.write({
-        content: "El item especificado no existe.",
+        content: "The specified item does not exist.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -99,19 +99,19 @@ export default class RemoveItemCommand extends Command {
 
       const errorMessages: Record<string, string> = {
         INSUFFICIENT_PERMISSIONS:
-          "❌ No tienes permisos para realizar esta acción.",
-        ITEM_NOT_FOUND: "El item especificado no existe.",
-        TARGET_NOT_FOUND: "El usuario objetivo no existe.",
+          "❌ You don't have permission to perform this action.",
+        ITEM_NOT_FOUND: "The specified item does not exist.",
+        TARGET_NOT_FOUND: "The target user does not exist.",
         TARGET_BLOCKED:
-          "⛔ La cuenta del usuario tiene restricciones temporales.",
+          "⛔ The user's account has temporary restrictions.",
         TARGET_BANNED:
-          "🚫 La cuenta del usuario tiene restricciones permanentes.",
-        INVALID_QUANTITY: error.message || "❌ Cantidad inválida.",
-        UPDATE_FAILED: "❌ Error al actualizar el inventario.",
+          "🚫 The user's account has permanent restrictions.",
+        INVALID_QUANTITY: error.message || "❌ Invalid quantity.",
+        UPDATE_FAILED: "❌ Error updating inventory.",
       };
 
       const message =
-        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+        errorMessages[error.code] ?? "❌ An unexpected error occurred.";
 
       await ctx.write({
         content: message,
@@ -123,12 +123,12 @@ export default class RemoveItemCommand extends Command {
     const adjustment = result.unwrap();
     const capacity = adjustment.capacity;
 
-    const capacityInfo = `📦 Capacidad: ${capacity.currentSlots}/${capacity.maxSlots} slots, ${capacity.currentWeight}/${capacity.maxWeight} peso`;
+    const capacityInfo = `📦 Capacity: ${capacity.currentSlots}/${capacity.maxSlots} slots, ${capacity.currentWeight}/${capacity.maxWeight} weight`;
 
     await ctx.write({
       content:
-        `✅ Se han retirado **${quantity}x ${itemDef.name}** del inventario de ${user.toString()}.\n` +
-        `📊 Nueva cantidad: ${adjustment.afterQuantity}\n` +
+        `✅ Removed **${quantity}x ${itemDef.name}** from ${user.toString()}'s inventory.\n` +
+        `📊 New quantity: ${adjustment.afterQuantity}\n` +
         `${capacityInfo}`,
     });
   }

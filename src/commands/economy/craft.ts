@@ -13,7 +13,7 @@ import {
   Embed,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
@@ -27,11 +27,11 @@ import type { CraftingRecipeView } from "@/modules/economy/crafting";
 
 const craftOptions = {
   recipe: createStringOption({
-    description: "ID de la receta a craftear",
+    description: "ID of the recipe to craft",
     required: false,
   }),
   quantity: createIntegerOption({
-    description: "Cantidad a craftear (default: 1)",
+    description: "Quantity to craft (default: 1)",
     required: false,
     min_value: 1,
     max_value: 100,
@@ -40,7 +40,7 @@ const craftOptions = {
 
 @Declare({
   name: "craft",
-  description: "Craftear items usando recetas",
+  description: "Craft items using recipes",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -73,7 +73,7 @@ export default class CraftCommand extends Command {
       !guildConfigResult.unwrap().features.crafting
     ) {
       await ctx.write({
-        content: "🚫 Crafting está deshabilitado en este servidor.",
+        content: "🚫 Crafting is disabled in this server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -130,16 +130,16 @@ export default class CraftCommand extends Command {
 
     if (recipes.length === 0) {
       await ctx.write({
-        content: "No hay recetas disponibles en este servidor.",
+        content: "No recipes available in this server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const embed = new Embed()
-      .setColor(EmbedColors.Blue)
-      .setTitle("🔨 Recetas de Crafteo")
-      .setDescription("Usa `/craft <recipeId>` para craftear un item.");
+      .setColor(UIColors.info)
+      .setTitle("🔨 Crafting Recipes")
+      .setDescription("Use `/craft <recipeId>` to craft an item.");
 
     // Group by canCraft
     const canCraft = recipes.filter((r: CraftingRecipeView) => r.canCraft);
@@ -164,7 +164,7 @@ export default class CraftCommand extends Command {
         .join(", ");
 
       const levelReq = recipe.requiredLevel
-        ? ` (Nv ${recipe.requiredLevel}+)`
+        ? ` (Lv.${recipe.requiredLevel}+)`
         : "";
 
       embed.addFields({
@@ -175,7 +175,7 @@ export default class CraftCommand extends Command {
     }
 
     if (recipes.length > 8) {
-      embed.setFooter({ text: `Y ${recipes.length - 8} recetas más...` });
+      embed.setFooter({ text: `And ${recipes.length - 8} more recipes...` });
     }
 
     await ctx.write({ embeds: [embed], flags: MessageFlags.Ephemeral });
@@ -196,7 +196,7 @@ export default class CraftCommand extends Command {
 
     if (recipeResult.isErr() || !recipeResult.unwrap()) {
       await ctx.write({
-        content: "❌ Receta no encontrada.",
+        content: "❌ Recipe not found.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -229,7 +229,7 @@ export default class CraftCommand extends Command {
       : "";
 
     const levelReq = recipe.requiredLevel
-      ? `\n📈 Requiere Nivel ${recipe.requiredLevel}`
+      ? `\n📈 Requires Level ${recipe.requiredLevel}`
       : "";
 
     const xpText = recipe.xpReward
@@ -245,25 +245,25 @@ export default class CraftCommand extends Command {
         const missingItems = recipe.missingItems
           .map(
             (m) =>
-              `${getItemDefinition(m.itemId)?.name ?? m.itemId} x${m.quantity}`,
+              `${getItemDefinition(m.itemId)?.name ?? m.itemId} ×${m.quantity}`,
           )
           .join(", ");
-        missingText = `\n\n❌ **Faltan:** ${missingItems}`;
+        missingText = `\n\n❌ **Missing:** ${missingItems}`;
       }
       if (recipe.missingCurrency) {
-        missingText += `\n❌ **Falta:** ${recipe.missingCurrency} ${recipe.currencyInput?.currencyId}`;
+        missingText += `\n❌ **Missing:** ${recipe.missingCurrency} ${recipe.currencyInput?.currencyId}`;
       }
     }
 
     const embed = new Embed()
-      .setColor(canCraft ? EmbedColors.Green : EmbedColors.Red)
+      .setColor(canCraft ? UIColors.success : UIColors.error)
       .setTitle(`${statusEmoji} ${recipe.name}`)
       .setDescription(
         `${recipe.description}\n\n` +
-          `**Cantidad:** ${quantity}\n\n` +
-          `**Materiales necesarios:**\n${inputsText}${currencyText}${feeText}${levelReq}${xpText}\n\n` +
-          `**Producirá:**\n${outputsText}` +
-          missingText,
+        `**Quantity:** ${quantity}\n\n` +
+        `**Required materials:**\n${inputsText}${currencyText}${feeText}${levelReq}${xpText}\n\n` +
+        `**Will produce:**\n${outputsText}` +
+        missingText,
       );
 
     await ctx.write({ embeds: [embed], flags: MessageFlags.Ephemeral });

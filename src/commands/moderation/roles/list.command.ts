@@ -1,20 +1,18 @@
 /**
- * Motivación: registrar el comando "moderation / roles / list" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role List Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: List managed roles and their limits.
  */
 import type { GuildCommandContext } from "seyfert";
 import { Declare, Embed, SubCommand } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { GuildStore } from "@/db/repositories/guilds";
 import { buildModerationSummary, fetchManagedRoles } from "./shared";
 
 @Declare({
   name: "list",
-  description: "Listar roles administrados y sus limites",
+  description: "List managed roles and their limits",
 })
 export default class RoleListCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
@@ -23,10 +21,10 @@ export default class RoleListCommand extends SubCommand {
       await ctx.write({
         embeds: [
           new Embed({
-            title: "Roles administrados",
+            title: "Managed Roles",
             description:
-              "Este comando solo puede ejecutarse dentro de un servidor.",
-            color: EmbedColors.Red,
+              "This command can only be executed within a server.",
+            color: UIColors.error,
           }),
         ],
       });
@@ -39,9 +37,9 @@ export default class RoleListCommand extends SubCommand {
 
     if (!roles.length) {
       const empty = new Embed({
-        title: "Roles administrados",
-        description: "No hay configuraciones registradas.",
-        color: EmbedColors.Greyple,
+        title: "Managed Roles",
+        description: "No registered configurations found.",
+        color: UIColors.info,
       });
       await ctx.write({ embeds: [empty] });
       return;
@@ -51,16 +49,16 @@ export default class RoleListCommand extends SubCommand {
       name: `${role.key} - ${role.label}`,
       value: [
         role.discordRoleId
-          ? `Rol vinculado: <@&${role.discordRoleId}>`
-          : "Rol vinculado: Sin asignar",
+          ? `Linked role: <@&${role.discordRoleId}>`
+          : "Linked role: Unassigned",
         "",
         buildModerationSummary(role),
       ].join("\n"),
     }));
 
     const embed = new Embed({
-      title: "Roles administrados",
-      color: EmbedColors.Blurple,
+      title: "Managed Roles",
+      color: UIColors.info,
       fields,
     });
 

@@ -2,10 +2,10 @@ import { AutoLoad, Command, Declare } from "seyfert";
 
 @Declare({
   name: "tops",
-  description: "Configurar y manejar el sistema de tops",
+  description: "Configure and manage the leaderboards system",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
   defaultMemberPermissions: ["ManageChannels"],
 })
 @AutoLoad()
-export default class TopsParent extends Command {}
+export default class TopsParent extends Command { }

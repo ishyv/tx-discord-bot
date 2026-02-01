@@ -14,7 +14,7 @@ import {
   ActionRow,
 } from "seyfert";
 import { ButtonStyle } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
@@ -111,9 +111,9 @@ async function showSlotSelection(
   const loadout = loadoutResult.unwrap();
 
   const embed = new Embed()
-    .setColor(EmbedColors.Blue)
-    .setTitle("👤 Selecciona un Slot")
-    .setDescription("Elige el slot donde quieres equipar un item.");
+    .setColor(UIColors.info)
+    .setTitle("👤 Equipment Loadout")
+    .setDescription("Select a slot to equip an item.");
 
   // Show current equipment
   for (const slot of EQUIPMENT_SLOTS) {
@@ -129,7 +129,7 @@ async function showSlotSelection(
     } else {
       embed.addFields({
         name: slotName,
-        value: "*Vacío*",
+        value: "*Empty*",
         inline: true,
       });
     }
@@ -139,13 +139,13 @@ async function showSlotSelection(
     label: SLOT_DISPLAY_NAMES[slot] ?? slot,
     value: slot,
     description: loadout.slots[slot]
-      ? `Cambiar: ${getEquipableItemDefinition(loadout.slots[slot]!.itemId)?.name ?? "Equipado"}`
-      : "Slot vacío - Equipar item",
+      ? `Swap: ${getEquipableItemDefinition(loadout.slots[slot]!.itemId)?.name ?? "Equipped"}`
+      : "Empty slot - Equip item",
   }));
 
   const selectMenu = createSelectMenu({
     customId: `equip_slot_select_${userId}`,
-    placeholder: "Selecciona un slot...",
+    placeholder: "Select a slot...",
     options: selectOptions,
   });
 
@@ -182,18 +182,18 @@ async function showSlotItems(
 
   if (items.length === 0) {
     await replyEphemeral(ctx, {
-      content: `No tienes items equipables para ${getSlotDisplayName(slot)} en tu inventario.`,
+      content: `No equipable items for **${getSlotDisplayName(slot)}** in your inventory.`,
     });
     return;
   }
 
   const embed = new Embed()
-    .setColor(EmbedColors.Purple)
-    .setTitle(`${getSlotDisplayName(slot)} - Items Disponibles`)
+    .setColor(UIColors.amethyst)
+    .setTitle(`${getSlotDisplayName(slot)} — Available Items`)
     .setDescription(
       currentlyEquipped
-        ? `Actualmente equipado: ${getEquipableItemDefinition(currentlyEquipped.itemId)?.emoji ?? "📦"} ${getEquipableItemDefinition(currentlyEquipped.itemId)?.name ?? currentlyEquipped.itemId}`
-        : "Slot vacío",
+        ? `Currently equipped: ${getEquipableItemDefinition(currentlyEquipped.itemId)?.emoji ?? "📦"} ${getEquipableItemDefinition(currentlyEquipped.itemId)?.name ?? currentlyEquipped.itemId}`
+        : "*Empty slot*",
     );
 
   for (const item of items.slice(0, 10)) {
@@ -206,43 +206,43 @@ async function showSlotItems(
             : `+${v}`;
         switch (k) {
           case "luck":
-            return `${valueText} suerte`;
+            return `${valueText} luck`;
           case "workBonusPct":
-            return `${valueText} trabajo`;
+            return `${valueText} work`;
           case "shopDiscountPct":
-            return `${valueText} descuento`;
+            return `${valueText} discount`;
           case "weightCap":
-            return `${valueText} peso`;
+            return `${valueText} weight`;
           case "slotCap":
             return `${valueText} slots`;
           case "dailyBonusCap":
-            return `${valueText} racha`;
+            return `${valueText} streak`;
           default:
             return "";
         }
       })
       .join(", ");
 
-    const levelReq = item.requiredLevel ? ` (Nv ${item.requiredLevel}+)` : "";
+    const levelReq = item.requiredLevel ? ` (Lv.${item.requiredLevel}+)` : "";
 
     embed.addFields({
       name: `${item.emoji} ${item.name}${levelReq}`,
-      value: `${item.description}\n📊 ${statsText}\n📦 Cantidad: ${item.quantity}`,
+      value: `${item.description}\n📊 ${statsText}\n📦 Qty: \`${item.quantity}\``,
       inline: false,
     });
   }
 
   const selectOptions = items.slice(0, 25).map((item) => ({
-    label: `${item.name} (x${item.quantity})`,
+    label: `${item.name} (×${item.quantity})`,
     value: item.itemId,
     description: item.requiredLevel
-      ? `Requiere Nv ${item.requiredLevel}`
-      : "Disponible",
+      ? `Requires Lv.${item.requiredLevel}`
+      : "Available",
   }));
 
   const selectMenu = createSelectMenu({
     customId: `equip_item_select_${userId}_${slot}`,
-    placeholder: "Selecciona un item para equipar...",
+    placeholder: "Select an item to equip...",
     options: selectOptions,
   });
 
@@ -250,7 +250,7 @@ async function showSlotItems(
 
   const backBtn = createButton({
     customId: `equip_back_${userId}`,
-    label: "⬅️ Volver",
+    label: "← Back",
     style: ButtonStyle.Secondary,
   });
 
@@ -293,13 +293,13 @@ export class EquipItemSelectHandler extends SubCommand {
 
     const itemId = getSelectValue(ctx);
     if (!itemId) {
-      await replyEphemeral(ctx, { content: "Item no encontrado." });
+      await replyEphemeral(ctx, { content: "Item not found." });
       return;
     }
 
     const itemDef = getEquipableItemDefinition(itemId);
     if (!itemDef) {
-      await replyEphemeral(ctx, { content: "Item no encontrado." });
+      await replyEphemeral(ctx, { content: "Item not found." });
       return;
     }
 
@@ -315,17 +315,17 @@ export class EquipItemSelectHandler extends SubCommand {
             : `+${v}`;
         switch (k) {
           case "luck":
-            return `${valueText} suerte`;
+            return `${valueText} luck`;
           case "workBonusPct":
-            return `${valueText} trabajo`;
+            return `${valueText} work`;
           case "shopDiscountPct":
-            return `${valueText} descuento`;
+            return `${valueText} discount`;
           case "weightCap":
-            return `${valueText} peso`;
+            return `${valueText} weight`;
           case "slotCap":
             return `${valueText} slots`;
           case "dailyBonusCap":
-            return `${valueText} racha`;
+            return `${valueText} streak`;
           default:
             return "";
         }
@@ -333,24 +333,24 @@ export class EquipItemSelectHandler extends SubCommand {
       .join(", ");
 
     const embed = new Embed()
-      .setColor(EmbedColors.Yellow)
-      .setTitle("🛒 Confirmar Equipamiento")
+      .setColor(UIColors.warning)
+      .setTitle("🔰 Confirm Equipment")
       .setDescription(
-        `¿Equipar **${itemDef.emoji ?? "📦"} ${itemDef.name}**?\n\n` +
-          `${itemDef.description}\n\n` +
-          `📊 Stats: ${statsText}\n` +
-          `👤 Slot: ${getSlotDisplayName(itemDef.slot)}`,
+        `Equip **${itemDef.emoji ?? "📦"} ${itemDef.name}**?\n\n` +
+        `${itemDef.description}\n\n` +
+        `📊 Stats: ${statsText}\n` +
+        `👤 Slot: ${getSlotDisplayName(itemDef.slot)}`,
       );
 
     const confirmBtn = createButton({
       customId: `equip_confirm_${userId}`,
-      label: "✅ Equipar",
+      label: "✓ Equip",
       style: ButtonStyle.Success,
     });
 
     const cancelBtn = createButton({
       customId: `equip_cancel_${userId}`,
-      label: "❌ Cancelar",
+      label: "✕ Cancel",
       style: ButtonStyle.Secondary,
     });
 
@@ -380,7 +380,7 @@ export class EquipConfirmHandler extends SubCommand {
     const pending = pendingEquips.get(userId);
     if (!pending || pending.guildId !== guildId) {
       await replyEphemeral(ctx, {
-        content: "❌ No tienes un equipamiento pendiente o ha expirado.",
+        content: "❌ No pending equipment action or it has expired.",
       });
       return;
     }
@@ -396,16 +396,16 @@ export class EquipConfirmHandler extends SubCommand {
     if (result.isErr()) {
       const error = result.error;
       const messages: Record<string, string> = {
-        ITEM_NOT_EQUIPABLE: "❌ Este item no se puede equipar.",
-        ITEM_NOT_IN_INVENTORY: "❌ No tienes este item en tu inventario.",
-        LEVEL_REQUIRED: "❌ No tienes el nivel requerido para este item.",
-        ACCOUNT_BLOCKED: "⛔ Tu cuenta tiene restricciones.",
-        ACCOUNT_BANNED: "🚫 Tu cuenta está suspendida.",
-        RATE_LIMITED: "⏱️ Demasiados cambios. Espera un momento.",
+        ITEM_NOT_EQUIPABLE: "❌ This item cannot be equipped.",
+        ITEM_NOT_IN_INVENTORY: "❌ You don't have this item in your inventory.",
+        LEVEL_REQUIRED: "❌ You don't meet the level requirement for this item.",
+        ACCOUNT_BLOCKED: "⛔ Your account has restrictions.",
+        ACCOUNT_BANNED: "🚫 Your account is suspended.",
+        RATE_LIMITED: "⏱️ Too many changes. Please wait a moment.",
       };
 
       await replyEphemeral(ctx, {
-        content: messages[error.code] ?? "❌ Error al equipar el item.",
+        content: messages[error.code] ?? "❌ Failed to equip item.",
       });
       return;
     }
@@ -415,11 +415,11 @@ export class EquipConfirmHandler extends SubCommand {
 
     const operationText =
       operation.operation === "swap"
-        ? `Cambiado ${getEquipableItemDefinition(operation.previousItemId!)?.name ?? "anterior"} por ${itemDef?.name ?? operation.itemId}`
-        : `Equipado ${itemDef?.name ?? operation.itemId}`;
+        ? `Swapped ${getEquipableItemDefinition(operation.previousItemId!)?.name ?? "previous"} for ${itemDef?.name ?? operation.itemId}`
+        : `Equipped ${itemDef?.name ?? operation.itemId}`;
 
     await replyEphemeral(ctx, {
-      content: `✅ ${operationText} en ${getSlotDisplayName(operation.slot)}.`,
+      content: `✅ ${operationText} in ${getSlotDisplayName(operation.slot)}.`,
     });
   }
 }
@@ -433,7 +433,7 @@ export class EquipCancelHandler extends SubCommand {
     const { userId } = getContextInfo(ctx);
     pendingEquips.delete(userId);
 
-    await replyEphemeral(ctx, { content: "❌ Equipamiento cancelado." });
+    await replyEphemeral(ctx, { content: "❌ Equipment action cancelled." });
   }
 }
 

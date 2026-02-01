@@ -28,7 +28,7 @@ export interface BalanceViewBuilder {
 }
 
 class BalanceViewBuilderImpl implements BalanceViewBuilder {
-  constructor(private registry: CurrencyRegistry) {}
+  constructor(private registry: CurrencyRegistry) { }
 
   build(
     inventory: CurrencyInventory,
@@ -91,7 +91,7 @@ class BalanceViewBuilderImpl implements BalanceViewBuilder {
     // Map currency IDs to display names
     const names: Record<string, string> = {
       coins: "💰 Coins",
-      rep: "⭐ Reputación",
+      rep: "⭐ Reputation",
     };
     return names[currencyId] ?? currencyId;
   }

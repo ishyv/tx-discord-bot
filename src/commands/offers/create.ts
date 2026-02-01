@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "offers / create" dentro de la categoría offers para ofrecer la acción de forma consistente y reutilizable.
+ * Offer Create Command.
  *
- * Idea/concepto: usa el framework de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Create a new job offer and send it for review.
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
@@ -18,8 +16,8 @@ import {
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
-  name: "crear",
-  description: "Crear una nueva oferta y enviarla a revisión",
+  name: "create",
+  description: "Create a new offer and send it for review",
 })
 @Cooldown({
   type: CooldownType.User,
@@ -34,7 +32,7 @@ export default class OfferCreateCommand extends SubCommand {
     const existingResult = await assertNoActiveOffer(guildId, ctx.author.id);
     if (existingResult.isErr()) {
       await ctx.write({
-        content: "Error verificando ofertas activas.",
+        content: "Error checking active offers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -43,7 +41,7 @@ export default class OfferCreateCommand extends SubCommand {
     if (existingResult.unwrap()) {
       await ctx.write({
         content:
-          "Ya tienes una oferta activa en revisión o con cambios pendientes. Usa `/oferta editar` o `/oferta retirar` antes de crear una nueva.",
+          "You already have an active offer in review or with pending changes. Use `/offer edit` or `/offer withdraw` before creating a new one.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -52,11 +50,11 @@ export default class OfferCreateCommand extends SubCommand {
     await startEmbedDesigner(ctx, {
       userId: ctx.author.id,
       content:
-        "Completa la información de tu oferta usando el menú y confirma para enviarla a revisión.",
+        "Complete your offer information using the menu and confirm to send it for review.",
       initial: {
-        title: "Título del puesto",
-        description: "Describe el rol, responsabilidades y contexto.",
-        footer: "Oferta de trabajo (se enviará a revisión)",
+        title: "Position Title",
+        description: "Describe the role, responsibilities, and context.",
+        footer: "Job offer (will be sent for review)",
         fields: buildDesignerFields(),
       },
       fields: OFFER_FIELD_DEFINITIONS,
@@ -64,7 +62,7 @@ export default class OfferCreateCommand extends SubCommand {
         const { details, error } = parseOfferDetails(data);
         if (!details) {
           await ctx.followup?.({
-            content: error ?? "Datos de oferta incompletos.",
+            content: error ?? "Incomplete offer data.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -84,22 +82,22 @@ export default class OfferCreateCommand extends SubCommand {
           const message =
             error instanceof Error
               ? error.message
-              : "Error desconocido creando la oferta.";
+              : "Unknown error creating the offer.";
 
           await ctx.followup?.({
             content:
               message === "OFFERS_REVIEW_CHANNEL_MISSING"
-                ? "No hay un canal de revisión configurado."
+                ? "No review channel configured."
                 : message === "ACTIVE_OFFER_EXISTS"
-                  ? "Ya tienes una oferta activa en revisión o con cambios pendientes."
-                  : `No se pudo crear la oferta: ${message}`,
+                  ? "You already have an active offer in review or with pending changes."
+                  : `Could not create the offer: ${message}`,
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
         await ctx.followup?.({
-          content: "Oferta enviada al canal de revisión.",
+          content: "Offer sent to the review channel.",
           flags: MessageFlags.Ephemeral,
         });
       },

@@ -28,7 +28,7 @@ import {
 
 @Declare({
   name: "title",
-  description: "🏷️ Gestiona tus títulos e insignias",
+  description: "🏷️ Manage your titles and badges",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -48,7 +48,7 @@ export default class TitleCommand extends Command {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -76,11 +76,11 @@ export default class TitleCommand extends Command {
       await ctx.write({
         embeds: [
           buildAchievementSuccessEmbed(
-            "Sin Título",
-            "No tienes ningún título equipado.\n\n" +
-              "Usa `/title list` para ver tus títulos disponibles\n" +
-              "o `/title set <id>` para equipar uno.\n\n" +
-              "Desbloquea logros para obtener más títulos.",
+            "No Title",
+            "You don't have any title equipped.\n\n" +
+            "Use `/title list` to see your available titles\n" +
+            "or `/title set <id>` to equip one.\n\n" +
+            "Unlock achievements to get more titles.",
           ),
         ],
       });
@@ -94,9 +94,9 @@ export default class TitleCommand extends Command {
     await ctx.write({
       embeds: [
         buildAchievementSuccessEmbed(
-          "Título Actual",
-          `Tienes equipado: **${display}**\n\n` +
-            `Usa \`/title list\` para ver todos tus títulos.`,
+          "Current Title",
+          `You have equipped: **${display}**\n\n` +
+          `Use \`/title list\` to see all your titles.`,
         ),
       ],
     });
@@ -106,14 +106,14 @@ export default class TitleCommand extends Command {
 // Subcommand: set
 const setOptions = {
   id: createStringOption({
-    description: "ID del título a equipar",
+    description: "ID of the title to equip",
     required: true,
   }),
 };
 
 @Declare({
   name: "set",
-  description: "Equipar un título",
+  description: "Equip a title",
 })
 @Options(setOptions)
 export class TitleSetSubCommand extends SubCommand {
@@ -126,7 +126,7 @@ export class TitleSetSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -146,7 +146,7 @@ export class TitleSetSubCommand extends SubCommand {
 
       if (error.code === "TITLE_NOT_OWNED") {
         message =
-          "No tienes este título. Desbloquéalo completando el logro correspondiente.";
+          "You don't own this title. Unlock it by completing the corresponding achievement.";
       }
 
       await ctx.write({
@@ -169,8 +169,8 @@ export class TitleSetSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementSuccessEmbed(
-            "Título Equipado",
-            "Tu título ha sido equipado correctamente.",
+            "Title Equipped",
+            "Your title has been equipped successfully.",
           ),
         ],
       });
@@ -181,7 +181,7 @@ export class TitleSetSubCommand extends SubCommand {
 // Subcommand: list
 @Declare({
   name: "list",
-  description: "Listar todos tus títulos disponibles",
+  description: "List all your available titles",
 })
 export class TitleListSubCommand extends SubCommand {
   async run(ctx: CommandContext) {
@@ -192,7 +192,7 @@ export class TitleListSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -217,10 +217,10 @@ export class TitleListSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementSuccessEmbed(
-            "Sin Títulos",
-            "Aún no tienes títulos.\n\n" +
-              "Desbloquea logros para obtener títulos únicos.\n" +
-              "Usa `/achievements` para ver los logros disponibles.",
+            "No Titles",
+            "You don't have any titles yet.\n\n" +
+            "Unlock achievements to get unique titles.\n" +
+            "Use `/achievements` to see available achievements.",
           ),
         ],
       });
@@ -235,7 +235,7 @@ export class TitleListSubCommand extends SubCommand {
 // Subcommand: clear
 @Declare({
   name: "clear",
-  description: "Quitar el título equipado",
+  description: "Remove the equipped title",
 })
 export class TitleClearSubCommand extends SubCommand {
   async run(ctx: CommandContext) {
@@ -246,7 +246,7 @@ export class TitleClearSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -271,8 +271,8 @@ export class TitleClearSubCommand extends SubCommand {
     await ctx.write({
       embeds: [
         buildAchievementSuccessEmbed(
-          "Título Removido",
-          "Ya no tienes ningún título equipado.",
+          "Title Removed",
+          "You no longer have any title equipped.",
         ),
       ],
     });
@@ -282,20 +282,20 @@ export class TitleClearSubCommand extends SubCommand {
 // Subcommand: badges
 const badgeOptions = {
   slot: createNumberOption({
-    description: "Slot de insignia (1-3)",
+    description: "Badge slot (1-3)",
     required: false,
     min_value: 1,
     max_value: 3,
   }),
   badge: createStringOption({
-    description: "ID de la insignia a equipar (dejar vacío para quitar)",
+    description: "ID of the badge to equip (leave empty to remove)",
     required: false,
   }),
 };
 
 @Declare({
   name: "badges",
-  description: "Ver o gestionar tus insignias",
+  description: "View or manage your badges",
 })
 @Options(badgeOptions)
 export class TitleBadgesSubCommand extends SubCommand {
@@ -309,7 +309,7 @@ export class TitleBadgesSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -336,12 +336,12 @@ export class TitleBadgesSubCommand extends SubCommand {
         return;
       }
 
-      const action = badgeId ? "equipada" : "removida";
+      const action = badgeId ? "equipped" : "removed";
       await ctx.write({
         embeds: [
           buildAchievementSuccessEmbed(
-            "Insignia Actualizada",
-            `Insignia ${action} en el slot ${slot}.`,
+            "Badge Updated",
+            `Badge ${action} in slot ${slot}.`,
           ),
         ],
       });

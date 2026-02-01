@@ -12,7 +12,7 @@ import {
   Embed,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
@@ -25,18 +25,18 @@ import {
 
 const configOptions = {
   opt_out: createBooleanOption({
-    description: "Desactivar recibir votos (true = no recibir votos)",
+    description: "Disable receiving votes (true = no votes)",
     required: false,
   }),
   show: createBooleanOption({
-    description: "Mostrar tus estadísticas en perfil público",
+    description: "Show your stats on public profile",
     required: false,
   }),
 };
 
 @Declare({
   name: "vote-config",
-  description: "Configura tus preferencias de votación",
+  description: "Configure your voting preferences",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -56,7 +56,7 @@ export default class VoteConfigCommand extends Command {
 
     if (!guildId) {
       await ctx.write({
-        content: "❌ Este comando solo funciona en servidores.",
+        content: "❌ This command only works in servers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -67,7 +67,7 @@ export default class VoteConfigCommand extends Command {
       const result = await votingService.updateUserPrefs(userId, { optOut });
       if (result.isErr()) {
         await ctx.write({
-          content: "❌ Error al actualizar preferencias.",
+          content: "❌ Error updating preferences.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -75,8 +75,8 @@ export default class VoteConfigCommand extends Command {
 
       await ctx.write({
         content: optOut
-          ? "🚫 Ahora no recibes votos."
-          : "✅ Ahora puedes recibir votos.",
+          ? "🚫 You will no longer receive votes."
+          : "✅ You can now receive votes.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -89,7 +89,7 @@ export default class VoteConfigCommand extends Command {
       });
       if (result.isErr()) {
         await ctx.write({
-          content: "❌ Error al actualizar preferencias.",
+          content: "❌ Error updating preferences.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -97,8 +97,8 @@ export default class VoteConfigCommand extends Command {
 
       await ctx.write({
         content: show
-          ? "✅ Tus estadísticas se mostrarán en tu perfil."
-          : "🚫 Tus estadísticas no se mostrarán públicamente.",
+          ? "✅ Your stats will be shown on your profile."
+          : "🚫 Your stats will not be shown publicly.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -119,19 +119,19 @@ export default class VoteConfigCommand extends Command {
     const config = configResult.unwrap();
 
     const embed = new Embed()
-      .setColor(EmbedColors.Blue)
-      .setTitle("⚙️ Configuración de Votos")
+      .setColor(UIColors.info)
+      .setTitle("⚙️ Vote Configuration")
       .setDescription(
-        `**Estado:** ${prefs.optOut ? "🚫 Opt-out" : "✅ Activo"}\n` +
-          `**Mostrar en perfil:** ${prefs.showVotes ? "✅ Sí" : "🚫 No"}\n` +
-          `**Votos hoy:** ${stats.dailyVoteCount}/${config.dailyMaxVotes}\n\n` +
-          `**Tus estadísticas:**\n${formatVoteCounts(stats.loveCount, stats.hateCount)}\n` +
-          `Ratio: ${calculateLoveRatio(stats.loveCount, stats.hateCount)}% 💝`,
+        `**Status:** ${prefs.optOut ? "🚫 Opt-out" : "✅ Active"}\n` +
+        `**Show on profile:** ${prefs.showVotes ? "✅ Yes" : "🚫 No"}\n` +
+        `**Votes today:** ${stats.dailyVoteCount}/${config.dailyMaxVotes}\n\n` +
+        `**Your stats:**\n${formatVoteCounts(stats.loveCount, stats.hateCount)}\n` +
+        `Ratio: ${calculateLoveRatio(stats.loveCount, stats.hateCount)}% 💝`,
       );
 
     if (badges.length > 0) {
       embed.addFields({
-        name: "🏅 Insignias Desbloqueadas",
+        name: "🏅 Unlocked Badges",
         value: badges
           .map((b) => `${b.emoji} **${b.name}**: ${b.description}`)
           .join("\n"),
@@ -139,8 +139,8 @@ export default class VoteConfigCommand extends Command {
       });
     } else {
       embed.addFields({
-        name: "🏅 Insignias",
-        value: "Aún no tienes insignias. ¡Recibe votos para desbloquearlas!",
+        name: "🏅 Badges",
+        value: "You don't have any badges yet. Receive votes to unlock them!",
         inline: false,
       });
     }
@@ -154,7 +154,7 @@ export default class VoteConfigCommand extends Command {
 
     if (nextBadges.length > 0) {
       embed.addFields({
-        name: "🎯 Próximas Insignias",
+        name: "🎯 Next Badges",
         value: nextBadges
           .map((b) => `${b.emoji} ${b.name}: ${b.description}`)
           .join("\n"),
@@ -163,7 +163,7 @@ export default class VoteConfigCommand extends Command {
     }
 
     embed.setFooter({
-      text: "Usa /vote-config opt-out:true/false para cambiar tu configuración",
+      text: "Use /vote-config opt-out:true/false to change your settings",
     });
 
     await ctx.write({

@@ -3,90 +3,90 @@
  */
 import type { GuildCommandContext } from "seyfert";
 import { createRoleOption, Declare, Embed, Options, SubCommand } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { applyReputationPreset } from "@/modules/autorole";
 import { botCanManageRole, requireAutoroleContext } from "./shared";
 
 const PRESET_RANKS = [
   {
-    optionKey: "novatorole",
-    label: "novato [1]",
+    optionKey: "novice_role",
+    label: "Novice [1]",
     minRep: 0,
-    slug: "rep-novato",
+    slug: "rep-novice",
   },
   {
-    optionKey: "iniciaterole",
-    label: "iniciante [2]",
+    optionKey: "initiate_role",
+    label: "Initiate [2]",
     minRep: 1,
-    slug: "rep-iniciante",
+    slug: "rep-initiate",
   },
   {
-    optionKey: "regularrole",
-    label: "regular [3]",
+    optionKey: "regular_role",
+    label: "Regular [3]",
     minRep: 16,
     slug: "rep-regular",
   },
   {
-    optionKey: "avanzadorole",
-    label: "avanzado [4]",
+    optionKey: "advanced_role",
+    label: "Advanced [4]",
     minRep: 40,
-    slug: "rep-avanzado",
+    slug: "rep-advanced",
   },
   {
-    optionKey: "veteranorole",
-    label: "veterano [5]",
+    optionKey: "veteran_role",
+    label: "Veteran [5]",
     minRep: 80,
-    slug: "rep-veterano",
+    slug: "rep-veteran",
   },
   {
-    optionKey: "sabiorole",
-    label: "sabio [6]",
+    optionKey: "sage_role",
+    label: "Sage [6]",
     minRep: 100,
-    slug: "rep-sabio",
+    slug: "rep-sage",
   },
   {
-    optionKey: "expertorole",
-    label: "experto [7]",
+    optionKey: "expert_role",
+    label: "Expert [7]",
     minRep: 150,
-    slug: "rep-experto",
+    slug: "rep-expert",
   },
 ] as const;
 
 const options = {
-  novatorole: createRoleOption({
-    description: "Rol para novato [1]",
+  novice_role: createRoleOption({
+    description: "Role for Novice [1]",
     required: true,
   }),
-  iniciaterole: createRoleOption({
-    description: "Rol para iniciante [2]",
+  initiate_role: createRoleOption({
+    description: "Role for Initiate [2]",
     required: true,
   }),
-  regularrole: createRoleOption({
-    description: "Rol para regular [3]",
+  regular_role: createRoleOption({
+    description: "Role for Regular [3]",
     required: true,
   }),
-  avanzadorole: createRoleOption({
-    description: "Rol para avanzado [4]",
+  advanced_role: createRoleOption({
+    description: "Role for Advanced [4]",
     required: true,
   }),
-  veteranorole: createRoleOption({
-    description: "Rol para veterano [5]",
+  veteran_role: createRoleOption({
+    description: "Role for Veteran [5]",
     required: true,
   }),
-  sabiorole: createRoleOption({
-    description: "Rol para sabio [6]",
+  sage_role: createRoleOption({
+    description: "Role for Sage [6]",
     required: true,
   }),
-  expertorole: createRoleOption({
-    description: "Rol para experto [7]",
+  expert_role: createRoleOption({
+    description: "Role for Expert [7]",
     required: true,
   }),
 };
 
 @Declare({
   name: "preset",
-  description: "Configurar el preset de reputacion con roles especificos",
+  description: "Configure the reputation preset with specific roles",
 })
 @Options(options)
 export default class AutorolePresetCommand extends SubCommand {
@@ -105,7 +105,7 @@ export default class AutorolePresetCommand extends SubCommand {
       const role = ctx.options[rank.optionKey as keyof typeof options];
       if (!role) {
         await ctx.write({
-          content: `Debes seleccionar el rol para ${rank.label}.`,
+          content: `You must select a role for ${rank.label}.`,
         });
         return;
       }
@@ -113,7 +113,7 @@ export default class AutorolePresetCommand extends SubCommand {
       const manageable = await botCanManageRole(ctx, role.id);
       if (!manageable) {
         await ctx.write({
-          content: `No puedo administrar el rol ${role.name} (${rank.label}). Asegurate de que este debajo del rol del bot y que el bot tenga permisos.`,
+          content: `I cannot manage the role ${role.name} (${rank.label}). Make sure it is below the bot's role and that the bot has permissions.`,
         });
         return;
       }
@@ -137,8 +137,8 @@ export default class AutorolePresetCommand extends SubCommand {
     );
 
     const embed = new Embed({
-      title: "Preset de reputacion configurado",
-      color: EmbedColors.Blue,
+      title: "Reputation preset configured",
+      color: UIColors.info,
       description: resolvedEntries
         .map(
           (entry) =>
@@ -146,7 +146,7 @@ export default class AutorolePresetCommand extends SubCommand {
         )
         .join("\n"),
       footer: {
-        text: "Los roles se asignaran automaticamente segun la reputacion.",
+        text: "Roles will be automatically assigned based on reputation.",
       },
     });
 

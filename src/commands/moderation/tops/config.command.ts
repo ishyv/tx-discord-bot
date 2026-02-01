@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / tops / config" para activar y ajustar el sistema de TOPs por servidor.
+ * Tops Config Command.
  *
- * Idea/concepto: permite elegir canal, intervalo y tamaño del ranking; persiste la configuración y reinicia la ventana actual.
- *
- * Alcance: valida y guarda la configuración, delegando el almacenamiento y los contadores al sistema de TOPs.
+ * Purpose: Enable and adjust the TOPs system per server.
  */
 import {
   createBooleanOption,
@@ -28,27 +26,27 @@ import { Guard } from "@/middlewares/guards/decorator";
 import * as duration from "@/utils/ms";
 
 const options = {
-  canal: createChannelOption({
-    description: "Canal donde se publicaran los reportes de TOPs",
+  channel: createChannelOption({
+    description: "Channel where TOPs reports will be published",
     required: false,
     channel_types: [ChannelType.GuildText],
   }),
-  intervalo: createStringOption({
-    description: "Cada cuanto se envia el reporte (ej: 24h, 3d, 1w)",
+  interval: createStringOption({
+    description: "How often the report is sent (e.g. 24h, 3d, 1w)",
     required: false,
   }),
-  tamano: createNumberOption({
-    description: "Cantidad maxima de elementos por TOP (default 10)",
+  size: createNumberOption({
+    description: "Maximum number of elements per TOP (default 10)",
     required: false,
     min_value: 1,
     max_value: 50,
   }),
-  desactivar: createBooleanOption({
-    description: "Desactiva el sistema y borra el canal configurado",
+  disable: createBooleanOption({
+    description: "Deactivates the system and clears the configured channel",
     required: false,
   }),
-  reiniciar: createBooleanOption({
-    description: "Reiniciar contadores desde cero con la nueva config",
+  reset: createBooleanOption({
+    description: "Reset counters from zero with the new config",
     required: false,
   }),
 };
@@ -57,7 +55,7 @@ const MIN_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos para evitar spam accidenta
 
 @Declare({
   name: "config",
-  description: "Configurar el sistema de tops",
+  description: "Configure the tops system",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -71,30 +69,30 @@ export default class ConfigTopsCommand extends SubCommand {
     const guildId = ctx.guildId;
     if (!guildId) {
       await ctx.write({
-        content: "Este comando solo puede usarse en un servidor.",
+        content: "This command can only be used in a server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const currentWindow = await getTopWindow(guildId);
-    const disable = ctx.options.desactivar ?? false;
+    const disable = ctx.options.disable ?? false;
     if (disable) {
       await updateTopConfig(guildId, { channelId: null });
       await ctx.write({
         content:
-          "Sistema de TOPs desactivado. No se enviarán nuevos reportes hasta configurar un canal nuevamente.",
+          "TOPs system disabled. No new reports will be sent until a channel is configured again.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const channel = ctx.options.canal;
-    const intervalInput = ctx.options.intervalo;
+    const channel = ctx.options.channel;
+    const intervalInput = ctx.options.interval;
     if (!channel || !intervalInput) {
       await ctx.write({
         content:
-          "Debes indicar un canal y un intervalo (ej: `24h`, `3d`, `1w`).",
+          "You must specify a channel and an interval (e.g. `24h`, `3d`, `1w`).",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -103,15 +101,15 @@ export default class ConfigTopsCommand extends SubCommand {
     const intervalMs = duration.parse(intervalInput);
     if (!intervalMs || intervalMs < MIN_INTERVAL_MS) {
       await ctx.write({
-        content: `Intervalo inválido. Usa valores como \`12h\`, \`3d\`, \`1w\`. Minimo permitido: ${duration.format(MIN_INTERVAL_MS)}.`,
+        content: `Invalid interval. Use values like \`12h\`, \`3d\`, \`1w\`. Minimum allowed: ${duration.format(MIN_INTERVAL_MS)}.`,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const topSize =
-      ctx.options.tamano && ctx.options.tamano > 0
-        ? Math.min(Math.trunc(ctx.options.tamano), 50)
+      ctx.options.size && ctx.options.size > 0
+        ? Math.min(Math.trunc(ctx.options.size), 50)
         : TOP_DEFAULTS.topSize;
 
     await updateTopConfig(guildId, {
@@ -122,19 +120,19 @@ export default class ConfigTopsCommand extends SubCommand {
 
     let resetNote = "";
     const shouldReset =
-      ctx.options.reiniciar === true || !currentWindow.channelId;
+      ctx.options.reset === true || !currentWindow.channelId;
     if (shouldReset) {
       await resetTopWindow(guildId, new Date());
       resetNote =
-        "\nSe reinició la ventana actual para comenzar a contar desde ahora.";
+        "\nThe current window was reset to start counting from now.";
     }
 
     await ctx.write({
       content: [
-        "Configuración de TOPs guardada.",
-        `Canal: <#${channel.id}>`,
-        `Intervalo: ${duration.format(intervalMs, true)}`,
-        `Tamaño de TOP: ${topSize}`,
+        "TOPs configuration saved.",
+        `Channel: <#${channel.id}>`,
+        `Interval: ${duration.format(intervalMs, true)}`,
+        `TOP Size: ${topSize}`,
         resetNote,
       ]
         .filter(Boolean)

@@ -1,20 +1,18 @@
 /**
- * Motivación: registrar el comando "moderation / forums / list" para listar foros monitoreados.
+ * Forums List Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert para mostrar el estado actual.
- *
- * Alcance: maneja la invocación y respuesta del comando; no modifica la configuración.
+ * Purpose: List monitored forums for AI-powered automatic replies.
  */
 import type { GuildCommandContext } from "seyfert";
 import { Declare, Embed, SubCommand, Middlewares } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
 
 @Declare({
   name: "list",
-  description: "Listar foros monitoreados",
+  description: "List monitored forums",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -32,16 +30,16 @@ export default class ForumsListCommand extends SubCommand {
     );
 
     if (!forumIds.length) {
-      await ctx.write({ content: "No hay foros monitoreados configurados." });
+      await ctx.write({ content: "No monitored forums configured." });
       return;
     }
 
     const lines = forumIds.map((id: string) => `• <#${id}>`).join("\n");
 
     const embed = new Embed({
-      title: "Foros monitoreados",
+      title: "Monitored Forums",
       description: lines,
-      color: EmbedColors.Blurple,
+      color: UIColors.info,
       footer: { text: `Total: ${forumIds.length}` },
     });
 

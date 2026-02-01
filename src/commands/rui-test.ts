@@ -1,9 +1,9 @@
 /**
- * Motivación: registrar el comando "ping" dentro de la categoría ping para ofrecer la acción de forma consistente y reutilizable.
+ * Motivation: register the "ping" command within the ping category to offer the action consistently and reusably.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
+ * Idea/Concept: uses the Seyfert command framework with typed options and shared utilities to validate input and dispatch logic.
  *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Scope: handles command invocation and response; delegates business rules, persistence, and additional policies to specialized services or modules.
  */
 import type { CommandContext } from "seyfert";
 import { Command, Declare } from "seyfert";
@@ -14,7 +14,7 @@ import { ButtonStyle } from "seyfert/lib/types";
 
 @Declare({
   name: "rui-test",
-  description: "test de interfaz de usuario reactiva",
+  description: "reactive user interface test",
 })
 export default class RuiTestCommand extends Command {
   async run(ctx: CommandContext) {

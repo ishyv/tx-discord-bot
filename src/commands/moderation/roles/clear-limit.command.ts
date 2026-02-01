@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / clear limit" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Clear Limit Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Remove a usage limit from a managed role.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -13,7 +11,7 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import {
   findManagedRole,
@@ -25,19 +23,18 @@ import { clearRoleLimit } from "@/modules/guild-roles";
 
 const options = {
   key: createStringOption({
-    description: "Clave del rol administrado",
+    description: "Managed role key",
     required: true,
   }),
   action: createStringOption({
-    description: "Accion de moderacion cuyo limite se desea limpiar",
+    description: "Moderation action whose limit you want to clear",
     required: true,
   }),
 };
 
-// Elimina el limite configurado para una accion concreta.
 @Declare({
   name: "clear-limit",
-  description: "Eliminar el limite de una accion",
+  description: "Delete the limit of an action",
 })
 @Options(options)
 export default class RoleClearLimitCommand extends SubCommand {
@@ -48,9 +45,9 @@ export default class RoleClearLimitCommand extends SubCommand {
     const key = ctx.options.key.trim();
     if (!key) {
       const embed = new Embed({
-        title: "Clave invalida",
-        description: "Indica la clave del rol administrado que deseas editar.",
-        color: EmbedColors.Red,
+        title: "Invalid key",
+        description: "Indicate the managed role key you want to edit.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -60,9 +57,9 @@ export default class RoleClearLimitCommand extends SubCommand {
     const resolvedAction = resolveActionInput(rawAction);
     if ("error" in resolvedAction) {
       const embed = new Embed({
-        title: "Accion invalida",
+        title: "Invalid action",
         description: resolvedAction.error,
-        color: EmbedColors.Red,
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -72,10 +69,10 @@ export default class RoleClearLimitCommand extends SubCommand {
     const role = await findManagedRole(context.guildId, key);
     if (!role) {
       const embed = new Embed({
-        title: "Rol no encontrado",
+        title: "Role not found",
         description:
-          "No existe una configuracion registrada con esa clave. Verifica el nombre e intentalo nuevamente.",
-        color: EmbedColors.Red,
+          "There is no registered configuration with that key. Check the name and try again.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -90,24 +87,24 @@ export default class RoleClearLimitCommand extends SubCommand {
 
     const embed = new Embed({
       title:
-        existing === undefined ? "Accion no configurada" : "Limite eliminado",
+        existing === undefined ? "Action not configured" : "Limit deleted",
       description:
         existing === undefined
-          ? "No habia un limite registrado para esa accion."
-          : `La accion **${action.definition.label}** del rol **${key}** vuelve al comportamiento por defecto.`,
-      color: existing === undefined ? EmbedColors.Orange : EmbedColors.Yellow,
+          ? "There was no registered limit for that action."
+          : `The action **${action.definition.label}** of the role **${key}** returns to default behavior.`,
+      color: existing === undefined ? UIColors.warning : UIColors.warning,
       fields: [
         {
-          name: "Limites restantes",
+          name: "Remaining limits",
           value: remaining.toString(),
         },
         ...(existing
           ? [
-              {
-                name: "Limite anterior",
-                value: formatLimitRecord(existing),
-              },
-            ]
+            {
+              name: "Previous limit",
+              value: formatLimitRecord(existing),
+            },
+          ]
           : []),
       ],
     });

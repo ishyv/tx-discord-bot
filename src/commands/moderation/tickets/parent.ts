@@ -1,18 +1,16 @@
 /**
- * Motivación: registrar el comando "moderation / tickets / parent" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Tickets Parent Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Configure and manage the tickets system.
  */
 import { AutoLoad, Command, Declare } from "seyfert";
 
 @Declare({
   name: "tickets",
-  description: "Configurar y manajar el sistema de tickets",
+  description: "Configure and manage the tickets system",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
   defaultMemberPermissions: ["ManageChannels"],
 })
 @AutoLoad()
-export default class TicketsParent extends Command {}
+export default class TicketsParent extends Command { }

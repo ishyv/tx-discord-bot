@@ -6,14 +6,14 @@ import {
   createUserOption,
   type GuildCommandContext,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import { UserStore } from "@/db/repositories/users";
 import { SanctionType } from "@/db/schemas/user";
 
 const options = {
   user: createUserOption({
-    description: "Usuario del que quieres ver el historial de casos",
+    description: "User to view the case history for",
     required: false,
   }),
 };
@@ -21,7 +21,7 @@ const options = {
 @Declare({
   name: "cases",
   description:
-    "Muestra el historial de sanciones de un usuario en este servidor",
+    "View the sanction history of a user on this server",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -32,7 +32,7 @@ export default class CasesCommand extends Command {
     const targetId = userOption ? userOption.id : ctx.author.id;
     const targetName = userOption ? userOption.username : ctx.author.username;
 
-    // Si el usuario es target, intentamos obtener avatarUrl, si no, es ctx.author
+    // If user is target, try to get avatarUrl, if not, use ctx.author
     const targetAvatar = userOption
       ? await userOption.avatarURL()
       : ctx.author.avatarURL();
@@ -42,7 +42,7 @@ export default class CasesCommand extends Command {
     if (userResult.isErr()) {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: "❌ Hubo un error al buscar el historial del usuario.",
+        content: "❌ There was an error fetching user history.",
       });
     }
 
@@ -51,7 +51,7 @@ export default class CasesCommand extends Command {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
         content:
-          "❌ No se encontraron registros de este usuario en la base de datos.",
+          "❌ No records found for this user in the database.",
       });
     }
 
@@ -61,12 +61,12 @@ export default class CasesCommand extends Command {
     if (history.length === 0) {
       return ctx.write({
         flags: MessageFlags.Ephemeral,
-        content: `📁 El usuario **${targetName}** no tiene casos registrados en este servidor.`,
+        content: `📁 User **${targetName}** has no cases recorded on this server.`,
       });
     }
 
-    // Ordenamos por fecha descendente (más reciente primero)
-    const sortedHistory = [...history].reverse().slice(0, 15); // Limite de 15 para no saturar
+    // Sort by date descending (most recent first)
+    const sortedHistory = [...history].reverse().slice(0, 15); // Limit to 15
 
     const description = sortedHistory
       .map((entry, index) => {
@@ -79,11 +79,11 @@ export default class CasesCommand extends Command {
       .join("\n\n");
 
     const embed = new Embed({
-      title: `Historial de casos de ${targetName}`,
+      title: `Case History for ${targetName}`,
       description: description,
-      color: EmbedColors.Blue,
+      color: UIColors.info,
       footer: {
-        text: `Mostrando últimos ${sortedHistory.length} casos | ID: ${targetId}`,
+        text: `Showing last ${sortedHistory.length} cases | ID: ${targetId}`,
         icon_url: targetAvatar,
       },
       timestamp: new Date().toISOString(),

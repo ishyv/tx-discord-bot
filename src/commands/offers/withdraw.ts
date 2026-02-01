@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "offers / withdraw" dentro de la categoría offers para ofrecer la acción de forma consistente y reutilizable.
+ * Offer Withdraw Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Withdraw an active job offer from review.
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
@@ -11,8 +9,8 @@ import { withdrawOffer, getActiveOffer } from "@/modules/offers";
 import { ensureGuildContext } from "./shared";
 
 @Declare({
-  name: "retirar",
-  description: "Retirar tu oferta activa",
+  name: "withdraw",
+  description: "Withdraw your active offer",
 })
 export default class OfferWithdrawCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
@@ -22,7 +20,7 @@ export default class OfferWithdrawCommand extends SubCommand {
     const offerResult = await getActiveOffer(guildId, ctx.author.id);
     if (offerResult.isErr()) {
       await ctx.write({
-        content: "Error buscando ofertas activas.",
+        content: "Error searching for active offers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -31,7 +29,7 @@ export default class OfferWithdrawCommand extends SubCommand {
     const offer = offerResult.unwrap();
     if (!offer) {
       await ctx.write({
-        content: "No tienes una oferta activa para retirar.",
+        content: "You don't have an active offer to withdraw.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -40,7 +38,7 @@ export default class OfferWithdrawCommand extends SubCommand {
     const updatedResult = await withdrawOffer(ctx.client, offer, ctx.author.id);
     if (updatedResult.isErr()) {
       await ctx.write({
-        content: "Error al retirar la oferta.",
+        content: "Error withdrawing the offer.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -49,14 +47,14 @@ export default class OfferWithdrawCommand extends SubCommand {
     const updated = updatedResult.unwrap();
     if (!updated) {
       await ctx.write({
-        content: "No se pudo retirar la oferta. Intenta nuevamente.",
+        content: "Could not withdraw the offer. Please try again.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     await ctx.write({
-      content: "Tu oferta fue retirada y ya no aparecerá en revisión.",
+      content: "Your offer was withdrawn and will no longer appear in review.",
       flags: MessageFlags.Ephemeral,
     });
   }

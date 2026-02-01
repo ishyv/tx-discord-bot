@@ -1,18 +1,16 @@
 /**
- * Motivacion: registrar el comando "ai" para configurar el proveedor y modelo por guild.
+ * AI Commands (Parent).
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con subcomandos auto-cargados.
- *
- * Alcance: define el namespace /ai; la logica vive en subcomandos.
+ * Purpose: Register the parent command for AI provider and model configuration.
  */
 import { AutoLoad, Command, Declare } from "seyfert";
 
 @Declare({
   name: "ai",
-  description: "Configurar proveedor y modelo de IA",
+  description: "Configure AI provider and model",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
   defaultMemberPermissions: ["ManageGuild"],
 })
 @AutoLoad()
-export default class AiParentCommand extends Command {}
+export default class AiParentCommand extends Command { }

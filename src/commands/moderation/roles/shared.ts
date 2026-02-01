@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / shared" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Shared Utilities.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Shared helpers and common logic for moderation role management.
  */
 import type { GuildCommandContext } from "seyfert";
 

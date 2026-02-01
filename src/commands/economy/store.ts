@@ -17,7 +17,7 @@ import {
   Button,
 } from "seyfert";
 import { MessageFlags, ButtonStyle } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { ITEM_DEFINITIONS } from "@/modules/inventory";
 import {
   storeService,
@@ -106,7 +106,7 @@ export class StoreBuyCommand extends Command {
       !guildConfigResult.unwrap().features.store
     ) {
       await ctx.write({
-        content: "🚫 Store está deshabilitado en este servidor.",
+        content: "🚫 Store is disabled in this server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -151,7 +151,7 @@ export class StoreBuyCommand extends Command {
         CAPACITY_EXCEEDED: "❌ This would exceed your inventory capacity.",
         INVALID_QUANTITY: "❌ Invalid quantity.",
         TRANSACTION_FAILED: "❌ Transaction failed. Please try again.",
-        FEATURE_DISABLED: "🚫 Store está deshabilitado en este servidor.",
+        FEATURE_DISABLED: "🚫 Store is disabled in this server.",
       };
 
       const message = errorMessages[error.code] ?? `❌ ${error.message}`;
@@ -187,7 +187,7 @@ export class StoreBuyCommand extends Command {
           },
         });
         if (xpResult.isOk() && xpResult.unwrap().leveledUp) {
-          levelUpLine = `\n🎉 Subiste a nivel **${xpResult.unwrap().afterLevel}**.`;
+          levelUpLine = `\n🎉 Level Up! You're now **Lv.${xpResult.unwrap().afterLevel}**.`;
         }
       }
     }
@@ -228,7 +228,7 @@ export class StoreSellCommand extends Command {
       !guildConfigResult.unwrap().features.store
     ) {
       await ctx.write({
-        content: "🚫 Store está deshabilitado en este servidor.",
+        content: "🚫 Store is disabled in this server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -272,7 +272,7 @@ export class StoreSellCommand extends Command {
           "❌ The store cannot afford to buy this item right now.",
         INVALID_QUANTITY: "❌ Invalid quantity.",
         TRANSACTION_FAILED: "❌ Transaction failed. Please try again.",
-        FEATURE_DISABLED: "🚫 Store está deshabilitado en este servidor.",
+        FEATURE_DISABLED: "🚫 Store is disabled in this server.",
       };
 
       const message = errorMessages[error.code] ?? `❌ ${error.message}`;
@@ -310,7 +310,7 @@ export class StoreSellCommand extends Command {
           },
         });
         if (xpResult.isOk() && xpResult.unwrap().leveledUp) {
-          levelUpLine = `\n🎉 Subiste a nivel **${xpResult.unwrap().afterLevel}**.`;
+          levelUpLine = `\n🎉 Level Up! You're now **Lv.${xpResult.unwrap().afterLevel}**.`;
         }
       }
     }
@@ -356,7 +356,7 @@ export class StoreFeaturedCommand extends Command {
     const guildConfigResult = await guildEconomyRepo.ensure(guildId);
     if (guildConfigResult.isOk() && !guildConfigResult.unwrap().features.store) {
       await ctx.write({
-        content: "🚫 Store está deshabilitado en este servidor.",
+        content: "🚫 Store is disabled in this server.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -390,7 +390,7 @@ export class StoreFeaturedCommand extends Command {
 
     // Build embed
     const embed = new Embed()
-      .setColor(EmbedColors.Gold)
+      .setColor(UIColors.gold)
       .setTitle("⭐ Featured Items")
       .setDescription(`Special discounts available for the next ${timeUntil} hours!`);
 
@@ -402,7 +402,7 @@ export class StoreFeaturedCommand extends Command {
       const itemDef = ITEM_DEFINITIONS[legendary.itemId];
       const discountPct = Math.round(legendary.discountPct * 100);
       const savings = legendary.originalPrice - legendary.featuredPrice;
-      
+
       embed.addFields({
         name: `🔥 Legendary - ${itemDef?.name || legendary.itemId}`,
         value:
@@ -417,7 +417,7 @@ export class StoreFeaturedCommand extends Command {
       const itemDef = ITEM_DEFINITIONS[item.itemId];
       const discountPct = Math.round(item.discountPct * 100);
       const savings = item.originalPrice - item.featuredPrice;
-      
+
       embed.addFields({
         name: `⭐ ${itemDef?.name || item.itemId}`,
         value:
@@ -433,7 +433,7 @@ export class StoreFeaturedCommand extends Command {
     // Create buy buttons for featured items
     const rows: ActionRow<Button>[] = [];
     const itemsWithButtons = featured.slice(0, 5); // Max 5 buttons
-    
+
     for (let i = 0; i < itemsWithButtons.length; i += 5) {
       const row = new ActionRow<Button>();
       for (const item of itemsWithButtons.slice(i, i + 5)) {
@@ -472,7 +472,7 @@ async function listItems(ctx: CommandContext) {
   const guildConfigResult = await guildEconomyRepo.ensure(guildId);
   if (guildConfigResult.isOk() && !guildConfigResult.unwrap().features.store) {
     await ctx.write({
-      content: "🚫 Store está deshabilitado en este servidor.",
+      content: "🚫 Store is disabled in this server.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -480,7 +480,7 @@ async function listItems(ctx: CommandContext) {
 
   // Get regular items
   const result = await storeService.listAvailableItems(guildId);
-  
+
   // Get featured items (Phase 9d)
   const featuredResult = await storeService.getFeaturedItems(guildId);
 
@@ -498,27 +498,27 @@ async function listItems(ctx: CommandContext) {
 
   // Build embed instead of plain text
   const embed = new Embed()
-    .setColor(EmbedColors.Blue)
+    .setColor(UIColors.gold)
     .setTitle("🏪 Guild Store");
 
   // Add featured section if available
   if (featured.length > 0) {
     const legendary = featured.find((f) => f.slotType === "legendary");
     const dailyItems = featured.filter((f) => f.slotType === "daily").slice(0, 3);
-    
+
     let featuredText = "";
     if (legendary) {
       const itemDef = ITEM_DEFINITIONS[legendary.itemId];
       const discount = Math.round(legendary.discountPct * 100);
       featuredText += `🔥 **Legendary**: ${itemDef?.name} - ~~${legendary.originalPrice}~~ **${legendary.featuredPrice}** (${discount}% OFF)\n`;
     }
-    
+
     for (const item of dailyItems) {
       const itemDef = ITEM_DEFINITIONS[item.itemId];
       const discount = Math.round(item.discountPct * 100);
       featuredText += `⭐ ${itemDef?.name} - ~~${item.originalPrice}~~ **${item.featuredPrice}** (${discount}% OFF)\n`;
     }
-    
+
     embed.addFields({
       name: "⭐ Featured Items (Limited Time)",
       value: featuredText + "\nUse `/store-featured` to see all featured items!",
@@ -555,7 +555,7 @@ async function listItems(ctx: CommandContext) {
         return `• \`${item.itemId}\` **${item.name}** - ${item.buyPrice} coins (stock: ${stockDisplay})`;
       })
       .join("\n");
-    
+
     embed.addFields({
       name: category,
       value: itemsText + (catItems.length > 5 ? `\n*...and ${catItems.length - 5} more*` : ""),

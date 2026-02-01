@@ -6,24 +6,24 @@ import type { EmbedFieldDefinition } from "@/modules/prefabs/embedDesigner";
 export const OFFER_FIELD_DEFINITIONS: EmbedFieldDefinition[] = [
   {
     key: "requirements",
-    label: "Requisitos",
-    placeholder: "Tecnologías, experiencia, stack",
+    label: "Requirements",
+    placeholder: "Technologies, experience, stack",
   },
   {
     key: "workMode",
-    label: "Modalidad",
-    placeholder: "Remoto, híbrido, presencial",
+    label: "Work Mode",
+    placeholder: "Remote, hybrid, on-site",
   },
-  { key: "salary", label: "Rango salarial", placeholder: "Ej: USD 2000-3000" },
-  { key: "contact", label: "Contacto", placeholder: "DM, email, formulario" },
+  { key: "salary", label: "Salary Range", placeholder: "e.g., USD 2000-3000" },
+  { key: "contact", label: "Contact", placeholder: "DM, email, form" },
   {
     key: "labels",
-    label: "Etiquetas",
+    label: "Tags",
     placeholder: "#junior #backend #devops",
   },
   {
     key: "location",
-    label: "Ubicación / zona horaria",
+    label: "Location / Timezone",
     placeholder: "Argentina (GMT-3)",
   },
 ];
@@ -38,7 +38,7 @@ export type OfferDesignerPayload = {
 
 export async function ensureGuildContext(
   ctx: GuildCommandContext,
-  message = "Este comando solo funciona dentro de un servidor.",
+  message = "This command only works within a server.",
 ): Promise<string | null> {
   if (!ctx.guildId) {
     await ctx.write({
@@ -71,7 +71,7 @@ export function parseOfferDetails(payload: OfferDesignerPayload): {
   if (!title || description.length < MIN_DESCRIPTION_LENGTH) {
     return {
       details: null,
-      error: "Necesitas un título y una descripción de al menos 8 caracteres.",
+      error: "You need a title and a description of at least 8 characters.",
     };
   }
 

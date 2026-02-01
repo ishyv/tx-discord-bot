@@ -73,3 +73,4 @@ src/commands\moderation\rep\config.command.ts
 src/commands\moderation\roles\control.command.ts
 src/commands\moderation\roles\dashboard.command.ts
 src/commands\moderation\roles\list.command.ts
+ 

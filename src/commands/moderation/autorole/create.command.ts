@@ -10,7 +10,7 @@ import {
   SubCommand,
   type GuildCommandContext,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { PermissionFlagsBits } from "seyfert/lib/types";
 
 import {
@@ -35,19 +35,19 @@ import {
 
 const options = {
   name: createStringOption({
-    description: "Slug del rule (minusculas, 1-40 caracteres)",
+    description: "Rule slug (lowercase, 1-40 characters)",
     required: true,
   }),
   trigger: createStringOption({
-    description: "Definicion del trigger (ej. `onReact <messageId> <:emoji:>`)",
+    description: "Trigger definition (e.g. `onReact <messageId> <:emoji:>`)",
     required: true,
   }),
   role: createRoleOption({
-    description: "Rol a otorgar cuando se cumpla el trigger",
+    description: "Role to grant when trigger is met",
     required: true,
   }),
   duration: createStringOption({
-    description: "Duracion (ej. 30m, 1h, 2d). Vacio = permanente",
+    description: "Duration (e.g. 30m, 1h, 2d). Empty = permanent",
     required: false,
   }),
 };
@@ -60,7 +60,7 @@ const DANGEROUS_ROLE_PERMISSIONS = [
 
 @Declare({
   name: "create",
-  description: "Crear una nueva regla de auto-role",
+  description: "Create a new auto-role rule",
 })
 @Options(options)
 export default class AutoroleCreateCommand extends SubCommand {
@@ -74,7 +74,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     if (!isValidRuleSlug(rawSlug)) {
       await ctx.write({
         content:
-          "El nombre debe usar `a-z`, `0-9` o guiones, y tener entre 1 y 40 caracteres.",
+          "The name must use `a-z`, `0-9` or hyphens, and be between 1 and 40 characters.",
       });
       return;
     }
@@ -83,7 +83,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     const nameCollision = existingRules.find((rule) => rule.name === slug);
     if (nameCollision) {
       await ctx.write({
-        content: `Ya existe una regla llamada \`${slug}\` en este servidor.`,
+        content: `A rule named \`${slug}\` already exists on this server.`,
       });
       return;
     }
@@ -91,7 +91,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     const trigger = parseTrigger(ctx.options.trigger);
     if (!trigger) {
       await ctx.write({
-        content: "Trigger invalido. Verifica el formato y vuelve a intentar.",
+        content: "Invalid trigger. Check the format and try again.",
       });
       return;
     }
@@ -100,7 +100,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     if (ctx.options.role.permissions?.has?.([...DANGEROUS_ROLE_PERMISSIONS])) {
       await ctx.write({
         content:
-          "No puedes crear una regla que otorgue un rol con permisos administrativos (Administrator / ManageGuild / ManageRoles).",
+          "You cannot create a rule that grants a role with administrative permissions (Administrator / ManageGuild / ManageRoles).",
       });
       return;
     }
@@ -113,7 +113,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     if (!invokerCanManage) {
       await ctx.write({
         content:
-          "No puedes asignar reglas para un rol igual o superior a tu jerarquía actual.",
+          "You cannot assign rules for a role equal to or higher than your current hierarchy.",
       });
       return;
     }
@@ -122,7 +122,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     if (!manageable) {
       await ctx.write({
         content:
-          "No puedo administrar ese rol. Asegurate de que este debajo del rol del bot y que el bot tenga permisos de ManageRoles.",
+          "I cannot manage that role. Make sure it is below the bot's role and that the bot has ManageRoles permission.",
       });
       return;
     }
@@ -131,7 +131,7 @@ export default class AutoroleCreateCommand extends SubCommand {
     const durationMs = rawDuration ? parseDurationInput(rawDuration) : null;
     if (rawDuration && durationMs == null) {
       await ctx.write({
-        content: "La duracion debe usar formatos como `30m`, `1h`, `2d`, `1w`.",
+        content: "Duration must use formats like `30m`, `1h`, `2d`, `1w`.",
       });
       return;
     }
@@ -158,8 +158,8 @@ export default class AutoroleCreateCommand extends SubCommand {
     });
 
     if (rule.trigger.type === "ANTIQUITY_THRESHOLD" && rule.enabled) {
-      // Aplicar el rol a miembros existentes que cumplan la antigüedad
-      // En una implementación real, esto podría ser pesado, así que se hace asíncrono
+      // Apply role to existing members who meet the antiquity threshold
+      // In a real implementation, this could be heavy, so it's done asynchronously
       ctx.client.members
         .list(context.guildId)
         .then(async (members) => {
@@ -183,19 +183,19 @@ export default class AutoroleCreateCommand extends SubCommand {
     }
 
     const embed = new Embed({
-      title: "Regla creada",
-      color: EmbedColors.Green,
+      title: "Rule created",
+      color: UIColors.success,
       description: formatRuleSummary(rule),
     });
 
     await ctx.write({ embeds: [embed] });
 
     await logModerationAction(ctx.client, context.guildId, {
-      title: "Autorole creado",
+      title: "Autorole created",
       description: formatRuleSummary(rule),
       fields: [
         { name: "Trigger", value: `\`${ctx.options.trigger}\`` },
-        { name: "Rol", value: `<@&${roleId}>`, inline: true },
+        { name: "Role", value: `<@&${roleId}>`, inline: true },
       ],
       actorId: ctx.author.id,
     });
@@ -218,7 +218,7 @@ async function validateTriggerInput(
         rule.trigger.args.emojiKey === emojiKey,
     );
     if (duplicate) {
-      return `Ya existe la regla \`${duplicate.name}\` usando ese mensaje y emoji.`;
+      return `A rule named \`${duplicate.name}\` already uses that message and emoji.`;
     }
 
     const emojiError = await ensureEmojiIsUsable(ctx, guildId, emojiKey);
@@ -237,7 +237,7 @@ async function validateTriggerInput(
         rule.trigger.args.minRep === trigger.args.minRep,
     );
     if (duplicate) {
-      return `Ya existe la regla \`${duplicate.name}\` para rep >= ${trigger.args.minRep}.`;
+      return `A rule named \`${duplicate.name}\` already exists for rep >= ${trigger.args.minRep}.`;
     }
   }
 
@@ -256,15 +256,15 @@ async function ensureEmojiIsUsable(
     const emojis = await guild.emojis.list(true);
     const found = emojis.some((emoji) => emoji.id === emojiKey);
     if (!found) {
-      return "El emoji indicado no pertenece a este servidor o ya no existe.";
+      return "The specified emoji does not belong to this server or no longer exists.";
     }
   } catch (error) {
-    ctx.client.logger?.warn?.("[autorole] no se pudo validar el emoji", {
+    ctx.client.logger?.warn?.("[autorole] could not validate emoji", {
       guildId,
       emojiKey,
       error,
     });
-    return "No se pudo validar el emoji indicado. Verifica que el bot tenga permiso para ver los emojis del servidor.";
+    return "Could not validate the specified emoji. Make sure the bot has permission to view server emojis.";
   }
 
   return null;
@@ -296,7 +296,7 @@ async function userCanManageTargetRole(
     return highest.position > target.position;
   } catch (error) {
     ctx.client.logger?.warn?.(
-      "[autorole] no se pudo validar jerarquia del usuario",
+      "[autorole] could not validate user hierarchy",
       {
         guildId,
         roleId,

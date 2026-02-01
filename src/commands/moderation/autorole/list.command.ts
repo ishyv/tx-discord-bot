@@ -2,7 +2,7 @@
  * Autorole List Command
  */
 import { Declare, Embed, SubCommand, type GuildCommandContext } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { refreshGuildRules } from "@/modules/autorole";
 
@@ -14,7 +14,7 @@ import {
 
 @Declare({
   name: "list",
-  description: "Listar las reglas de auto-role configuradas",
+  description: "List the configured auto-role rules",
 })
 export default class AutoroleListCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
@@ -24,7 +24,7 @@ export default class AutoroleListCommand extends SubCommand {
     const rules = await refreshGuildRules(context.guildId);
     if (!rules.length) {
       await ctx.write({
-        content: "No hay reglas de auto-role configuradas.",
+        content: "No auto-role rules configured.",
       });
       return;
     }
@@ -50,11 +50,11 @@ export default class AutoroleListCommand extends SubCommand {
 
       const embed = new Embed({
         title: "Auto-role rules",
-        color: EmbedColors.Blue,
+        color: UIColors.info,
       }).addFields(chunk);
 
       if (totalPages > 1) {
-        embed.setFooter({ text: `Pagina ${page}/${totalPages}` });
+        embed.setFooter({ text: `Page ${page}/${totalPages}` });
       }
 
       embeds.push(embed);

@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / autorole / help" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Autorole Help Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Provide contextual help for admins tweaking autorole rules.
  */
 /**
  * Provides contextual help for admins tweaking autorole rules.
@@ -11,13 +9,13 @@
  */
 
 import { Declare, Embed, SubCommand, type GuildCommandContext } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { requireAutoroleContext } from "./shared";
 
 @Declare({
   name: "help",
-  description: "Mostrar las opciones disponibles para las reglas de auto-role",
+  description: "Show available options for auto-role rules",
 })
 export default class AutoroleHelpCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {
@@ -25,37 +23,37 @@ export default class AutoroleHelpCommand extends SubCommand {
     if (!context) return;
 
     const embed = new Embed()
-      .setColor(EmbedColors.Blue)
-      .setTitle("Auto-role - triggers disponibles")
+      .setColor(UIColors.info)
+      .setTitle("Auto-role - Available Triggers")
       .setDescription(
         [
-          "Al crear una regla debes usar uno de los siguientes triggers exactos:",
+          "When creating a rule, you must use one of the following exact triggers:",
           "",
           "**`onMessageReactAny`**",
-          "- Otorga el rol a cualquiera que reaccione en cualquier mensaje del servidor.",
-          "- Usalo con `duration` cuando sea posible para evitar acumular roles permanentes.",
+          "- Grants the role to anyone who reacts on any message in the server.",
+          "- Use it with `duration` when possible to avoid accumulating permanent roles.",
           "",
           "**`onReactSpecific <messageId> <emoji>`**",
-          "- Otorga el rol a quien reaccione con el emoji indicado en el mensaje indicado.",
-          "- Usa IDs copiados en modo desarrollador y emojis en formato `:nombre:` o `<:nombre:id>`.",
-          "- Las reglas permanentes revocan el rol cuando la reaccion se quita o se borra el mensaje.",
+          "- Grants the role to anyone who reacts with the specified emoji on the specified message.",
+          "- Use IDs copied in developer mode and emojis in `:name:` or `<:name:id>` format.",
+          "- Permanent rules revoke the role when the reaction is removed or the message is deleted.",
           "",
           "**`onAuthorReactionThreshold <emoji> <count>`**",
-          "- Otorga el rol al autor del mensaje cuando el emoji alcanza el umbral solicitado.",
-          "- Ejemplo: `onAuthorReactionThreshold :thumbsup: 10` asigna el rol al autor cuando llega a 10 reacciones.",
-          "- El rol se retira si el contador baja por debajo del umbral.",
+          "- Grants the role to the message author when the emoji reaches the requested threshold.",
+          "- Example: `onAuthorReactionThreshold :thumbsup: 10` assigns the role to the author when it reaches 10 reactions.",
+          "- The role is removed if the count falls below the threshold.",
           "",
           "**`onReputationAtLeast <rep>`**",
-          "- Otorga el rol cuando el usuario alcanza el puntaje de reputacion indicado.",
-          "- Ejemplo: `onReputationAtLeast 40` otorga el rol desde 40 rep y lo revoca si baja de ese valor.",
-          "- Configura un rol por cada rango de reputacion que necesites.",
+          "- Grants the role when the user reaches the specified reputation score.",
+          "- Example: `onReputationAtLeast 40` grants the role starting from 40 rep and revokes it if it falls below that value.",
+          "- Configure a role for each reputation range you need.",
           "",
-          "**`onAntiquityAtLeast <duracion>`**",
-          "- Otorga el rol a quienes llevan al menos la duracion indicada en el servidor.",
-          "- Ejemplo: `onAntiquityAtLeast 30d` asigna el rol a miembros con 30 dias o mas en el server.",
-          "- Duraciones validas: `<numero>m|h|d|w` (minutos, horas, dias, semanas).",
+          "**`onAntiquityAtLeast <duration>`**",
+          "- Grants the role to members who have been on the server for at least the specified duration.",
+          "- Example: `onAntiquityAtLeast 30d` assigns the role to members with 30 days or more in the server.",
+          "- Valid durations: `<number>m|h|d|w` (minutes, hours, days, weeks).",
           "",
-          "Puedes anadir `duration` (por ejemplo `30m`, `1h`, `2d`, `1w`) para que la concesion sea temporal. Sin duracion, la regla sera live y dependera unicamente del trigger.",
+          "You can add `duration` (for example `30m`, `1h`, `2d`, `1w`) to make the grant temporary. Without duration, the rule will be live and depend solely on the trigger.",
         ].join("\n"),
       );
 

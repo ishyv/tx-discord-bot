@@ -1,9 +1,8 @@
 /**
- * Motivación: registrar el comando "moderation / restrict" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Restrict Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Register the "moderation/restrict" command to offer the action consistently.
+ * Uses the Seyfert command framework with typed options.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -15,8 +14,8 @@ import {
   InteractionGuildMember,
   Options,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import {
   RESTRICTED_FORUMS_ROLE_ID,
   RESTRICTED_JOBS_ROLE_ID,
@@ -135,7 +134,7 @@ export default class RestrictCommand extends Command {
         **Reason:** ${reason}
         **Restriction:** ${TYPE_TRANSLATIONS[type]}
       `,
-      color: EmbedColors.Green,
+      color: UIColors.success,
       footer: {
         text: `Restricted by ${ctx.author.username}`,
         icon_url: ctx.author.avatarURL() || undefined,
@@ -149,7 +148,7 @@ export default class RestrictCommand extends Command {
 
     await GuildLogger.banSanctionLog({
       title: "User restricted",
-      color: EmbedColors.DarkOrange,
+      color: UIColors.warning,
       thumbnail: await user.avatarURL(),
       fields: [
         {

@@ -29,9 +29,9 @@ const options = {
   tab: createStringOption({
     description: "Tab to display (daily, weekly, featured)",
     choices: [
-      { name: "📅 Diarias", value: "daily" },
-      { name: "📆 Semanales", value: "weekly" },
-      { name: "⭐ Destacada", value: "featured" },
+      { name: "📅 Daily", value: "daily" },
+      { name: "📆 Weekly", value: "weekly" },
+      { name: "⭐ Featured", value: "featured" },
     ],
     required: false,
   }),
@@ -39,7 +39,7 @@ const options = {
 
 @Declare({
   name: "quests",
-  description: "📜 Abre el Tablón de Misiones interactivo",
+  description: "📜 Open the interactive Quest Board",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -59,7 +59,7 @@ export default class QuestsCommand extends Command {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -74,7 +74,7 @@ export default class QuestsCommand extends Command {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            `Error al cargar misiones: ${rotationStatus.error.message}`,
+            `Error loading quests: ${rotationStatus.error.message}`,
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -88,7 +88,7 @@ export default class QuestsCommand extends Command {
       await ctx.write({
         embeds: [
           buildQuestErrorEmbed(
-            `Error al cargar misiones: ${boardResult.error.message}`,
+            `Error loading quests: ${boardResult.error.message}`,
           ),
         ],
         flags: MessageFlags.Ephemeral,

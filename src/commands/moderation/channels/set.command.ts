@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / channels / set" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Channel Set Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Update one of the required core channels.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -15,7 +13,7 @@ import {
   createStringOption,
   Middlewares,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import {
   CORE_CHANNEL_DEFINITIONS,
   type CoreChannelName,
@@ -35,20 +33,19 @@ const nameChoices = Object.entries(CORE_CHANNEL_DEFINITIONS).map(
 
 const options = {
   name: createStringOption({
-    description: "Nombre del canal requerido",
+    description: "Name of the required channel",
     required: true,
     choices: nameChoices,
   }),
   channel: createChannelOption({
-    description: "Canal de Discord a asociar",
+    description: "Discord channel to associate",
     required: true,
   }),
 };
 
-// Actualiza la referencia de un canal core obligatorio.
 @Declare({
   name: "set",
-  description: "Actualizar uno de los canales requeridos",
+  description: "Update one of the required channels",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -61,7 +58,7 @@ export default class ChannelSetCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
 
-    // Remueve los canales invalidos antes de proceder.
+    // Removal of invalid channels before proceeding.
     await removeInvalidChannels(guildId, ctx.client);
 
     const name = ctx.options.name as CoreChannelName;
@@ -69,17 +66,17 @@ export default class ChannelSetCommand extends SubCommand {
 
     const record = await setCoreChannel(guildId, name, channelId);
 
-    // Cuando se actualiza el canal de tickets, asegurarse de que el mensaje de tickets exista.
+    // When the tickets channel is updated, ensure the ticket message exists.
     if (name === CoreChannelNames.Tickets) {
       await ensureTicketMessage(ctx.client).catch(() => {
-        // no hacer nada si falla; el mensaje se intentará crear en el próximo reinicio o reconfiguración
+        // do nothing if it fails; the message will be retried on next restart or reconfiguration
       });
     }
 
     const embed = new Embed({
-      title: "Canal actualizado",
-      description: `Se asigno <#${record.channelId}> a **${name}** (${CORE_CHANNEL_DEFINITIONS[name]})`,
-      color: EmbedColors.Green,
+      title: "Channel updated",
+      description: `Assigned <#${record.channelId}> to **${name}** (${CORE_CHANNEL_DEFINITIONS[name]})`,
+      color: UIColors.success,
     });
 
     await ctx.write({ embeds: [embed] });

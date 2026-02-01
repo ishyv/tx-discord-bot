@@ -1,23 +1,23 @@
 /**
- * Motivación: registrar el comando "ping" dentro de la categoría ping para ofrecer la acción de forma consistente y reutilizable.
+ * Motivation: register the "ping" command within the ping category to provide the action in a consistent and reusable way.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
+ * Idea/concept: uses Seyfert's command framework with typed options and shared utilities to validate input and dispatch logic.
  *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Scope: handles command invocation and response; delegates business rules, persistence, and additional policies to specialized services or modules.
  */
 import type { CommandContext } from "seyfert";
 import { Command, Declare } from "seyfert";
 
 @Declare({
   name: "ping",
-  description: "Mostrar la latencia con Discord",
+  description: "Show latency with Discord",
 })
 export default class PingCommand extends Command {
   async run(ctx: CommandContext) {
     const ping = ctx.client.gateway.latency;
 
     await ctx.write({
-      content: `La latencia es \`${ping}ms\``,
+      content: `Latency is \`${ping}ms\``,
     });
   }
 }

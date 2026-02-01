@@ -1,18 +1,16 @@
 /**
- * Motivación: registrar el comando "moderation / rep / parent" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
- *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
- */
+* Reputation Parent Command.
+*
+* Purpose: Manage user reputation.
+*/
 import { AutoLoad, Command, Declare } from "seyfert";
 
-// Comandos para manejar la rep
+// Commands for managing reputation
 @Declare({
   name: "rep",
-  description: "Gestionar la reputacion de los usuarios",
+  description: "Manage user reputation",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
 @AutoLoad()
-export default class RepParentCommand extends Command {}
+export default class RepParentCommand extends Command { }

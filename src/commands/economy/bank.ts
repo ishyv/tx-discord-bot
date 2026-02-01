@@ -28,7 +28,7 @@ const economyService = createEconomyAccountService(economyAccountRepo);
 
 @Declare({
   name: "bank",
-  description: "Muestra el desglose de tus coins en mano y banco.",
+  description: "Show the breakdown of your coins in hand and bank.",
 })
 @BindDisabled(Features.Economy)
 @Cooldown({
@@ -44,7 +44,7 @@ export default class BankCommand extends Command {
     const accessResult = await economyService.checkAccess(userId);
     if (accessResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("Error verificando acceso.")],
+        embeds: [buildErrorEmbed("Error verifying access.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -82,7 +82,7 @@ export default class BankCommand extends Command {
       }
 
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu información bancaria.")],
+        embeds: [buildErrorEmbed("Could not load your banking information.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -121,7 +121,7 @@ export default class BankCommand extends Command {
     if (!view.isEmpty) {
       const rating = getBankSafetyRating(view.percentInBank);
       embed.addFields({
-        name: `${rating.emoji} Seguridad: ${rating.rating}`,
+        name: `${rating.emoji} Safety: ${rating.rating}`,
         value: rating.advice,
         inline: false,
       });

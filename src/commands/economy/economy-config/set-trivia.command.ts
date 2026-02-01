@@ -15,7 +15,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 import { checkEconomyPermission } from "@/modules/economy/permissions";
 import { economyAuditRepo, buildErrorEmbed } from "@/modules/economy";
 import { minigameRepo } from "@/modules/economy/minigames";
@@ -23,64 +23,64 @@ import { DIFFICULTY_CONFIG } from "@/modules/economy/minigames";
 
 const options = {
   enabled: createBooleanOption({
-    description: "Activar/desactivar trivia",
+    description: "Enable/disable trivia",
     required: false,
   }),
   base_reward: createIntegerOption({
-    description: "Recompensa base de monedas por respuesta correcta",
+    description: "Base currency reward for correct answer",
     required: false,
     min_value: 1,
     max_value: 1000,
   }),
   base_xp: createIntegerOption({
-    description: "XP base por respuesta correcta",
+    description: "Base XP for correct answer",
     required: false,
     min_value: 1,
     max_value: 100,
   }),
   cooldown: createIntegerOption({
-    description: "Cooldown entre preguntas (segundos)",
+    description: "Cooldown between questions (seconds)",
     required: false,
     min_value: 5,
     max_value: 3600,
   }),
   daily_max: createIntegerOption({
-    description: "Máximo de preguntas diarias por usuario",
+    description: "Daily question limit per user",
     required: false,
     min_value: 1,
     max_value: 100,
   }),
   timeout: createIntegerOption({
-    description: "Tiempo límite para responder (segundos)",
+    description: "Time limit to answer (seconds)",
     required: false,
     min_value: 10,
     max_value: 300,
   }),
   streak_enabled: createBooleanOption({
-    description: "Activar bonus por racha de respuestas correctas",
+    description: "Enable streak bonus for correct answers",
     required: false,
   }),
   streak_bonus: createNumberOption({
-    description: "Bonus por cada respuesta correcta consecutiva (ej: 0.1 = 10%)",
+    description: "Bonus per consecutive correct answer (e.g. 0.1 = 10%)",
     required: false,
     min_value: 0,
     max_value: 0.5,
   }),
   max_streak_bonus: createNumberOption({
-    description: "Máximo bonus acumulado por racha (ej: 0.5 = 50%)",
+    description: "Max accumulated streak bonus (e.g. 0.5 = 50%)",
     required: false,
     min_value: 0,
     max_value: 2,
   }),
   show: createBooleanOption({
-    description: "Mostrar configuración actual sin cambiar",
+    description: "Show current configuration without changing",
     required: false,
   }),
 };
 
 @Declare({
   name: "trivia",
-  description: "Configurar ajustes de trivia (multiplicadores, rachas, límites)",
+  description: "Configure trivia settings (multipliers, streaks, limits)",
 })
 @Options(options)
 export default class EconomyConfigSetTriviaCommand extends SubCommand {
@@ -88,7 +88,7 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
     const guildId = ctx.guildId;
     if (!guildId) {
       await ctx.write({
-        embeds: [buildErrorEmbed("Este comando solo funciona en servidores.")],
+        embeds: [buildErrorEmbed("This command only works in servers.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -103,7 +103,7 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
     );
     if (!hasAdmin) {
       await ctx.write({
-        embeds: [buildErrorEmbed("Necesitas permisos de administrador.")],
+        embeds: [buildErrorEmbed("You need administrator permissions.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -113,7 +113,7 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
     const configResult = await minigameRepo.getTriviaConfig(guildId);
     if (configResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No se pudo cargar la configuración.")],
+        embeds: [buildErrorEmbed("Could not load configuration.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -132,7 +132,7 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
 
     // Build update object
     const update: Record<string, unknown> = {};
-    
+
     if (ctx.options.enabled !== undefined) update.enabled = ctx.options.enabled;
     if (ctx.options.base_reward !== undefined) update.baseCurrencyReward = ctx.options.base_reward;
     if (ctx.options.base_xp !== undefined) update.baseXpReward = ctx.options.base_xp;
@@ -147,7 +147,7 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
     const updateResult = await minigameRepo.updateTriviaConfig(guildId, update);
     if (updateResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No se pudo actualizar la configuración.")],
+        embeds: [buildErrorEmbed("Could not update configuration.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -171,9 +171,9 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
 
     await ctx.write({
       embeds: [{
-        color: EmbedColors.Green,
-        title: "✅ Configuración de Trivia Actualizada",
-        description: "Los cambios han sido aplicados exitosamente.",
+        color: UIColors.success,
+        title: "✅ Trivia Configuration Updated",
+        description: "Changes successfully applied.",
         fields: Object.entries(update).map(([key, value]) => ({
           name: key,
           value: String(value),
@@ -187,50 +187,50 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
 
   private async showConfig(ctx: GuildCommandContext, config: any) {
     const { Embed } = await import("seyfert");
-    
+
     const embed = new Embed()
-      .setColor(EmbedColors.Blue)
-      .setTitle("⚙️ Configuración de Trivia")
-      .setDescription(`Estado: ${config.enabled ? "✅ Activo" : "🚫 Desactivado"}`)
+      .setColor(UIColors.info)
+      .setTitle("⚙️ Trivia Configuration")
+      .setDescription(`Status: ${config.enabled ? "✅ Active" : "🚫 Disabled"}`)
       .addFields(
         {
-          name: "💰 Recompensas Base",
-          value: 
-            `Monedas: ${config.baseCurrencyReward}\n` +
+          name: "💰 Base Rewards",
+          value:
+            `Coins: ${config.baseCurrencyReward}\n` +
             `XP: ${config.baseXpReward}`,
           inline: true,
         },
         {
-          name: "⏱️ Límites de Tiempo",
+          name: "⏱️ Time Limits",
           value:
             `Cooldown: ${config.cooldownSeconds}s\n` +
             `Timeout: ${config.timeoutSeconds}s`,
           inline: true,
         },
         {
-          name: "📅 Límites Diarios",
-          value: `Máximo diario: ${config.dailyMaxPlays} preguntas`,
+          name: "📅 Daily Limits",
+          value: `Daily max: ${config.dailyMaxPlays} questions`,
           inline: true,
         },
         {
-          name: "🔥 Sistema de Rachas",
+          name: "🔥 Streak System",
           value:
-            `Activado: ${config.streakBonusEnabled ? "✅" : "🚫"}\n` +
-            `Bonus por racha: ${(config.streakBonusPerQuestion * 100).toFixed(0)}%\n` +
-            `Máximo bonus: ${(config.maxStreakBonus * 100).toFixed(0)}%`,
+            `Enabled: ${config.streakBonusEnabled ? "✅" : "🚫"}\n` +
+            `Streak bonus: ${(config.streakBonusPerQuestion * 100).toFixed(0)}%\n` +
+            `Max bonus: ${(config.maxStreakBonus * 100).toFixed(0)}%`,
           inline: true,
         },
         {
-          name: "📈 Multiplicadores por Dificultad",
+          name: "📈 Difficulty Multipliers",
           value: Object.entries(DIFFICULTY_CONFIG)
-            .map(([level, diff]) => 
-              `${diff.emoji} Nivel ${level}: ${diff.currencyMultiplier}x monedas, ${diff.xpMultiplier}x XP`
+            .map(([level, diff]) =>
+              `${diff.emoji} Level ${level}: ${diff.currencyMultiplier}x coins, ${diff.xpMultiplier}x XP`
             )
             .join("\n"),
           inline: false,
         }
       )
-      .setFooter({ text: "Usa /economy-config trivia <opción> para cambiar" });
+      .setFooter({ text: "Use /economy-config trivia <option> to change" });
 
     await ctx.write({
       embeds: [embed],

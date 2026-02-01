@@ -20,11 +20,11 @@ const CoreChannelSchema = z
   .optional();
 
 /**
- * Configuración del sistema de ofertas.
+ * Offers system configuration.
  *
- * Se guarda en `channels.core`:
- * - `offersReview`: canal donde se envían ofertas para revisión (requerido para crear ofertas).
- * - `approvedOffers`: canal donde se publican ofertas aprobadas (opcional).
+ * Stored in `channels.core`:
+ * - `offersReview`: channel where offers are sent for review (required to create offers).
+ * - `approvedOffers`: channel where approved offers are published (optional).
  */
 export const offersConfig = defineConfig(
   ConfigurableModule.Offers,

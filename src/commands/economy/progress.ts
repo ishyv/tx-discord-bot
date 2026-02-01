@@ -23,7 +23,7 @@ const economyService = createEconomyAccountService(economyAccountRepo);
 
 @Declare({
   name: "progress",
-  description: "Muestra tu progreso de XP y nivel en este servidor.",
+  description: "View your XP and level progress in this server.",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -48,7 +48,7 @@ export default class ProgressCommand extends Command {
     const ensureResult = await economyService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu progreso.")],
+        embeds: [buildErrorEmbed("Could not load your progress.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -69,7 +69,7 @@ export default class ProgressCommand extends Command {
     );
     if (progressResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu progreso.")],
+        embeds: [buildErrorEmbed("Could not load your progress.")],
         flags: MessageFlags.Ephemeral,
       });
       return;

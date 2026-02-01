@@ -15,8 +15,8 @@ import {
   Options,
   type CommandContext,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags, ChannelType } from "seyfert/lib/types";
+import { UIColors } from "@/modules/ui/design-system";
 import { launchOps, opsConfigRepo } from "@/modules/ops";
 
 const MAX_REPORT_DAYS = 30;
@@ -128,7 +128,7 @@ export default class OpsCommand extends Command {
     const config = configResult.unwrap();
 
     const embed = new Embed()
-      .setColor(EmbedColors.Blue)
+      .setColor(UIColors.info)
       .setTitle("⚙️ Launch Ops Configuration")
       .setDescription(`Current settings for this server`)
       .addFields(
@@ -326,10 +326,10 @@ export default class OpsCommand extends Command {
 
     const statusColor =
       health.overallStatus === "healthy"
-        ? EmbedColors.Green
+        ? UIColors.success
         : health.overallStatus === "degraded"
-          ? EmbedColors.Yellow
-          : EmbedColors.Red;
+          ? UIColors.warning
+          : UIColors.error;
 
     const embed = new Embed()
       .setColor(statusColor)

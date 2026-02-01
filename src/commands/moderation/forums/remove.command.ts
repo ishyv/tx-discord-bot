@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / forums / remove" para quitar foros monitoreados.
+ * Forums Remove Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega la persistencia al config store.
+ * Purpose: Remove a monitored forum for AI-powered automatic replies.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -19,8 +17,8 @@ import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
-  foro: createChannelOption({
-    description: "Foro de Discord a dejar de monitorear",
+  forum: createChannelOption({
+    description: "Discord forum to stop monitoring",
     required: true,
     channel_types: [ChannelType.GuildForum],
   }),
@@ -28,7 +26,7 @@ const options = {
 
 @Declare({
   name: "remove",
-  description: "Remover un foro monitoreado",
+  description: "Remove a monitored forum",
   defaultMemberPermissions: ["ManageChannels"],
   contexts: ["Guild"],
 })
@@ -41,10 +39,10 @@ export default class ForumsRemoveCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
 
-    const forum = ctx.options.foro;
+    const forum = ctx.options.forum;
     if (!forum || forum.type !== ChannelType.GuildForum) {
       await ctx.write({
-        content: "Debes elegir un canal de tipo foro válido.",
+        content: "You must choose a valid forum channel.",
       });
       return;
     }
@@ -56,7 +54,7 @@ export default class ForumsRemoveCommand extends SubCommand {
 
     if (!forumIds.includes(forum.id)) {
       await ctx.write({
-        content: `El foro <#${forum.id}> no está en la lista configurada.`,
+        content: `The forum <#${forum.id}> is not in the configured list.`,
       });
       return;
     }
@@ -67,7 +65,7 @@ export default class ForumsRemoveCommand extends SubCommand {
     });
 
     await ctx.write({
-      content: `Foro removido: <#${forum.id}>. Total: ${next.length}.`,
+      content: `Forum removed: <#${forum.id}>. Total: ${next.length}.`,
     });
   }
 }

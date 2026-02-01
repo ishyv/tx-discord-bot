@@ -28,28 +28,28 @@ const choices = currencyRegistry.list().map((currencyId) => {
 
 const options = {
   currency: createStringOption({
-    description: "Moneda a transferir",
+    description: "Currency to transfer",
     required: true,
     choices,
   }),
   amount: createIntegerOption({
-    description: "Cantidad a transferir (debe ser positiva)",
+    description: "Amount to transfer (must be positive)",
     required: true,
     min_value: 1,
   }),
   recipient: createUserOption({
-    description: "Usuario destinatario",
+    description: "Recipient user",
     required: true,
   }),
   reason: createStringOption({
-    description: "Razón de la transferencia",
+    description: "Reason for transfer",
     required: false,
   }),
 };
 
 @Declare({
   name: "transfer",
-  description: "Transferir moneda a otro usuario",
+  description: "Transfer currency to another user",
 })
 @Options(options)
 @BindDisabled(Features.Economy)
@@ -68,7 +68,7 @@ export default class TransferCommand extends Command {
     const currencyId = sanitizeCurrencyId(rawCurrencyId);
     if (!currencyId) {
       await ctx.write({
-        content: "⚠️ ID de moneda inválido.",
+        content: "⚠️ Invalid currency ID.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -78,7 +78,7 @@ export default class TransferCommand extends Command {
     const currencyObj = currencyRegistry.get(currencyId);
     if (!currencyObj) {
       await ctx.write({
-        content: "La moneda especificada no existe.",
+        content: "The specified currency does not exist.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -138,22 +138,22 @@ export default class TransferCommand extends Command {
       const error = result.error;
 
       const errorMessages: Record<string, string> = {
-        CURRENCY_NOT_FOUND: "La moneda especificada no existe.",
-        INVALID_AMOUNT: "La cantidad debe ser un número positivo.",
-        SELF_TRANSFER: "No puedes transferirte a ti mismo.",
-        ACTOR_BLOCKED: "⛔ Tu cuenta tiene restricciones temporales.",
-        ACTOR_BANNED: "🚫 Tu cuenta tiene restricciones permanentes.",
+        CURRENCY_NOT_FOUND: "The specified currency does not exist.",
+        INVALID_AMOUNT: "The amount must be a positive number.",
+        SELF_TRANSFER: "You can't transfer to yourself.",
+        ACTOR_BLOCKED: "⛔ Your account has temporary restrictions.",
+        ACTOR_BANNED: "🚫 Your account has permanent restrictions.",
         TARGET_BLOCKED:
-          "⛔ La cuenta del destinatario tiene restricciones temporales.",
+          "⛔ The recipient's account has temporary restrictions.",
         TARGET_BANNED:
-          "🚫 La cuenta del destinatario tiene restricciones permanentes.",
+          "🚫 The recipient's account has permanent restrictions.",
         INSUFFICIENT_FUNDS:
-          "❌ No tienes suficientes fondos para esta transferencia.",
-        UPDATE_FAILED: "❌ Error en la transferencia. Intenta nuevamente.",
+          "❌ You don't have enough funds for this transfer.",
+        UPDATE_FAILED: "❌ Transfer failed. Please try again.",
       };
 
       const message =
-        errorMessages[error.code] ?? "❌ Ocurrió un error inesperado.";
+        errorMessages[error.code] ?? "❌ An unexpected error occurred.";
 
       await ctx.write({
         content: message,
@@ -167,13 +167,13 @@ export default class TransferCommand extends Command {
     // Build success message
     let taxInfo = "";
     if (taxAmount > 0) {
-      taxInfo = `\n📊 Impuesto (${(taxRate * 100).toFixed(0)}%): ${currencyObj.display(taxAmount as any)}`;
+      taxInfo = `\n📊 Tax (${(taxRate * 100).toFixed(0)}%): ${currencyObj.display(taxAmount as any)}`;
     }
 
     await ctx.write({
       content:
-        `✅ Has transferido **${currencyObj.display(transferAmount as any)}** a ${recipient.toString()}.${taxInfo}\n` +
-        `📤 Tu nuevo balance: ${currencyObj.display(transfer.senderAfter as any)}`,
+        `✅ You transferred **${currencyObj.display(transferAmount as any)}** to ${recipient.toString()}.${taxInfo}\n` +
+        `📤 Your new balance: \`${currencyObj.display(transfer.senderAfter as any)}\``,
     });
 
     // Note: Recipient notification could be added here (DM or mention)

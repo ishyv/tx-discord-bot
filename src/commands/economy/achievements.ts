@@ -28,7 +28,7 @@ import {
 
 @Declare({
   name: "achievements",
-  description: "🏆 Gestiona tus logros y recompensas",
+  description: "🏆 Manage your achievements and rewards",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -48,7 +48,7 @@ export default class AchievementsCommand extends Command {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -81,14 +81,14 @@ export default class AchievementsCommand extends Command {
 // Subcommand: view
 const viewOptions = {
   id: createStringOption({
-    description: "ID del logro a ver",
+    description: "ID of the achievement to view",
     required: true,
   }),
 };
 
 @Declare({
   name: "view",
-  description: "Ver detalles de un logro específico",
+  description: "View details of a specific achievement",
 })
 @Options(viewOptions)
 export class AchievementsViewSubCommand extends SubCommand {
@@ -101,7 +101,7 @@ export class AchievementsViewSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -130,7 +130,7 @@ export class AchievementsViewSubCommand extends SubCommand {
     const achievement = achievementResult.unwrap();
     if (!achievement) {
       await ctx.write({
-        embeds: [buildAchievementErrorEmbed("Logro no encontrado.")],
+        embeds: [buildAchievementErrorEmbed("Achievement not found.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -144,14 +144,14 @@ export class AchievementsViewSubCommand extends SubCommand {
 // Subcommand: claim
 const claimOptions = {
   id: createStringOption({
-    description: "ID del logro para reclamar recompensas",
+    description: "ID of the achievement to claim rewards from",
     required: true,
   }),
 };
 
 @Declare({
   name: "claim",
-  description: "Reclamar recompensas de un logro desbloqueado",
+  description: "Claim rewards from an unlocked achievement",
 })
 @Options(claimOptions)
 export class AchievementsClaimSubCommand extends SubCommand {
@@ -164,7 +164,7 @@ export class AchievementsClaimSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -183,9 +183,9 @@ export class AchievementsClaimSubCommand extends SubCommand {
       let message = error.message;
 
       if (error.code === "ACHIEVEMENT_NOT_UNLOCKED") {
-        message = "Aún no has desbloqueado este logro.";
+        message = "You haven't unlocked this achievement yet.";
       } else if (error.code === "REWARDS_ALREADY_CLAIMED") {
-        message = "Ya has reclamado las recompensas de este logro.";
+        message = "You've already claimed rewards from this achievement.";
       }
 
       await ctx.write({
@@ -216,22 +216,22 @@ export class AchievementsClaimSubCommand extends SubCommand {
 // Subcommand: category
 const categoryOptions = {
   category: createStringOption({
-    description: "Categoría de logros a ver",
+    description: "Achievement category to view",
     required: true,
     choices: [
-      { name: "📈 Progresión", value: "progression" },
-      { name: "🎮 Minijuegos", value: "minigame" },
-      { name: "⚒️ Crafteo", value: "crafting" },
+      { name: "📈 Progression", value: "progression" },
+      { name: "🎮 Minigames", value: "minigame" },
+      { name: "⚒️ Crafting", value: "crafting" },
       { name: "👥 Social", value: "social" },
-      { name: "🎒 Colección", value: "collection" },
-      { name: "✨ Especial", value: "special" },
+      { name: "🎒 Collection", value: "collection" },
+      { name: "✨ Special", value: "special" },
     ],
   }),
 };
 
 @Declare({
   name: "category",
-  description: "Ver logros por categoría",
+  description: "View achievements by category",
 })
 @Options(categoryOptions)
 export class AchievementsCategorySubCommand extends SubCommand {
@@ -244,7 +244,7 @@ export class AchievementsCategorySubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -273,7 +273,7 @@ export class AchievementsCategorySubCommand extends SubCommand {
     if (categoryAchievements.length === 0) {
       await ctx.write({
         embeds: [
-          buildAchievementErrorEmbed("No hay logros en esta categoría."),
+          buildAchievementErrorEmbed("No achievements in this category."),
         ],
         flags: MessageFlags.Ephemeral,
       });
@@ -291,7 +291,7 @@ export class AchievementsCategorySubCommand extends SubCommand {
 // Subcommand: list
 @Declare({
   name: "list",
-  description: "Listar todos los logros disponibles",
+  description: "List all available achievements",
 })
 export class AchievementsListSubCommand extends SubCommand {
   async run(ctx: CommandContext) {
@@ -302,7 +302,7 @@ export class AchievementsListSubCommand extends SubCommand {
       await ctx.write({
         embeds: [
           buildAchievementErrorEmbed(
-            "Este comando solo puede usarse en un servidor.",
+            "This command can only be used in a server.",
           ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -336,8 +336,8 @@ export class AchievementsListSubCommand extends SubCommand {
 
     const { Embed } = await import("seyfert");
     const embed = new Embed()
-      .setTitle("📜 Lista de Logros")
-      .setDescription(`Hay ${achievements.length} logros disponibles.`)
+      .setTitle("📜 Achievement List")
+      .setDescription(`There are ${achievements.length} achievements available.`)
       .setColor(0xf39c12);
 
     for (const [cat, list] of byCategory) {

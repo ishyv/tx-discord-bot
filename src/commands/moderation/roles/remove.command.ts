@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / remove" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Remove Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Remove a managed role configuration.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -13,21 +11,21 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import { requireGuildContext } from "./shared";
 
 const options = {
   key: createStringOption({
-    description: "Clave del rol administrado a eliminar",
+    description: "Key of the managed role to remove",
     required: true,
   }),
 };
 
 @Declare({
   name: "remove",
-  description: "Eliminar un rol administrado",
+  description: "Remove a managed role",
 })
 @Options(options)
 export default class RoleRemoveCommand extends SubCommand {
@@ -38,10 +36,10 @@ export default class RoleRemoveCommand extends SubCommand {
     const key = ctx.options.key.trim();
     if (!key) {
       const embed = new Embed({
-        title: "Clave invalida",
+        title: "Invalid Key",
         description:
-          "Proporciona una clave conocida para eliminar la configuracion.",
-        color: EmbedColors.Red,
+          "Provide a known key to remove the configuration.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -51,11 +49,11 @@ export default class RoleRemoveCommand extends SubCommand {
     const removed = res.isOk();
 
     const embed = new Embed({
-      title: removed ? "Rol eliminado" : "Rol no encontrado",
+      title: removed ? "Role removed" : "Role not found",
       description: removed
-        ? `Se elimino la configuracion **${key}**.`
-        : "No existia una configuracion con esa clave.",
-      color: removed ? EmbedColors.Red : EmbedColors.Orange,
+        ? `Configuration **${key}** was removed.`
+        : "No configuration existed with that key.",
+      color: removed ? UIColors.error : UIColors.warning,
     });
 
     await ctx.write({ embeds: [embed] });

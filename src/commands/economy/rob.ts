@@ -28,14 +28,14 @@ import {
 
 const robOptions = {
   target: createUserOption({
-    description: "Usuario a robar",
+    description: "User to rob",
     required: true,
   }),
 };
 
 @Declare({
   name: "rob",
-  description: "Intenta robarle a otro usuario (cuidado: puede fallar)",
+  description: "Attempt to steal from another user (risky!)",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -54,7 +54,7 @@ export default class RobCommand extends Command {
 
     if (!guildId) {
       await ctx.write({
-        embeds: [buildErrorEmbed("Este comando solo funciona en servidores.")],
+        embeds: [buildErrorEmbed("This command only works in servers.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -64,7 +64,7 @@ export default class RobCommand extends Command {
     const guildConfigResult = await guildEconomyRepo.ensure(guildId);
     if (guildConfigResult.isOk() && !guildConfigResult.unwrap().features.rob) {
       await ctx.write({
-        embeds: [buildErrorEmbed("Rob está deshabilitado en este servidor.")],
+        embeds: [buildErrorEmbed("Rob is disabled in this server.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -72,7 +72,7 @@ export default class RobCommand extends Command {
 
     if (!target) {
       await ctx.write({
-        embeds: [buildErrorEmbed("Usuario no encontrado.")],
+        embeds: [buildErrorEmbed("User not found.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -83,7 +83,7 @@ export default class RobCommand extends Command {
     // Self-check
     if (userId === targetId) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No puedes robarte a ti mismo.")],
+        embeds: [buildErrorEmbed("You can't rob yourself.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -94,7 +94,7 @@ export default class RobCommand extends Command {
     const ensureResult = await accountService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No se pudo acceder a tu cuenta.")],
+        embeds: [buildErrorEmbed("Could not access your account.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -103,7 +103,7 @@ export default class RobCommand extends Command {
     const { account } = ensureResult.unwrap();
     if (account.status !== "ok") {
       await ctx.write({
-        embeds: [buildErrorEmbed("Tu cuenta tiene restricciones.")],
+        embeds: [buildErrorEmbed("Your account has restrictions.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -116,16 +116,16 @@ export default class RobCommand extends Command {
 
       // Show warning about risks
       const warningEmbed = buildEconomyWarningEmbed({
-        title: "Intento de Robo",
-        message: `**Objetivo:** ${target.username}`,
+        title: "Rob Attempt",
+        message: `**Target:** ${target.username}`,
         emoji: "⚠️",
         fields: [
           {
-            name: "Riesgos",
+            name: "Risks",
             value:
-              `• ${Math.round(config.failChance * 100)}% probabilidad de fallar\n` +
-              `• Multa de hasta ${Math.round(config.failFinePct * 100)}% si fallas\n` +
-              `• Cooldown de ${Math.ceil(config.pairCooldownSeconds / 60)}min por objetivo`,
+              `• ${Math.round(config.failChance * 100)}% chance of failure\n` +
+              `• Fine up to ${Math.round(config.failFinePct * 100)}% if you fail\n` +
+              `• ${Math.ceil(config.pairCooldownSeconds / 60)}min cooldown per target`,
             inline: false,
           },
         ],
@@ -147,19 +147,19 @@ export default class RobCommand extends Command {
     if (result.isErr()) {
       const error = result.error;
       const messages: Record<string, string> = {
-        SELF_TARGET: "No puedes robarte a ti mismo.",
-        TARGET_NOT_FOUND: "Usuario no encontrado.",
-        TARGET_BLOCKED: "El objetivo tiene restricciones.",
-        TARGET_BANNED: "El objetivo está baneado.",
-        TARGET_TOO_POOR: "El objetivo es demasiado pobre.",
-        TARGET_INACTIVE: "El objetivo no ha estado activo recientemente.",
-        INSUFFICIENT_FUNDS: "No tienes suficiente saldo para intentar robar.",
-        COOLDOWN_ACTIVE: "Espera antes de intentar robar de nuevo.",
-        PAIR_COOLDOWN: "Debes esperar antes de robar al mismo objetivo.",
-        DAILY_LIMIT_REACHED: "Has alcanzado el límite diario de robos.",
-        CONFIG_NOT_FOUND: "Rob no está disponible.",
-        UPDATE_FAILED: "Error al procesar el robo.",
-        FEATURE_DISABLED: "Rob está deshabilitado en este servidor.",
+        SELF_TARGET: "You can't rob yourself.",
+        TARGET_NOT_FOUND: "User not found.",
+        TARGET_BLOCKED: "The target has restrictions.",
+        TARGET_BANNED: "The target is banned.",
+        TARGET_TOO_POOR: "The target is too poor.",
+        TARGET_INACTIVE: "The target hasn't been active recently.",
+        INSUFFICIENT_FUNDS: "You don't have enough balance to attempt a rob.",
+        COOLDOWN_ACTIVE: "Wait before attempting to rob again.",
+        PAIR_COOLDOWN: "You must wait before robbing the same target.",
+        DAILY_LIMIT_REACHED: "You've reached the daily rob limit.",
+        CONFIG_NOT_FOUND: "Rob is not available.",
+        UPDATE_FAILED: "Error processing the rob.",
+        FEATURE_DISABLED: "Rob is disabled in this server.",
       };
 
       await ctx.editOrReply({

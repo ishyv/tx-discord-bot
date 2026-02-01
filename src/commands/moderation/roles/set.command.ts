@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "moderation / roles / set" dentro de la categoría moderation para ofrecer la acción de forma consistente y reutilizable.
+ * Role Set Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert con opciones tipadas y utilidades compartidas para validar la entrada y despachar la lógica.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Register or update a managed role configuration.
  */
 import type { GuildCommandContext } from "seyfert";
 import {
@@ -14,7 +12,7 @@ import {
   Options,
   SubCommand,
 } from "seyfert";
-import { EmbedColors } from "seyfert/lib/common";
+import { UIColors } from "@/modules/ui/design-system";
 
 import { GuildStore } from "@/db/repositories/guilds";
 import { GuildRolesRepo } from "@/db/repositories/guild-roles";
@@ -23,18 +21,18 @@ import { requireGuildContext } from "./shared";
 
 const options = {
   key: createStringOption({
-    description: "Identificador interno del rol administrado",
+    description: "Internal identifier of the managed role",
     required: true,
   }),
   role: createRoleOption({
-    description: "Rol de Discord al que se aplicara la configuracion",
+    description: "Discord role the configuration will apply to",
     required: true,
   }),
 };
 
 @Declare({
   name: "set",
-  description: "Registrar o actualizar un rol administrado",
+  description: "Register or update a managed role",
 })
 @Options(options)
 export default class RoleSetCommand extends SubCommand {
@@ -47,9 +45,9 @@ export default class RoleSetCommand extends SubCommand {
 
     if (!key) {
       const embed = new Embed({
-        title: "Clave invalida",
-        description: "Proporciona una clave no vacia para registrar el rol.",
-        color: EmbedColors.Red,
+        title: "Invalid Key",
+        description: "Provide a non-empty key to register the role.",
+        color: UIColors.error,
       });
       await ctx.write({ embeds: [embed] });
       return;
@@ -69,18 +67,18 @@ export default class RoleSetCommand extends SubCommand {
     const role = rolesRes.isOk() ? (rolesRes.unwrap() as any)[key] : null;
 
     const embed = new Embed({
-      title: "Rol administrado registrado",
-      color: EmbedColors.Green,
+      title: "Managed role registered",
+      color: UIColors.success,
       fields: [
-        { name: "Clave", value: key },
+        { name: "Key", value: key },
         {
-          name: "Rol",
+          name: "Role",
           value: role?.discordRoleId
             ? `<@&${role.discordRoleId}>`
-            : "Sin asignar",
+            : "Unassigned",
         },
         {
-          name: "Limites configurados",
+          name: "Configured Limits",
           value: String(
             Object.keys((role?.limits ?? {}) as Record<string, unknown>).length,
           ),

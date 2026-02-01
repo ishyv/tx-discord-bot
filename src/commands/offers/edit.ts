@@ -1,9 +1,7 @@
 /**
- * Motivación: registrar el comando "offers / edit" dentro de la categoría offers para ofrecer la acción de forma consistente y reutilizable.
+ * Offer Edit Command.
  *
- * Idea/concepto: usa el framework de comandos de Seyfert y el prefab embedDesigner para editar ofertas de forma interactiva.
- *
- * Alcance: maneja la invocación y respuesta del comando; delega reglas de negocio, persistencia y políticas adicionales a servicios o módulos especializados.
+ * Purpose: Edit an active job offer using the embed designer.
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
@@ -18,8 +16,8 @@ import {
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 
 @Declare({
-  name: "editar",
-  description: "Editar tu oferta activa (vuelve a revisión)",
+  name: "edit",
+  description: "Edit your active offer (returns to review)",
 })
 @Cooldown({
   type: CooldownType.User,
@@ -34,7 +32,7 @@ export default class OfferEditCommand extends SubCommand {
     const offerResult = await getActiveOffer(guildId, ctx.author.id);
     if (offerResult.isErr()) {
       await ctx.write({
-        content: "Error buscando ofertas activas.",
+        content: "Error searching for active offers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -44,7 +42,7 @@ export default class OfferEditCommand extends SubCommand {
     if (!offer) {
       await ctx.write({
         content:
-          "No tienes ofertas activas para editar. Usa `/oferta crear` para enviar una nueva.",
+          "You don't have active offers to edit. Use `/offer create` to submit a new one.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -53,11 +51,11 @@ export default class OfferEditCommand extends SubCommand {
     await startEmbedDesigner(ctx, {
       userId: ctx.author.id,
       content:
-        "Edita la información de tu oferta usando el menú y confirma para reenviarla a revisión.",
+        "Edit your offer information using the menu and confirm to resend it for review.",
       initial: {
         title: offer.details.title,
         description: offer.details.description,
-        footer: "Oferta de trabajo (se enviará a revisión)",
+        footer: "Job offer (will be sent for review)",
         fields: buildDesignerFields(offer.details),
       },
       fields: OFFER_FIELD_DEFINITIONS,
@@ -65,7 +63,7 @@ export default class OfferEditCommand extends SubCommand {
         const { details, error } = parseOfferDetails(data);
         if (!details) {
           await ctx.followup?.({
-            content: error ?? "Datos de oferta incompletos.",
+            content: error ?? "Incomplete offer data.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -82,9 +80,9 @@ export default class OfferEditCommand extends SubCommand {
           const message =
             updatedResult.error instanceof Error
               ? updatedResult.error.message
-              : "Error desconocido editando la oferta.";
+              : "Unknown error editing the offer.";
           await ctx.followup?.({
-            content: `No se pudo editar la oferta: ${message}`,
+            content: `Could not edit the offer: ${message}`,
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -94,7 +92,7 @@ export default class OfferEditCommand extends SubCommand {
 
         if (!updated) {
           await ctx.followup?.({
-            content: "No se pudo actualizar la oferta. Intenta nuevamente.",
+            content: "Could not update the offer. Please try again.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -102,7 +100,7 @@ export default class OfferEditCommand extends SubCommand {
 
         await ctx.followup?.({
           content:
-            "Oferta actualizada. Volvió a estado *Pendiente de revisión*.",
+            "Offer updated. Returned to *Pending Review* status.",
           flags: MessageFlags.Ephemeral,
         });
       },
