@@ -18,6 +18,7 @@ export type AuditOperationType =
   | "item_sell"
   | "item_equip"
   | "item_unequip"
+  | "item_use"
   | "config_update"
   | "daily_claim"
   | "work_claim"
@@ -55,9 +56,14 @@ export interface EconomyAuditEntry {
   /** Item-specific data (if applicable). */
   readonly itemData?: {
     itemId: string;
-    quantity: number;
+    quantity?: number;
     beforeQuantity?: number;
     afterQuantity?: number;
+    instanceId?: string;
+    durability?: number;
+    damage?: number;
+    broken?: boolean;
+    remainingDurability?: number;
   };
   /** Additional metadata for extensibility. */
   readonly metadata?: Record<string, unknown>;
@@ -79,9 +85,14 @@ export interface CreateAuditEntryInput {
   };
   readonly itemData?: {
     itemId: string;
-    quantity: number;
+    quantity?: number;
     beforeQuantity?: number;
     afterQuantity?: number;
+    instanceId?: string;
+    durability?: number;
+    damage?: number;
+    broken?: boolean;
+    remainingDurability?: number;
   };
   readonly metadata?: Record<string, unknown>;
 }

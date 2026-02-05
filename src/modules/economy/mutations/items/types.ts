@@ -62,3 +62,24 @@ export class ItemMutationError extends Error {
     this.name = "ItemMutationError";
   }
 }
+
+/** Error codes for instance operations. */
+export type ItemInstanceErrorCode =
+  | "NOT_INSTANCE_BASED"
+  | "ITEM_NOT_FOUND"
+  | "TARGET_NOT_FOUND"
+  | "CAPACITY_EXCEEDED"
+  | "INVALID_QUANTITY"
+  | "INSUFFICIENT_QUANTITY"
+  | "UPDATE_FAILED";
+
+/** Error class for instance operations. */
+export class ItemInstanceError extends Error {
+  constructor(
+    public readonly code: ItemInstanceErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ItemInstanceError";
+  }
+}

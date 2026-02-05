@@ -8,8 +8,9 @@
  */
 
 import { DEFAULT_INVENTORY_CAPACITY, type ItemId } from "./definitions";
-import type { ItemInventory } from "./inventory";
+import type { ItemInventory, ModernInventory } from "./inventory";
 import { getItemDefinition, resolveCanStack, resolveWeight } from "./items";
+import { isInstanceBased, getTotalQuantity } from "./instances";
 
 export type CapacityLimits = {
   readonly maxWeight: number;
@@ -132,4 +133,113 @@ export function simulateCapacityAfterAdd(
     current.currentSlots + slotsDelta,
     limits,
   );
+}
+
+// ============================================================================
+// Modern Inventory Capacity (with Instances)
+// ============================================================================
+
+/** Calculate capacity for modern inventory with instances. */
+export function calculateModernCapacity(
+  inventory: ModernInventory,
+  options?: CapacityOptions,
+): CapacityStats {
+  const limits = resolveLimits(options?.limits);
+  let currentWeight = 0;
+  let currentSlots = 0;
+
+  for (const [itemId, entry] of Object.entries(inventory)) {
+    if (!entry) continue;
+
+    const definition = getItemDefinition(itemId);
+    if (!definition) continue;
+
+    const weight = resolveWeight(definition);
+    const quantity = getTotalQuantity(entry);
+
+    if (quantity <= 0) continue;
+
+    // Instance-based items always use 1 slot per instance
+    if (entry.type === "instances") {
+      currentWeight += weight * quantity;
+      currentSlots += quantity; // 1 slot per instance
+    } else {
+      const canStack = resolveCanStack(definition);
+      currentWeight += weight * quantity;
+      currentSlots += calculateSlotsForItem(canStack, quantity);
+    }
+  }
+
+  return buildCapacityStats(currentWeight, currentSlots, limits);
+}
+
+/** Simulate capacity after adding items to modern inventory. */
+export function simulateModernCapacityAfterAdd(
+  inventory: ModernInventory,
+  itemId: ItemId,
+  quantity: number,
+  options?: CapacityOptions,
+): CapacityStats {
+  const limits = resolveLimits(options?.limits);
+  const current = calculateModernCapacity(inventory, { limits });
+
+  const definition = getItemDefinition(itemId);
+  if (!definition) {
+    if (options?.ignoreUnknownItem) {
+      return {
+        ...current,
+        weightExceeded: false,
+        slotsExceeded: false,
+      };
+    }
+    return current;
+  }
+
+  const weight = resolveWeight(definition);
+  const isInstanced = isInstanceBased(itemId);
+  const entry = inventory[itemId];
+
+  const weightDelta = weight * quantity;
+  let slotsDelta = 0;
+
+  if (isInstanced) {
+    // Instance-based: each item takes 1 slot
+    slotsDelta = quantity;
+  } else {
+    const canStack = resolveCanStack(definition);
+    const currentQty = entry?.type === "stackable" ? entry.quantity : 0;
+
+    if (canStack) {
+      if (currentQty === 0 && quantity > 0) {
+        slotsDelta = 1;
+      }
+    } else {
+      slotsDelta = quantity;
+    }
+  }
+
+  return buildCapacityStats(
+    current.currentWeight + weightDelta,
+    current.currentSlots + slotsDelta,
+    limits,
+  );
+}
+
+/** Check if adding instances would exceed capacity. */
+export function canAddInstances(
+  inventory: ModernInventory,
+  itemId: ItemId,
+  count: number,
+  limits?: CapacityLimits,
+): { allowed: boolean; reason?: string } {
+  const simulated = simulateModernCapacityAfterAdd(inventory, itemId, count, { limits });
+
+  if (simulated.weightExceeded) {
+    return { allowed: false, reason: "Weight limit would be exceeded" };
+  }
+  if (simulated.slotsExceeded) {
+    return { allowed: false, reason: "Slot limit would be exceeded" };
+  }
+
+  return { allowed: true };
 }

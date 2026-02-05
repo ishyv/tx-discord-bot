@@ -13,6 +13,20 @@ Reference framework to understand the logic of the economic system and item mana
 - **Pre-simulation**: Before persisting any change, the engine simulates the operation to validate that the resulting state is legal according to the currency rules.
 - **Concurrency**: It uses optimistic concurrency techniques to handle multiple simultaneous transactions on the same user, ensuring balance integrity even in high-activity situations.
 
+## Hybrid Work Payout Model
+
+The `/work` command implements a hybrid payout system designed to balance inflation control with user incentives:
+
+### Payout Structure
+- **Base Mint**: A guaranteed amount of newly minted currency (always paid)
+- **Treasury Bonus**: An additional amount paid from the guild's `works` sector (only if funds available)
+
+### Benefits
+- **Predictable Inflation**: Only the base mint contributes to inflation, making it easier to control
+- **Treasury Incentives**: Users are incentivized to keep the `works` sector funded for bonus payouts
+- **Always Available**: Users can always work and earn the base amount, even with empty treasury
+- **Audit Trail**: Each payout is audited with `baseMint` and `bonusFromWorks` metadata for transparency
+
 ## Item Inventory
 
 - **Definitions**: Items are managed through static definitions that dictate their behavior (max stack, rarity, effects).

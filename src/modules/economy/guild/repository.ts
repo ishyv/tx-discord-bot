@@ -160,9 +160,9 @@ function toDomain(guildId: string, data: GuildEconomyData): GuildEconomyConfig {
   };
   return {
     guildId,
-    sectors: data.sectors as SectorBalances,
-    tax: data.tax as TaxConfig,
-    thresholds: data.thresholds as TransferThresholds,
+    sectors: (data.sectors ?? { ...DEFAULT_SECTOR_BALANCES }) as SectorBalances,
+    tax: (data.tax ?? { ...DEFAULT_TAX_CONFIG }) as TaxConfig,
+    thresholds: (data.thresholds ?? { ...DEFAULT_TRANSFER_THRESHOLDS }) as TransferThresholds,
     daily: daily as DailyConfig,
     work,
     progression,

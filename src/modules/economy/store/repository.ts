@@ -17,29 +17,7 @@ import {
   buildDefaultCatalog,
 } from "./types";
 
-/** Zod schema for store item. */
-const StoreItemSchema = z.object({
-  itemId: z.string(),
-  name: z.string(),
-  buyPrice: z.number().min(0),
-  sellPrice: z.number().min(0),
-  stock: z.number(),
-  available: z.boolean(),
-  description: z.string().optional(),
-  category: z.string().optional(),
-  purchaseLimit: z.number().optional(),
-  requiredRole: z.string().optional(),
-});
-
-/** Zod schema for store catalog data. */
-const StoreCatalogDataSchema = z.object({
-  currencyId: z.string().catch("coin"),
-  items: z.record(z.string(), StoreItemSchema).catch(() => ({})),
-  active: z.boolean().catch(true),
-  taxRate: z.number().min(0).max(1).catch(0.05),
-  updatedAt: z.date().catch(() => new Date()),
-  version: z.number().catch(0),
-});
+import { StoreCatalogDataSchema } from "@/db/schemas/guild";
 
 export type StoreCatalogData = z.infer<typeof StoreCatalogDataSchema>;
 

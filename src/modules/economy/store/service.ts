@@ -94,6 +94,28 @@ export interface StoreService {
    * Get featured items with rotation check (Phase 9d).
    */
   getFeaturedItems(guildId: GuildId): Promise<Result<FeaturedItem[], Error>>;
+
+  /**
+   * Add or update an item in the catalog (Admin).
+   */
+  addItem(
+    guildId: GuildId,
+    item: StoreItem,
+  ): Promise<Result<StoreCatalog, Error>>;
+
+  /**
+   * Edit an existing item in the catalog (Admin).
+   */
+  editItem(
+    guildId: GuildId,
+    itemId: ItemId,
+    update: Partial<StoreItem>,
+  ): Promise<Result<StoreCatalog, Error>>;
+
+  /**
+   * Remove an item from the catalog (Admin).
+   */
+  removeItem(guildId: GuildId, itemId: ItemId): Promise<Result<StoreCatalog, Error>>;
 }
 
 class StoreServiceImpl implements StoreService {
@@ -249,7 +271,7 @@ class StoreServiceImpl implements StoreService {
     // Step 3: Calculate price (with featured item discount if applicable - Phase 9d)
     let unitPrice = item.buyPrice;
     let featuredItem: FeaturedItem | undefined;
-    
+
     const featuredResult = await storeRotationService.getFeaturedPrice(guildId, itemId);
     if (featuredResult.isOk() && featuredResult.unwrap()) {
       const featured = featuredResult.unwrap()!;
@@ -419,7 +441,7 @@ class StoreServiceImpl implements StoreService {
       auditMetadata.featuredDiscountPct = featuredItem.discountPct;
       auditMetadata.scarcityMarkupPct = featuredItem.scarcityMarkupPct;
       auditMetadata.savings = (item.buyPrice - unitPrice) * quantity;
-      
+
       // Record featured purchase
       await storeRotationService.recordFeaturedPurchase(guildId, itemId);
     }
@@ -768,6 +790,48 @@ class StoreServiceImpl implements StoreService {
     guildId: GuildId,
   ): Promise<Result<FeaturedItem[], Error>> {
     return storeRotationService.getFeatured(guildId);
+  }
+
+  async addItem(
+    guildId: GuildId,
+    item: StoreItem,
+  ): Promise<Result<StoreCatalog, Error>> {
+    return storeRepo.upsertItem(guildId, item);
+  }
+
+  async editItem(
+    guildId: GuildId,
+    itemId: ItemId,
+    update: Partial<StoreItem>,
+  ): Promise<Result<StoreCatalog, Error>> {
+    const catalogResult = await storeRepo.findByGuildId(guildId);
+    if (catalogResult.isErr()) return ErrResult(catalogResult.error);
+
+    const catalog = catalogResult.unwrap();
+    if (!catalog) {
+      return ErrResult(new StoreError("STORE_CLOSED", "Store not found"));
+    }
+
+    const existingItem = catalog.items[itemId];
+    if (!existingItem) {
+      return ErrResult(
+        new StoreError("ITEM_NOT_FOUND", "Item not found in store"),
+      );
+    }
+
+    const updatedItem: StoreItem = {
+      ...existingItem,
+      ...update,
+    };
+
+    return storeRepo.upsertItem(guildId, updatedItem);
+  }
+
+  async removeItem(
+    guildId: GuildId,
+    itemId: ItemId,
+  ): Promise<Result<StoreCatalog, Error>> {
+    return storeRepo.removeItem(guildId, itemId);
   }
 }
 

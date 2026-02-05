@@ -59,18 +59,19 @@ export class MongoStore<T extends Document & { _id: string }> {
   }
 
   private getDefault(id: string): T {
-    const raw = { _id: id };
+    const raw: Record<string, unknown> = { _id: id };
 
     // Check if schema expects guildId field and set it if needed
+    // Supports both Zod v3 (typeName === "ZodObject", shape is function)
+    // and Zod v4 (shape is object on both schema and _def)
     try {
-      const schemaDef = (this.schema as any)._def;
-      if (schemaDef && schemaDef.typeName === "ZodObject" && schemaDef.shape) {
-        const shape = schemaDef.shape();
-        if (shape && shape.guildId) {
-          (raw as any).guildId = id;
-        }
+      const schemaAny = this.schema as any;
+      // ZodObject schemas have a 'shape' property containing the field definitions
+      const shape = schemaAny.shape ?? schemaAny._def?.shape;
+      if (shape && typeof shape === "object" && "guildId" in shape) {
+        raw.guildId = id;
       }
-    } catch (error) {
+    } catch {
       // If we can't determine the schema shape, continue without guildId
       // This maintains backward compatibility
     }

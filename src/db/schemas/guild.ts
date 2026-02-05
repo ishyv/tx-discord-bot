@@ -27,14 +27,41 @@ export const DailyConfigSchema = z.object({
   dailyStreakCap: z.number().int().min(0).catch(10),
 });
 
-// Work config schema
+// Work config schema (Hybrid payout model: minted base + treasury-funded bonus)
 export const WorkConfigSchema = z.object({
   workRewardBase: z.number().int().catch(120),
+  workBaseMintReward: z.number().int().min(0).catch(100),
+  workBonusFromWorksMax: z.number().int().min(0).catch(100),
+  workBonusScaleMode: z.enum(["flat", "percent"]).catch("flat"),
   workCooldownMinutes: z.number().int().catch(30),
   workDailyCap: z.number().int().catch(5),
   workCurrencyId: z.string().catch("coins"),
   workPaysFromSector: EconomySectorEnum.catch(() => "works" as const),
   workFailureChance: z.number().min(0).max(1).catch(0.1),
+});
+
+// Store item schema
+export const StoreItemSchema = z.object({
+  itemId: z.string(),
+  name: z.string(),
+  buyPrice: z.number().min(0),
+  sellPrice: z.number().min(0),
+  stock: z.number(),
+  available: z.boolean(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  purchaseLimit: z.number().optional(),
+  requiredRole: z.string().optional(),
+});
+
+// Store catalog schema
+export const StoreCatalogDataSchema = z.object({
+  currencyId: z.string().catch("coin"),
+  items: z.record(z.string(), StoreItemSchema).catch(() => ({})),
+  active: z.boolean().catch(true),
+  taxRate: z.number().min(0).max(1).catch(0.05),
+  updatedAt: z.preprocess((val) => (typeof val === "string" ? new Date(val) : val), z.date()).catch(() => new Date()),
+  version: z.number().catch(0),
 });
 
 export enum Features {
@@ -135,6 +162,86 @@ export const ForumAutoReplySchema = z.object({
 export const AiConfigSchema = z.object({
   provider: z.string().catch(DEFAULT_PROVIDER_ID),
   model: z.string().catch(DEFAULT_GEMINI_MODEL),
+});
+
+// RPG Configuration Schemas
+export const RpgCombatConfigSchema = z.object({
+  critChance: z.number().min(0).max(1).catch(0.15),
+  blockChance: z.number().min(0).max(1).catch(0.25),
+  varianceMin: z.number().min(0).max(1).catch(0.85),
+  varianceMax: z.number().min(0).max(1).catch(1.15),
+  defenseReductionMin: z.number().min(0).max(1).catch(0.1),
+  defenseReductionMax: z.number().min(0).max(1).catch(0.5),
+  timeoutSeconds: z.number().int().min(30).catch(300),
+});
+
+export const RpgProcessingConfigSchema = z.object({
+  baseSuccessChance: z.number().min(0).max(1).catch(0.6),
+  luckCap: z.number().min(0).max(1).catch(0.25),
+  feePercent: z.number().min(0).max(1).catch(0.05),
+  minFee: z.number().int().min(0).catch(5),
+  maxFee: z.number().int().min(0).catch(100),
+});
+
+export const RpgGatheringConfigSchema = z.object({
+  durabilityMin: z.number().int().min(1).catch(8),
+  durabilityMax: z.number().int().min(1).catch(12),
+  yieldMin: z.number().int().min(1).catch(1),
+  yieldMax: z.number().int().min(1).catch(3),
+  tierBonusPerLevel: z.number().min(0).catch(0.5),
+});
+
+export const RpgUpgradeConfigSchema = z.object({
+  costs: z.record(z.string(), z.object({
+    money: z.number().int().min(0),
+    materials: z.array(z.object({
+      id: z.string(),
+      quantity: z.number().int().min(1),
+    })),
+  })).catch(() => ({
+    tier2: { money: 500, materials: [{ id: "iron_ore", quantity: 5 }] },
+    tier3: { money: 2000, materials: [{ id: "silver_ore", quantity: 5 }] },
+    tier4: { money: 10000, materials: [{ id: "gold_ore", quantity: 5 }] },
+  })),
+  maxTier: z.number().int().min(1).max(10).catch(4),
+  resetDurabilityOnUpgrade: z.boolean().catch(true),
+});
+
+export const RpgConfigSchema = z.object({
+  enabled: z.boolean().catch(true),
+  combat: RpgCombatConfigSchema.catch(() => ({
+    critChance: 0.15,
+    blockChance: 0.25,
+    varianceMin: 0.85,
+    varianceMax: 1.15,
+    defenseReductionMin: 0.1,
+    defenseReductionMax: 0.5,
+    timeoutSeconds: 300,
+  })),
+  processing: RpgProcessingConfigSchema.catch(() => ({
+    baseSuccessChance: 0.6,
+    luckCap: 0.25,
+    feePercent: 0.05,
+    minFee: 5,
+    maxFee: 100,
+  })),
+  gathering: RpgGatheringConfigSchema.catch(() => ({
+    durabilityMin: 8,
+    durabilityMax: 12,
+    yieldMin: 1,
+    yieldMax: 3,
+    tierBonusPerLevel: 0.5,
+  })),
+  upgrades: RpgUpgradeConfigSchema.catch(() => ({
+    costs: {
+      tier2: { money: 500, materials: [{ id: "iron_ore", quantity: 5 }] },
+      tier3: { money: 2000, materials: [{ id: "silver_ore", quantity: 5 }] },
+      tier4: { money: 10000, materials: [{ id: "gold_ore", quantity: 5 }] },
+    },
+    maxTier: 4,
+    resetDurabilityOnUpgrade: true,
+  })),
+  updatedAt: z.preprocess((val) => (typeof val === "string" ? new Date(val) : val), z.date()).catch(() => new Date()),
 });
 
 export const LinkSpamSchema = z.object({
@@ -266,6 +373,42 @@ export const GuildSchema = z.object({
       ],
     },
   })),
+  rpg: RpgConfigSchema.catch(() => ({
+    enabled: true,
+    combat: {
+      critChance: 0.15,
+      blockChance: 0.25,
+      varianceMin: 0.85,
+      varianceMax: 1.15,
+      defenseReductionMin: 0.1,
+      defenseReductionMax: 0.5,
+      timeoutSeconds: 300,
+    },
+    processing: {
+      baseSuccessChance: 0.6,
+      luckCap: 0.25,
+      feePercent: 0.05,
+      minFee: 5,
+      maxFee: 100,
+    },
+    gathering: {
+      durabilityMin: 8,
+      durabilityMax: 12,
+      yieldMin: 1,
+      yieldMax: 3,
+      tierBonusPerLevel: 0.5,
+    },
+    upgrades: {
+      costs: {
+        tier2: { money: 500, materials: [{ id: "iron_ore", quantity: 5 }] },
+        tier3: { money: 2000, materials: [{ id: "silver_ore", quantity: 5 }] },
+        tier4: { money: 10000, materials: [{ id: "gold_ore", quantity: 5 }] },
+      },
+      maxTier: 4,
+      resetDurabilityOnUpgrade: true,
+    },
+    updatedAt: new Date(),
+  })),
   // ...existing fields...
   crafting: z
     .object({
@@ -334,6 +477,9 @@ export const GuildSchema = z.object({
       })),
       work: WorkConfigSchema.catch(() => ({
         workRewardBase: 120,
+        workBaseMintReward: 100,
+        workBonusFromWorksMax: 100,
+        workBonusScaleMode: "flat" as const,
         workCooldownMinutes: 30,
         workDailyCap: 5,
         workCurrencyId: "coins",
@@ -381,6 +527,16 @@ export const GuildSchema = z.object({
             craft: 0,
           },
         })),
+      // Economy sectors for guild treasury
+      sectors: z
+        .object({
+          global: z.number().catch(0),
+          works: z.number().catch(0),
+          trade: z.number().catch(0),
+          tax: z.number().catch(0),
+        })
+        .optional()
+        .catch(() => ({ global: 0, works: 0, trade: 0, tax: 0 })),
       // ...other economy config fields (if any) can be added here...
     })
     .catch(() => ({
@@ -395,6 +551,9 @@ export const GuildSchema = z.object({
       },
       work: {
         workRewardBase: 120,
+        workBaseMintReward: 100,
+        workBonusFromWorksMax: 100,
+        workBonusScaleMode: "flat" as const,
         workCooldownMinutes: 30,
         workDailyCap: 5,
         workCurrencyId: "coins",
@@ -423,6 +582,7 @@ export const GuildSchema = z.object({
     })),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
+  store: StoreCatalogDataSchema.optional(),
 });
 
 export type Guild = z.infer<typeof GuildSchema>;
@@ -432,3 +592,8 @@ export type CoreChannelRecord = z.infer<typeof CoreChannelSchema>;
 export type ManagedChannelRecord = z.infer<typeof ManagedChannelSchema>;
 export type ForumAutoReplyRecord = z.infer<typeof ForumAutoReplySchema>;
 export type AiConfigRecord = z.infer<typeof AiConfigSchema>;
+export type RpgConfigRecord = z.infer<typeof RpgConfigSchema>;
+export type RpgCombatConfig = z.infer<typeof RpgCombatConfigSchema>;
+export type RpgProcessingConfig = z.infer<typeof RpgProcessingConfigSchema>;
+export type RpgGatheringConfig = z.infer<typeof RpgGatheringConfigSchema>;
+export type RpgUpgradeConfig = z.infer<typeof RpgUpgradeConfigSchema>;

@@ -28,12 +28,12 @@ import * as duration from "@/utils/ms";
 const options = {
   channel: createChannelOption({
     description: "Channel where TOPs reports will be published",
-    required: false,
+    required: true,
     channel_types: [ChannelType.GuildText],
   }),
   interval: createStringOption({
     description: "How often the report is sent (e.g. 24h, 3d, 1w)",
-    required: false,
+    required: true,
   }),
   size: createNumberOption({
     description: "Maximum number of elements per TOP (default 10)",
@@ -89,7 +89,15 @@ export default class ConfigTopsCommand extends SubCommand {
 
     const channel = ctx.options.channel;
     const intervalInput = ctx.options.interval;
-    if (!channel || !intervalInput) {
+    if (!channel || channel.type !== ChannelType.GuildText) {
+      await ctx.write({
+        content: "You must specify a valid text channel.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (!intervalInput) {
       await ctx.write({
         content:
           "You must specify a channel and an interval (e.g. `24h`, `3d`, `1w`).",

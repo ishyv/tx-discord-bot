@@ -81,6 +81,41 @@ El sistema genera recomendaciones automáticas basadas en umbrales:
 | Baja actividad | < 10 transacciones/día | warning |
 | Desbalance Work/Daily | ratio < 0.5 | info |
 
+## Hybrid Work Payout Model (Phase 11.x)
+
+El sistema de trabajo (`/work`) utiliza un modelo híbrido de pagos:
+
+### Componentes del Pago
+
+| Componente | Fuente | Inflacionario | Configuración |
+|------------|--------|---------------|---------------|
+| **Base Mint** | Se mintea nuevo | ✅ Sí | `workBaseMintReward` |
+| **Bonus Treasury** | Sector `works` | ❌ No (redistribución) | `workBonusFromWorksMax` |
+
+### Cómo funciona
+
+1. **Base Mint**: Siempre se paga, independientemente del estado del tesoro
+2. **Bonus**: Solo se paga si el sector `works` tiene fondos suficientes
+3. **Escalado**: El bono puede ser "flat" o "percent" según `workBonusScaleMode`
+
+### Configuración
+
+```
+/economy-config set-work-base-mint <amount>
+/economy-config set-work-bonus-max <amount>
+/economy-config set-work-bonus-mode <flat|percent>
+```
+
+### Impacto en Reportes
+
+- El **baseMint** se cuenta como inflación (nueva moneda)
+- El **bonusFromWorks** NO se cuenta como inflación (redistribución)
+- Los metadatos de auditoría incluyen:
+  - `baseMint`: monto base pagado
+  - `bonusFromWorks`: monto del bono del tesoro
+  - `isMinted`: true si hubo base mint
+  - `isRedistribution`: true si hubo bono
+
 ## Balance Knobs Checklist
 
 El reporte incluye una checklist de comandos para ajustar la economía:
@@ -89,9 +124,10 @@ El reporte incluye una checklist de comandos para ajustar la economía:
 ```
 /guild-economy
 ```
-- Ajustar `dailyReward` y `workRewardBase`
+- Ajustar `dailyReward` y `workBaseMintReward`
 - Reducir si hay inflación alta
 - Aumentar si hay deflación
+- Configurar `workBonusFromWorksMax` para incentivar fondos del sector works
 
 ### Tax & Fees
 ```

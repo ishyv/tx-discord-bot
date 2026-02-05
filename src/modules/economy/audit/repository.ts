@@ -52,9 +52,14 @@ const EconomyAuditEntrySchema = z.object({
   itemData: z
     .object({
       itemId: z.string(),
-      quantity: z.number(),
+      quantity: z.number().optional(),
       beforeQuantity: z.number().optional(),
       afterQuantity: z.number().optional(),
+      instanceId: z.string().optional(),
+      durability: z.number().optional(),
+      damage: z.number().optional(),
+      broken: z.boolean().optional(),
+      remainingDurability: z.number().optional(),
     })
     .optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),

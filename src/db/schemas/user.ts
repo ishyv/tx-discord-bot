@@ -15,6 +15,7 @@ import {
 } from "./progression";
 import { PerkStateSchema, type PerkStateData } from "./perks";
 import { EquipmentStateSchema, type EquipmentStateData } from "./equipment";
+import { RpgProfileSchema, type RpgProfileData } from "./rpg-profile";
 
 export const WarnSchema = z.object({
   reason: z.string().catch(""),
@@ -67,6 +68,13 @@ export const UserSchema = z.object({
       typeof ctx.input === "object" && ctx.input !== null ? ctx.input : {};
     return EconomyAccountSchema.parse(input);
   }) as z.ZodType<EconomyAccountData | undefined>,
+  // RPG Profile (lazy-initialized)
+  rpgProfile: RpgProfileSchema.optional().catch((ctx) => {
+    // Repair: parse the input with defaults instead of returning undefined
+    const input =
+      typeof ctx.input === "object" && ctx.input !== null ? ctx.input : {};
+    return RpgProfileSchema.parse(input);
+  }) as z.ZodType<RpgProfileData | undefined>,
   // Minigames state (cooldowns, daily limits)
   minigames: z
     .record(z.string(), z.unknown())
@@ -96,3 +104,4 @@ export const UserSchema = z.object({
 export type Warn = z.infer<typeof WarnSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type { EquipmentStateData } from "./equipment";
+export type { RpgProfileData } from "./rpg-profile";
