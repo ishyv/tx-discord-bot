@@ -15,6 +15,7 @@ import type { Collection, Document } from "mongodb";
 import { MongoStore } from "@/db/mongo-store";
 import { GuildStore, UserStore } from "@/db/repositories";
 import { z } from "zod";
+import { marketRepository } from "@/modules/market/repository";
 
 // ============================================================================
 // Configuration
@@ -394,6 +395,15 @@ export async function ensureStoreIndexes(): Promise<void> {
 }
 
 // ============================================================================
+// Market Indexes
+// ============================================================================
+
+export async function ensureMarketIndexes(): Promise<void> {
+  await marketRepository.ensureIndexes();
+  console.log("[EconomyDB] Market indexes ensured");
+}
+
+// ============================================================================
 // Achievements Indexes (collections: achievements_unlocked, achievements_progress, achievements_cosmetics)
 // ============================================================================
 
@@ -559,6 +569,7 @@ export async function ensureAllEconomyIndexes(): Promise<void> {
     { name: "equipment", fn: ensureEquipmentIndexes },
     { name: "crafting", fn: ensureCraftingIndexes },
     { name: "store", fn: ensureStoreIndexes },
+    { name: "market", fn: ensureMarketIndexes },
     { name: "achievements", fn: ensureAchievementsIndexes },
   ];
 
@@ -595,6 +606,7 @@ export async function getEconomyIndexStats(): Promise<Record<string, unknown>> {
   const votesCol = await getVotesCollection();
   const perkCol = await PerkStateStore.collection();
   const craftingCol = await CraftingStateStore.collection();
+  const marketCol = await marketRepository.collection();
   const unlockedCol = await AchievementUnlockedStore.collection();
   const progressCol = await AchievementProgressStore.collection();
   const cosmeticsCol = await AchievementCosmeticsStore.collection();
@@ -607,6 +619,7 @@ export async function getEconomyIndexStats(): Promise<Record<string, unknown>> {
     votesCol.indexes().catch(() => []),
     perkCol.indexes().catch(() => []),
     craftingCol.indexes().catch(() => []),
+    marketCol.indexes().catch(() => []),
     unlockedCol.indexes().catch(() => []),
     progressCol.indexes().catch(() => []),
     cosmeticsCol.indexes().catch(() => []),
@@ -626,15 +639,16 @@ export async function getEconomyIndexStats(): Promise<Record<string, unknown>> {
     votes: stats[4].map((i) => ({ name: i.name ?? "unknown", key: i.key })),
     perks: stats[5].map((i) => ({ name: i.name ?? "unknown", key: i.key })),
     crafting: stats[6].map((i) => ({ name: i.name ?? "unknown", key: i.key })),
-    achievementsUnlocked: stats[7].map((i) => ({
+    market: stats[7].map((i) => ({ name: i.name ?? "unknown", key: i.key })),
+    achievementsUnlocked: stats[8].map((i) => ({
       name: i.name ?? "unknown",
       key: i.key,
     })),
-    achievementsProgress: stats[8].map((i) => ({
+    achievementsProgress: stats[9].map((i) => ({
       name: i.name ?? "unknown",
       key: i.key,
     })),
-    achievementsCosmetics: stats[9].map((i) => ({
+    achievementsCosmetics: stats[10].map((i) => ({
       name: i.name ?? "unknown",
       key: i.key,
     })),

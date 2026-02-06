@@ -9,10 +9,52 @@ import type { GuildId } from "@/db/types";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 import type { CraftingRecipe, GuildRecipes } from "./types";
 import { DEFAULT_CRAFTING_RECIPES } from "./definitions";
+import { getContentRegistry } from "@/modules/content";
 
 interface CraftingConfigData {
   recipes?: Record<string, CraftingRecipe>;
   updatedAt?: string;
+}
+
+function contentRecipeToCraftingRecipe(contentRecipe: {
+  id: string;
+  name: string;
+  description: string;
+  type: "crafting" | "processing";
+  itemInputs: readonly { itemId: string; quantity: number }[];
+  itemOutputs: readonly { itemId: string; quantity: number }[];
+  currencyInput?: { currencyId: string; amount: number };
+  guildFee?: { currencyId: string; amount: number; sector: "global" | "works" | "trade" | "tax" };
+  requiredLevel?: number;
+  professionRequirement?: "miner" | "lumber";
+  tierRequirement?: number;
+  xpReward: number;
+  enabled: boolean;
+}): CraftingRecipe | null {
+  if (contentRecipe.type !== "crafting") {
+    return null;
+  }
+
+  return {
+    id: contentRecipe.id,
+    name: contentRecipe.name,
+    description: contentRecipe.description,
+    itemInputs: contentRecipe.itemInputs.map((input) => ({
+      itemId: input.itemId,
+      quantity: input.quantity,
+    })),
+    currencyInput: contentRecipe.currencyInput,
+    itemOutputs: contentRecipe.itemOutputs.map((output) => ({
+      itemId: output.itemId,
+      quantity: output.quantity,
+    })),
+    guildFee: contentRecipe.guildFee,
+    requiredLevel: contentRecipe.requiredLevel,
+    professionRequirement: contentRecipe.professionRequirement,
+    tierRequirement: contentRecipe.tierRequirement,
+    xpReward: contentRecipe.xpReward,
+    enabled: contentRecipe.enabled,
+  };
 }
 
 export interface CraftingRepo {
@@ -69,6 +111,16 @@ class CraftingRepoImpl implements CraftingRepo {
     // Start with defaults
     for (const recipe of DEFAULT_CRAFTING_RECIPES) {
       recipes[recipe.id] = recipe;
+    }
+
+    // Apply content recipes (content-first over legacy defaults)
+    const contentRegistry = getContentRegistry();
+    if (contentRegistry) {
+      for (const contentRecipe of contentRegistry.listRecipesByType("crafting")) {
+        const mapped = contentRecipeToCraftingRecipe(contentRecipe);
+        if (!mapped) continue;
+        recipes[mapped.id] = mapped;
+      }
     }
 
     // Apply guild overrides

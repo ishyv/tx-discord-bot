@@ -35,7 +35,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
 
     if (!action || !slug) {
       await ctx.write({
-        content: "Esta accion ya no es valida.",
+        content: "This action is no longer valid.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -44,7 +44,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     const messageId = ctx.interaction.message?.id;
     if (!messageId) {
       await ctx.write({
-        content: "No pude resolver el mensaje para esta accion.",
+        content: "Could not resolve the message for this action.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -53,7 +53,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     const session = getDeleteSession(messageId);
     if (!session) {
       await ctx.write({
-        content: "Esta accion expiro. Ejecuta el comando nuevamente.",
+        content: "This action expired. Run the command again.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -61,7 +61,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
 
     if (Date.now() > session.expiresAt) {
       clearDeleteSession(messageId);
-      await disableWithStatus(ctx, slug, "Expirado");
+      await disableWithStatus(ctx, slug, "Expired");
       return;
     }
 
@@ -71,7 +71,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
 
     if (!hasPermission) {
       await ctx.write({
-        content: "Necesitas ManageRoles o ser quien inicio la eliminacion.",
+        content: "You need ManageRoles permission or be the original requester.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -89,7 +89,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
         break;
       default:
         await ctx.write({
-          content: "Accion desconocida.",
+          content: "Unknown action.",
           flags: MessageFlags.Ephemeral,
         });
     }
@@ -115,7 +115,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
 
     if (!deleted) {
       await ctx.followup({
-        content: "No se pudo eliminar la regla. Intenta nuevamente.",
+        content: "Could not delete the rule. Try again.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -129,11 +129,11 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     });
 
     await logModerationAction(ctx.client, session.guildId, {
-      title: "Autorole eliminado",
-      description: `Regla \`${session.slug}\` eliminada`,
+      title: "Autorole Deleted",
+      description: `Rule \`${session.slug}\` deleted`,
       actorId: ctx.author.id,
     });
-    await disableWithStatus(ctx, session.slug, "Regla eliminada");
+    await disableWithStatus(ctx, session.slug, "Rule deleted");
   }
 
   private async handleCancel(
@@ -143,7 +143,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
   ) {
     await ctx.deferUpdate();
     clearDeleteSession(messageId);
-    await disableWithStatus(ctx, slug, "Cancelado");
+    await disableWithStatus(ctx, slug, "Canceled");
   }
 
   private async handlePurge(
@@ -165,16 +165,16 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
     });
 
     await logModerationAction(ctx.client, session.guildId, {
-      title: "Autorole purgado",
-      description: `Regla \`${session.slug}\` purgada`,
+      title: "Autorole Purged",
+      description: `Rule \`${session.slug}\` purged`,
       fields: [
         {
-          name: "Razones eliminadas",
+          name: "Grants removed",
           value: `${result.removedGrants}`,
           inline: true,
         },
         {
-          name: "Roles actualizados",
+          name: "Roles updated",
           value: `${result.roleRevocations}`,
           inline: true,
         },
@@ -187,7 +187,7 @@ export default class AutoroleDeleteButtons extends ComponentCommand {
       const baseEmbed = resp.embeds?.[0];
       const embed = new Embed(baseEmbed);
       embed.setFooter({
-        text: `Purgado: se eliminaron ${result.removedGrants} razones y se actualizaron ${result.roleRevocations} roles.`,
+        text: `Purged: removed ${result.removedGrants} grants and updated ${result.roleRevocations} roles.`,
       });
 
       await ctx.editResponse({
@@ -221,17 +221,17 @@ async function disableWithStatus(
 function buildDisabledRow(slug: string) {
   const confirm = new Button()
     .setCustomId(`autorole:delete:confirm:${slug}`)
-    .setLabel("Confirmar eliminacion")
+    .setLabel("Confirm deletion")
     .setStyle(ButtonStyle.Danger)
     .setDisabled(true);
   const purge = new Button()
     .setCustomId(`autorole:delete:purge:${slug}`)
-    .setLabel("Purgar asignaciones activas")
+    .setLabel("Purge active grants")
     .setStyle(ButtonStyle.Primary)
     .setDisabled(true);
   const cancel = new Button()
     .setCustomId(`autorole:delete:cancel:${slug}`)
-    .setLabel("Cancelar")
+    .setLabel("Cancel")
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(true);
 

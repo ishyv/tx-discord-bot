@@ -22,16 +22,10 @@ import {
   sanitizeItemId,
 } from "@/modules/economy";
 
-const itemChoices = Object.values(ITEM_DEFINITIONS).map((item) => ({
-  name: item.name,
-  value: item.id,
-}));
-
 const options = {
   item: createStringOption({
-    description: "Item to give",
+    description: "Item ID (e.g., iron_ore, copper_ingot)",
     required: true,
-    choices: itemChoices,
   }),
   quantity: createIntegerOption({
     description: "Number of items",

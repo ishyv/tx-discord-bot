@@ -107,7 +107,7 @@ class VotingServiceImpl implements VotingService {
     // Safety: Prevent self-voting
     if (voterId === targetId) {
       return ErrResult(
-        new VoteErrorClass("SELF_VOTE", "No puedes votarte a ti mismo."),
+        new VoteErrorClass("SELF_VOTE", "You cannot vote for yourself."),
       );
     }
 
@@ -115,7 +115,7 @@ class VotingServiceImpl implements VotingService {
     const configResult = await this.repo.getConfig(guildId);
     if (configResult.isErr()) {
       return ErrResult(
-        new VoteErrorClass("CONFIG_NOT_FOUND", "Configuración no encontrada."),
+        new VoteErrorClass("CONFIG_NOT_FOUND", "Configuration not found."),
       );
     }
     const config = configResult.unwrap();
@@ -124,7 +124,7 @@ class VotingServiceImpl implements VotingService {
       return ErrResult(
         new VoteErrorClass(
           "VOTING_DISABLED",
-          "El sistema de votos está desactivado.",
+          "Voting system is disabled.",
         ),
       );
     }
@@ -137,7 +137,7 @@ class VotingServiceImpl implements VotingService {
         return ErrResult(
           new VoteErrorClass(
             "FEATURE_DISABLED",
-            "Voting está deshabilitado en este servidor.",
+            "Voting is disabled in this server.",
           ),
         );
       }
@@ -147,18 +147,18 @@ class VotingServiceImpl implements VotingService {
     const voterResult = await economyAccountRepo.ensure(voterId);
     if (voterResult.isErr()) {
       return ErrResult(
-        new VoteErrorClass("UPDATE_FAILED", "No se pudo verificar tu cuenta."),
+        new VoteErrorClass("UPDATE_FAILED", "Could not verify your account."),
       );
     }
     const { account: voterAccount } = voterResult.unwrap();
     if (voterAccount.status === "blocked") {
       return ErrResult(
-        new VoteErrorClass("TARGET_BLOCKED", "Tu cuenta tiene restricciones."),
+        new VoteErrorClass("TARGET_BLOCKED", "Your account has restrictions."),
       );
     }
     if (voterAccount.status === "banned") {
       return ErrResult(
-        new VoteErrorClass("TARGET_BANNED", "Tu cuenta está baneada."),
+        new VoteErrorClass("TARGET_BANNED", "Your account is banned."),
       );
     }
 
@@ -166,7 +166,7 @@ class VotingServiceImpl implements VotingService {
     const targetResult = await economyAccountRepo.ensure(targetId);
     if (targetResult.isErr()) {
       return ErrResult(
-        new VoteErrorClass("TARGET_BLOCKED", "El objetivo no existe."),
+        new VoteErrorClass("TARGET_BLOCKED", "Target does not exist."),
       );
     }
     const { account: targetAccount } = targetResult.unwrap();
@@ -174,13 +174,13 @@ class VotingServiceImpl implements VotingService {
       return ErrResult(
         new VoteErrorClass(
           "TARGET_BLOCKED",
-          "El objetivo tiene restricciones.",
+          "The target account has restrictions.",
         ),
       );
     }
     if (targetAccount.status === "banned") {
       return ErrResult(
-        new VoteErrorClass("TARGET_BANNED", "El objetivo está baneado."),
+        new VoteErrorClass("TARGET_BANNED", "Target is banned."),
       );
     }
 
@@ -197,7 +197,7 @@ class VotingServiceImpl implements VotingService {
         return ErrResult(
           new VoteErrorClass(
             "TARGET_OPTED_OUT",
-            "Este usuario no acepta votos.",
+            "This user does not accept votes.",
           ),
         );
       }
@@ -210,7 +210,7 @@ class VotingServiceImpl implements VotingService {
     );
     if (voterStatsResult.isErr()) {
       return ErrResult(
-        new VoteErrorClass("UPDATE_FAILED", "Error al verificar límites."),
+        new VoteErrorClass("UPDATE_FAILED", "Error checking limits."),
       );
     }
     const voterStats = voterStatsResult.unwrap();
@@ -220,7 +220,7 @@ class VotingServiceImpl implements VotingService {
       return ErrResult(
         new VoteErrorClass(
           "DAILY_LIMIT_REACHED",
-          `Límite diario de ${config.dailyMaxVotes} votos alcanzado.`,
+          `Daily vote limit of ${config.dailyMaxVotes} reached.`,
         ),
       );
     }
@@ -236,7 +236,7 @@ class VotingServiceImpl implements VotingService {
       return ErrResult(
         new VoteErrorClass(
           "COOLDOWN_ACTIVE",
-          `Espera ${remaining}s antes de votar de nuevo.`,
+          `Wait ${remaining}s before voting again.`,
         ),
       );
     }
@@ -255,7 +255,7 @@ class VotingServiceImpl implements VotingService {
         return ErrResult(
           new VoteErrorClass(
             "SAME_VOTE_TYPE",
-            `Ya votaste ${type === "love" ? "💖" : "😤"} a este usuario. Cambia tu voto primero.`,
+            `You already voted ${type === "love" ? "💖" : "😤"} for this user. Change your vote first.`,
           ),
         );
       }
@@ -273,7 +273,7 @@ class VotingServiceImpl implements VotingService {
         return ErrResult(
           new VoteErrorClass(
             "REPEAT_COOLDOWN",
-            `Debes esperar ${remainingHours}h antes de votar a este usuario de nuevo.`,
+            `You must wait ${remainingHours}h before voting for this user again.`,
           ),
         );
       }
@@ -294,7 +294,7 @@ class VotingServiceImpl implements VotingService {
 
     if (voteResult.isErr()) {
       return ErrResult(
-        new VoteErrorClass("UPDATE_FAILED", "Error al registrar el voto."),
+        new VoteErrorClass("UPDATE_FAILED", "Error registering the vote."),
       );
     }
 
@@ -462,7 +462,7 @@ class VotingServiceImpl implements VotingService {
     if (voterId === targetId) {
       return OkResult({
         canVote: false,
-        reason: "No puedes votarte a ti mismo.",
+        reason: "You cannot vote for yourself.",
       });
     }
 
@@ -471,7 +471,7 @@ class VotingServiceImpl implements VotingService {
     if (configResult.isErr()) {
       return OkResult({
         canVote: false,
-        reason: "Configuración no disponible.",
+        reason: "Configuration unavailable.",
       });
     }
     const config = configResult.unwrap();
@@ -479,7 +479,7 @@ class VotingServiceImpl implements VotingService {
     if (!config.enabled) {
       return OkResult({
         canVote: false,
-        reason: "Sistema de votos desactivado.",
+        reason: "Voting system disabled.",
       });
     }
 
@@ -488,7 +488,7 @@ class VotingServiceImpl implements VotingService {
     if (voterResult.isErr() || voterResult.unwrap().account.status !== "ok") {
       return OkResult({
         canVote: false,
-        reason: "Tu cuenta tiene restricciones.",
+        reason: "Your account has restrictions.",
       });
     }
 
@@ -497,7 +497,7 @@ class VotingServiceImpl implements VotingService {
     if (targetResult.isErr() || targetResult.unwrap().account.status !== "ok") {
       return OkResult({
         canVote: false,
-        reason: "El objetivo no puede recibir votos.",
+        reason: "The target cannot receive votes.",
       });
     }
 
@@ -507,7 +507,7 @@ class VotingServiceImpl implements VotingService {
       if (targetPrefs.isOk() && targetPrefs.unwrap().optOut) {
         return OkResult({
           canVote: false,
-          reason: "El usuario no acepta votos.",
+          reason: "This user does not accept votes.",
         });
       }
     }
@@ -518,7 +518,7 @@ class VotingServiceImpl implements VotingService {
       statsResult.isOk() &&
       statsResult.unwrap().dailyVoteCount >= config.dailyMaxVotes
     ) {
-      return OkResult({ canVote: false, reason: "Límite diario alcanzado." });
+      return OkResult({ canVote: false, reason: "Daily limit reached." });
     }
 
     // Check cooldown
@@ -529,7 +529,7 @@ class VotingServiceImpl implements VotingService {
       if (Date.now() < cooldownEnd) {
         return OkResult({
           canVote: false,
-          reason: "En cooldown.",
+          reason: "On cooldown.",
           cooldownSeconds: Math.ceil((cooldownEnd - Date.now()) / 1000),
         });
       }
@@ -554,3 +554,6 @@ class VotingServiceImpl implements VotingService {
 }
 
 export const votingService: VotingService = new VotingServiceImpl(votingRepo);
+
+
+

@@ -146,7 +146,7 @@ onMessageCreate(async (message, client) => {
   await responseCache.set(cooldownKey, "1", COOLDOWN_TTL_MS);
 
   try {
-    const title = thread.name ?? "Sin título";
+    const title = thread.name ?? "Untitled";
     const rawContent = message.content ?? "";
     const content = truncate(rawContent, MAX_CONTENT_CHARS);
     const attachments = (message.attachments ?? []) as AttachmentLike[];
@@ -157,7 +157,7 @@ onMessageCreate(async (message, client) => {
 
     const prompt = buildPrompt({
       title,
-      author: message.author?.username ?? "usuario",
+      author: message.author?.username ?? "user",
       authorId: message.author?.id ?? "desconocido",
       content,
       attachmentSummary,
@@ -377,24 +377,24 @@ function buildPrompt(input: {
         : "desconocido";
 
   return [
-    "Eres un asistente tecnico para un foro de Discord.",
-    "Responde en el mismo idioma del post.",
-    `Idioma detectado: ${languageLabel}.`,
-    "Si faltan datos clave, pide solo el contexto minimo necesario con un tono natural.",
-    "Propon pasos concretos y diagnosticos.",
-    "No dejes backticks sin cerrar; si usas bloques de codigo, cierralos.",
-    "Incluye un disclaimer breve solo si el tema puede ser medico, legal, financiero o de alto riesgo.",
-    "Evita respuestas genericas o que no aporten valor.",
-    "Esta prohibido cualquier tema ilegal, inmoral o inapropiado.",
-    "Si el post esta vacio o no tiene suficiente informacion, pide mas detalles de forma educada.",
+    "You are a technical assistant for a Discord forum.",
+    "Reply in the same language as the post.",
+    `Detected language: ${languageLabel}.`,
+    "If key details are missing, ask only for the minimum required context in a natural tone.",
+    "Propose concrete diagnostic steps.",
+    "Do not leave unmatched backticks; if you use code blocks, close them.",
+    "Include a short disclaimer only when the topic may be medical, legal, financial, or otherwise high risk.",
+    "Avoid generic responses that provide no value.",
+    "Any illegal, immoral, or inappropriate topic is forbidden.",
+    "If the post is empty or lacks enough information, ask politely for more details.",
     "",
-    "Contexto del post:",
-    `- Titulo: ${input.title}`,
-    `- Autor: ${input.author} (${input.authorId})`,
-    `- Contenido: ${input.content || "(sin contenido)"}`,
-    `- Adjuntos: ${input.attachmentSummary}`,
-    `- Logs/codigo adjuntos o inline: ${input.hasCodeOrLogs ? "si" : "no"}`,
-    `- Post vacio: ${input.isEmpty ? "si" : "no"}`,
+    "Post context:",
+    `- Title: ${input.title}`,
+    `- Author: ${input.author} (${input.authorId})`,
+    `- Content: ${input.content || "(no content)"}`,
+    `- Attachments: ${input.attachmentSummary}`,
+    `- Attached or inline logs/code: ${input.hasCodeOrLogs ? "yes" : "no"}`,
+    `- Empty post: ${input.isEmpty ? "yes" : "no"}`,
   ].join("\n");
 }
 
@@ -474,7 +474,7 @@ async function handleForumContinuation(
 ): Promise<void> {
   if (ctx.author?.id !== options.authorId) {
     await ctx.write({
-      content: "Solo el autor del post puede continuar la respuesta.",
+      content: "Only the post author can continue the response.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -553,3 +553,4 @@ function logWarn(
 ) {
   client.logger?.warn?.(`[forum-auto-reply] ${reason}`, context);
 }
+

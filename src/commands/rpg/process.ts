@@ -15,18 +15,27 @@ import {
 } from "seyfert";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
-import { ITEM_DEFINITIONS } from "@/modules/inventory/definitions";
+import { getItemDefinition } from "@/modules/inventory/items";
 import { rpgProcessingService } from "@/modules/rpg/processing/service";
 import { rpgProfileService } from "@/modules/rpg/profile/service";
-import { canProcessMaterial, getProcessedMaterial } from "@/modules/rpg/processing/recipes";
+import {
+  canProcessMaterial,
+  getProcessedMaterial,
+  listProcessableMaterials,
+} from "@/modules/rpg/processing/recipes";
 
 // Build choices from processable materials
-const materialChoices = Object.entries(ITEM_DEFINITIONS)
-  .filter(([id]) => canProcessMaterial(id))
-  .map(([id, def]) => ({
-    name: def.name,
-    value: id,
-  }));
+const materialChoices = listProcessableMaterials()
+  .map((id) => ({
+    id,
+    def: getItemDefinition(id),
+  }))
+  .filter((entry) => !!entry.def)
+  .map((entry) => ({
+    name: entry.def!.name,
+    value: entry.id,
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 const options = {
   material: createStringOption({
@@ -81,8 +90,10 @@ export default class ProcessCommand extends Command {
     }
 
     const outputId = getProcessedMaterial(rawMaterialId);
-    const rawName = ITEM_DEFINITIONS[rawMaterialId]?.name ?? rawMaterialId;
-    const outputName = outputId ? (ITEM_DEFINITIONS[outputId]?.name ?? outputId) : "unknown";
+    const rawName = getItemDefinition(rawMaterialId)?.name ?? rawMaterialId;
+    const outputName = outputId
+      ? (getItemDefinition(outputId)?.name ?? outputId)
+      : "unknown";
 
     // Defer reply since processing may take time
     await ctx.deferReply();

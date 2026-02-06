@@ -50,7 +50,7 @@ export default class TriviaButtonHandler extends ComponentCommand {
     // Security: Verify the user clicking is the same who started
     if (actualUserId !== expectedUserId) {
       await ctx.write({
-        content: "❌ No puedes responder por otra persona.",
+        content: "❌ You cannot answer for another user.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -58,7 +58,7 @@ export default class TriviaButtonHandler extends ComponentCommand {
 
     if (!guildId) {
       await ctx.write({
-        content: "❌ Este comando solo funciona en servidores.",
+        content: "❌ This command only works in servers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -68,7 +68,7 @@ export default class TriviaButtonHandler extends ComponentCommand {
     const session = await minigameService.getTriviaSession(actualUserId, guildId);
     if (!session || session.questionId !== questionId) {
       await ctx.write({
-        content: "❌ Esta pregunta ya no está activa. Usa `/trivia` para empezar una nueva.",
+        content: "❌ This question is no longer active. Use `/trivia` to start a new one.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -79,7 +79,7 @@ export default class TriviaButtonHandler extends ComponentCommand {
       minigameService.clearTriviaSession(actualUserId, guildId);
       await ctx.deferUpdate();
       await ctx.editOrReply({
-        content: "⏰ ¡Se acabó el tiempo! La pregunta expiró.",
+        content: "⏰ Time is up! The question expired.",
         components: [],
         flags: MessageFlags.Ephemeral,
       });
@@ -89,7 +89,7 @@ export default class TriviaButtonHandler extends ComponentCommand {
     const answerIndex = ANSWER_MAP[answer.toLowerCase()];
     if (answerIndex === undefined) {
       await ctx.write({
-        content: "❌ Respuesta inválida.",
+        content: "❌ Invalid answer.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -109,13 +109,13 @@ export default class TriviaButtonHandler extends ComponentCommand {
     if (result.isErr()) {
       const error = result.error;
       const messages: Record<string, string> = {
-        COOLDOWN_ACTIVE: "⏳ Espera antes de jugar de nuevo.",
-        DAILY_LIMIT_REACHED: "📅 Has alcanzado el límite diario de trivia.",
-        CONFIG_NOT_FOUND: "⚙️ Trivia no está disponible.",
-        INVALID_CHOICE: "❌ Respuesta inválida.",
-        UPDATE_FAILED: "⚠️ Error al procesar tu respuesta.",
-        FEATURE_DISABLED: "🚫 Trivia está deshabilitado en este servidor.",
-        TIMEOUT_EXPIRED: "⏰ ¡Se acabó el tiempo! La pregunta expiró.",
+        COOLDOWN_ACTIVE: "⏳ Wait before playing again.",
+        DAILY_LIMIT_REACHED: "📅 You reached the daily trivia limit.",
+        CONFIG_NOT_FOUND: "⚙️ Trivia is not available.",
+        INVALID_CHOICE: "❌ Invalid answer.",
+        UPDATE_FAILED: "⚠️ Error while processing your answer.",
+        FEATURE_DISABLED: "🚫 Trivia is disabled in this server.",
+        TIMEOUT_EXPIRED: "⏰ Time is up! The question expired.",
       };
 
       await ctx.editOrReply({
@@ -138,51 +138,51 @@ export default class TriviaButtonHandler extends ComponentCommand {
     if (game.correct) {
       embed
         .setColor(EmbedColors.Green)
-        .setTitle("✅ ¡Correcto!")
+        .setTitle("✅ Correct!")
         .setDescription(
           `**${game.question}**\n\n` +
-          `✅ Tu respuesta: **${game.selectedAnswer}**\n` +
-          `📝 Respuesta correcta: **${game.correctAnswer}**\n\n` +
-          `💡 **Explicación:** ${game.explanation}`
+          `✅ Your answer: **${game.selectedAnswer}**\n` +
+          `📝 Correct answer: **${game.correctAnswer}**\n\n` +
+          `💡 **Explanation:** ${game.explanation}`
         );
 
       // Add reward breakdown
       const rewards = game.rewards;
       embed.addFields(
         {
-          name: "🎁 Recompensas",
+          name: "🎁 Rewards",
           value: `
 Base: ${display(rewards.base.currency)} | ${rewards.base.xp} XP
-Dificultad (${difficultyConfig.emoji} x${difficultyConfig.currencyMultiplier}): +${display(rewards.difficulty.currency)} | +${rewards.difficulty.xp} XP
-Racha (${game.streakAfter}🔥): +${display(rewards.streak.currency)} | +${rewards.streak.xp} XP
+Difficulty (${difficultyConfig.emoji} x${difficultyConfig.currencyMultiplier}): +${display(rewards.difficulty.currency)} | +${rewards.difficulty.xp} XP
+Streak (${game.streakAfter}🔥): +${display(rewards.streak.currency)} | +${rewards.streak.xp} XP
 **Total: ${display(rewards.total.currency)} | ${rewards.total.xp} XP**`,
         }
       );
 
       if (game.streakAfter > 1) {
-        embed.setFooter({ text: `🔥 Racha: ${game.streakAfter} | Nuevo balance: ${display(game.newBalance)}` });
+        embed.setFooter({ text: `🔥 Streak: ${game.streakAfter} | New balance: ${display(game.newBalance)}` });
       } else {
-        embed.setFooter({ text: `Nuevo balance: ${display(game.newBalance)}` });
+        embed.setFooter({ text: `New balance: ${display(game.newBalance)}` });
       }
     } else {
       embed
         .setColor(EmbedColors.Red)
-        .setTitle("❌ ¡Incorrecto!")
+        .setTitle("❌ Incorrect!")
         .setDescription(
           `**${game.question}**\n\n` +
-          `❌ Tu respuesta: **${game.selectedAnswer}**\n` +
-          `✅ Respuesta correcta: **${game.correctAnswer}**\n\n` +
-          `💡 **Explicación:** ${game.explanation}\n\n` +
-          `_Tu racha se ha reiniciado_ 🔥➡️0`
+          `❌ Your answer: **${game.selectedAnswer}**\n` +
+          `✅ Correct answer: **${game.correctAnswer}**\n\n` +
+          `💡 **Explanation:** ${game.explanation}\n\n` +
+          `_Your streak has been reset_ 🔥➡️0`
         )
-        .setFooter({ text: `Mejor suerte en la siguiente pregunta` });
+        .setFooter({ text: "Better luck on the next question." });
     }
 
-    // Add "Jugar de nuevo" button
+    // Add "Play again" button
     const row = new ActionRow<Button>().addComponents(
       new Button({
         custom_id: `trivia:again:${actualUserId}:${Date.now()}`,
-        label: "🎮 Jugar de nuevo",
+        label: "🎮 Play again",
         style: ButtonStyle.Success,
       })
     );
@@ -203,7 +203,7 @@ Racha (${game.streakAfter}🔥): +${display(rewards.streak.currency)} | +${rewar
     // Security: Verify the user clicking is the same who started
     if (actualUserId !== expectedUserId) {
       await ctx.write({
-        content: "❌ No puedes jugar por otra persona.",
+        content: "❌ You cannot play for another user.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -211,7 +211,7 @@ Racha (${game.streakAfter}🔥): +${display(rewards.streak.currency)} | +${rewar
 
     if (!guildId) {
       await ctx.write({
-        content: "❌ Este comando solo funciona en servidores.",
+        content: "❌ This command only works in servers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -225,11 +225,11 @@ Racha (${game.streakAfter}🔥): +${display(rewards.streak.currency)} | +${rewar
     if (result.isErr()) {
       const error = result.error;
       const messages: Record<string, string> = {
-        COOLDOWN_ACTIVE: "⏳ Espera antes de jugar de nuevo.",
-        DAILY_LIMIT_REACHED: "📅 Has alcanzado el límite diario de trivia.",
-        CONFIG_NOT_FOUND: "⚙️ Trivia no está disponible.",
-        UPDATE_FAILED: "⚠️ Error al iniciar trivia.",
-        FEATURE_DISABLED: "🚫 Trivia está deshabilitado en este servidor.",
+        COOLDOWN_ACTIVE: "⏳ Wait before playing again.",
+        DAILY_LIMIT_REACHED: "📅 You reached the daily trivia limit.",
+        CONFIG_NOT_FOUND: "⚙️ Trivia is not available.",
+        UPDATE_FAILED: "⚠️ Error while starting trivia.",
+        FEATURE_DISABLED: "🚫 Trivia is disabled in this server.",
       };
 
       await ctx.editOrReply({
@@ -248,13 +248,13 @@ Racha (${game.streakAfter}🔥): +${display(rewards.streak.currency)} | +${rewar
       .setColor(difficultyConfig.color)
       .setTitle(`${difficultyConfig.emoji} Trivia - ${difficultyConfig.name}`)
       .setDescription(
-        `**Categoría:** ${question.category}\n` +
-        `**Pregunta:** ${question.question}\n\n` +
+        `**Category:** ${question.category}\n` +
+        `**Question:** ${question.question}\n\n` +
         `${question.options.map((opt, i) => `${["A", "B", "C", "D"][i]}) ${opt}`).join("\n")}\n\n` +
-        `⏱️ Tiempo restante: ${timeRemaining}s`
+        `⏱️ Time remaining: ${timeRemaining}s`
       )
       .setFooter({ 
-        text: `Racha actual: ${streak} | ID: ${correlationId.slice(-8)}` 
+        text: `Current streak: ${streak} | ID: ${correlationId.slice(-8)}` 
       });
 
     // Create button row with answer options

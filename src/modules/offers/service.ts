@@ -111,7 +111,7 @@ async function updateReviewMessage(
     return OkResult(true);
   } catch (error) {
     client.logger?.warn?.(
-      "[offers] no se pudo actualizar el mensaje de revisión",
+      "[offers] failed to update review message",
       {
         error,
         guildId: offer.guildId,
@@ -141,7 +141,7 @@ async function publishOffer(
     // RISK: si esto falla, la oferta puede quedar "aprobada" pero no publicada.
     // El caller decide si degradar o si propagar el error.
     const message = await client.messages.write(approvedChannelId, {
-      content: `<@${offer.authorId}> Nueva oferta aprobada`,
+      content: `<@${offer.authorId}> New approved offer`,
       embeds: [embed],
       allowed_mentions: { users: [offer.authorId] },
     });
@@ -151,7 +151,7 @@ async function publishOffer(
       publishedMessageId: message.id,
     });
   } catch (error) {
-    client.logger?.warn?.("[offers] no se pudo publicar la oferta aprobada", {
+    client.logger?.warn?.("[offers] failed to publish approved offer", {
       error,
       guildId: offer.guildId,
       offerId: offer.id,
@@ -171,7 +171,7 @@ async function notifyAuthor(
       allowed_mentions: { parse: [] },
     });
   } catch (error) {
-    client.logger?.debug?.("[offers] no se pudo notificar al autor por DM", {
+    client.logger?.debug?.("[offers] failed to notify author via DM", {
       error,
       offerId: offer.id,
       authorId: offer.authorId,
@@ -227,9 +227,9 @@ export async function createOfferForReview(
   const { reviewChannelId } = await resolveChannels(client, params.guildId);
   if (!reviewChannelId) {
     await logModerationAction(client, params.guildId, {
-      title: "Ofertas: canal de revisión no configurado",
+      title: "Offers: review channel not configured",
       description:
-        "No se pudo crear la oferta porque falta el canal `offersReview` en la configuración.",
+        "Could not create the offer because the `offersReview` channel is missing from configuration.",
       color: EmbedColors.Red,
     });
     client.logger?.error?.("[offers] missing offersReview channel", {
@@ -276,7 +276,7 @@ export async function createOfferForReview(
     // ALT: persistir primero y luego crear mensaje. Se descartó porque necesitaríamos un flujo
     // de reconciliación para mensajes fallidos (UI sin messageId) y complica moderación.
     const message = await client.messages.write(reviewChannelId, {
-      content: `Nueva oferta enviada por <@${params.authorId}>`,
+      content: `New offer submitted by <@${params.authorId}>`,
       embeds: [statusEmbed, userEmbed],
       components: [buildReviewButtons(id, false)],
       allowed_mentions: { users: [params.authorId] },
@@ -299,7 +299,7 @@ export async function createOfferForReview(
         await client.messages.delete(message.id, reviewChannelId);
       } catch (deleteError) {
         client.logger?.warn?.(
-          "[offers] no se pudo eliminar el mensaje de revisión tras fallo de DB",
+          "[offers] failed to delete review message after DB failure",
           {
             deleteError,
             guildId: params.guildId,
@@ -338,7 +338,7 @@ export async function editOfferContent(
       client,
       { ...offer, ...updated },
       "PENDING_REVIEW",
-      "Actualizada por el autor",
+      "Updated by author",
       false,
     );
   }
@@ -368,7 +368,7 @@ export async function withdrawOffer(
       client,
       { ...offer, ...updated },
       "WITHDRAWN",
-      "Retirada por el autor",
+      "Withdrawn by author",
       true,
     );
   }
@@ -407,9 +407,9 @@ export async function approveOffer(
 
   if (!approvedChannelId) {
     await logModerationAction(client, updated.guildId, {
-      title: "Ofertas: canal de aprobadas no configurado",
+      title: "Offers: approved channel not configured",
       description:
-        "La oferta no se pudo publicar porque falta el canal `approvedOffers` en la configuración.",
+        "The offer could not be published because the `approvedOffers` channel is missing in configuration.",
       color: EmbedColors.Red,
     });
   }
@@ -422,7 +422,7 @@ export async function approveOffer(
       offerId: updated.id,
       authorTag: `<@${updated.authorId}>`,
       includeMeta: false,
-      note: "Aprobada por moderación",
+      note: "Approved by moderation",
     }),
     approvedChannelId,
   );
@@ -444,21 +444,21 @@ export async function approveOffer(
   await notifyAuthor(
     client,
     updated,
-    "Tu oferta fue aprobada y publicada en el canal configurado. ¡Gracias por compartir!",
+    "Your offer was approved and published in the configured channel. Thanks for sharing!",
   );
 
   if (generalLogsId) {
     await logModerationAction(client, updated.guildId, {
-      title: "Oferta aprobada",
-      description: `ID: \`${updated.id}\`\nAutor: <@${updated.authorId}>`,
+      title: "Offer approved",
+      description: `ID: \`${updated.id}\`\nAuthor: <@${updated.authorId}>`,
       fields: [
         publishData.publishedChannelId
           ? {
-              name: "Canal",
+              name: "Channel",
               value: `<#${publishData.publishedChannelId}>`,
               inline: true,
             }
-          : { name: "Canal", value: "No configurado", inline: true },
+          : { name: "Channel", value: "Not configured", inline: true },
       ],
       actorId: moderatorId,
       color: EmbedColors.Green,
@@ -499,16 +499,16 @@ export async function rejectOffer(
   await notifyAuthor(
     client,
     updated,
-    `Tu oferta fue rechazada.${reason ? ` Motivo: ${reason}` : ""}`,
+    `Your offer was rejected.${reason ? ` Reason: ${reason}` : ""}`,
   );
 
   await logModerationAction(client, updated.guildId, {
-    title: "Oferta rechazada",
+    title: "Offer rejected",
     description: `ID: \`${updated.id}\``,
     fields: [
-      { name: "Autor", value: `<@${updated.authorId}>`, inline: true },
-      { name: "Moderador", value: `<@${moderatorId}>`, inline: true },
-      reason ? { name: "Motivo", value: reason, inline: false } : null,
+      { name: "Author", value: `<@${updated.authorId}>`, inline: true },
+      { name: "Moderator", value: `<@${moderatorId}>`, inline: true },
+      reason ? { name: "Reason", value: reason, inline: false } : null,
     ].filter(Boolean) as Array<{
       name: string;
       value: string;
@@ -553,16 +553,19 @@ export async function requestOfferChanges(
   await notifyAuthor(
     client,
     updated,
-    `Se solicitaron cambios en tu oferta. Detalles: ${note}`,
+    `Changes were requested in your offer. Details: ${note}`,
   );
 
   await logModerationAction(client, updated.guildId, {
-    title: "Cambios solicitados en oferta",
-    description: `ID: \`${updated.id}\`\nAutor: <@${updated.authorId}>`,
-    fields: [{ name: "Moderador", value: `<@${moderatorId}>`, inline: true }],
+    title: "Changes requested on offer",
+    description: `ID: \`${updated.id}\`\nAuthor: <@${updated.authorId}>`,
+    fields: [{ name: "Moderator", value: `<@${moderatorId}>`, inline: true }],
     actorId: moderatorId,
     color: EmbedColors.Orange,
   });
 
   return OkResult(updated);
 }
+
+
+

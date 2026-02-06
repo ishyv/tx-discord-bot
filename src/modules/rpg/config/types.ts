@@ -76,6 +76,33 @@ export interface RpgUpgradeConfig {
   resetDurabilityOnUpgrade: boolean;
 }
 
+/** Starter kit item definition. */
+export interface StarterKitItem {
+  /** Item ID. */
+  id: string;
+  /** Quantity to grant. */
+  qty: number;
+}
+
+/** Starter kit definition for a path (miner/lumber). */
+export interface StarterKitDefinition {
+  /** Tool item ID to grant. */
+  toolId: string;
+  /** Additional gear items to grant. */
+  gear: StarterKitItem[];
+}
+
+/** Onboarding configuration. */
+export interface RpgOnboardingConfig {
+  /** Whether onboarding is enabled. */
+  enabled: boolean;
+  /** Starter kit definitions by path. */
+  starterKits: {
+    miner: StarterKitDefinition;
+    lumber: StarterKitDefinition;
+  };
+}
+
 /** Complete RPG configuration. */
 export interface RpgConfig {
   /** Guild ID. */
@@ -90,6 +117,8 @@ export interface RpgConfig {
   gathering: RpgGatheringConfig;
   /** Upgrades configuration. */
   upgrades: RpgUpgradeConfig;
+  /** Onboarding configuration (optional, defaults applied if missing). */
+  onboarding?: RpgOnboardingConfig;
   /** Last updated timestamp. */
   updatedAt: Date;
 }
@@ -112,7 +141,7 @@ export interface ConfigUpdateInput {
   /** Actor ID (who made the change). */
   actorId: string;
   /** Config category being updated. */
-  category: "combat" | "processing" | "gathering" | "upgrades" | "enabled";
+  category: "combat" | "processing" | "gathering" | "upgrades" | "enabled" | "onboarding";
   /** Field being updated. */
   field: string;
   /** Previous value. */

@@ -25,7 +25,7 @@ import { UserStore } from "@/db/repositories/users";
 import { ErrResult, OkResult, type Result } from "@/utils/result";
 import type { UserId } from "@/db/types";
 import type { CurrencyInventory } from "../currency";
-import type { ItemInventory } from "@/modules/inventory/inventory";
+import { normalizeModernInventory } from "@/modules/inventory/inventory";
 import {
   type EconomyAccount,
   type AccountEnsureResult,
@@ -138,7 +138,7 @@ export interface EconomyAccountService {
 }
 
 class EconomyAccountServiceImpl implements EconomyAccountService {
-  constructor(private repo: EconomyAccountRepo) {}
+  constructor(private repo: EconomyAccountRepo) { }
 
   async ensureAccount(
     userId: UserId,
@@ -248,7 +248,7 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
       return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
     }
 
-    const inventory = (user.inventory ?? {}) as ItemInventory;
+    const inventory = normalizeModernInventory(user.inventory);
     const view = buildInventorySummary(inventory);
 
     this.repo.touchActivity(userId);
@@ -283,7 +283,7 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
       return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
     }
 
-    const inventory = (user.inventory ?? {}) as ItemInventory;
+    const inventory = normalizeModernInventory(user.inventory);
     const view = buildInventoryPage(inventory, options);
 
     this.repo.touchActivity(userId);
@@ -321,7 +321,7 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
     }
 
     const currencyInventory = (user.currency ?? {}) as CurrencyInventory;
-    const itemInventory = (user.inventory ?? {}) as ItemInventory;
+    const itemInventory = normalizeModernInventory(user.inventory);
     let progressionView = null;
 
     if (options?.guildId) {

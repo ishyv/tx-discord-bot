@@ -282,12 +282,26 @@ export function buildBankEmbed(
 // ============================================================================
 
 /** Build a single inventory item line. */
+/** Build a single inventory item line. */
 export function buildInventoryItemLine(
   item: InventoryPageView["items"][number],
   showDescription = false,
 ): string {
   const emoji = item.emoji || "📦";
   const name = item.name || item.id;
+
+  if (item.isInstanceBased && item.instances && item.instances.length > 0) {
+    return item.instances
+      .map((inst) => {
+        const shortId = inst.instanceId.slice(-6);
+        const max = inst.maxDurability || 100;
+        const percent = (inst.durability / max) * 100;
+        const bar = renderProgressBar(percent, 5);
+        return `${emoji} **${name}** \`#${shortId}\` ${bar} \`${inst.durability}/${max}\``;
+      })
+      .join("\n");
+  }
+
   let line = `${emoji} **${name}** x${formatNumber(item.quantity)}`;
   if (showDescription && item.description) {
     line += `\n   *${item.description}*`;

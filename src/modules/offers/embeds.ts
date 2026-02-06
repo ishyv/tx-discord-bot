@@ -11,11 +11,11 @@ import { EmbedColors } from "seyfert/lib/common";
 import type { Offer, OfferDetails, OfferStatus } from "./types";
 
 export const STATUS_LABEL: Record<OfferStatus, string> = {
-  PENDING_REVIEW: "Pendiente de revisión",
-  APPROVED: "Aprobada",
-  REJECTED: "Rechazada",
-  CHANGES_REQUESTED: "Cambios solicitados",
-  WITHDRAWN: "Retirada por el autor",
+  PENDING_REVIEW: "Pending review",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  CHANGES_REQUESTED: "Changes requested",
+  WITHDRAWN: "Withdrawn by author",
 };
 
 export const STATUS_COLOR: Record<OfferStatus, number> = {
@@ -62,24 +62,24 @@ export function buildOfferEmbed(
 
   if (details.requirements) {
     fields.push({
-      name: "Requisitos",
+      name: "Requirements",
       value: details.requirements,
       inline: false,
     });
   }
   if (details.workMode) {
-    fields.push({ name: "Modalidad", value: details.workMode, inline: true });
+    fields.push({ name: "Work mode", value: details.workMode, inline: true });
   }
   if (details.salary) {
     fields.push({
-      name: "Rango salarial",
+      name: "Salary range",
       value: details.salary,
       inline: true,
     });
   }
   if (details.location) {
     fields.push({
-      name: "Ubicación / zona horaria",
+      name: "Location / time zone",
       value: details.location,
       inline: true,
     });
@@ -87,28 +87,28 @@ export function buildOfferEmbed(
 
   const labels = summarizeList(details.labels);
   if (labels) {
-    fields.push({ name: "Etiquetas", value: labels, inline: false });
+    fields.push({ name: "Tags", value: labels, inline: false });
   }
 
   if (details.contact) {
-    fields.push({ name: "Contacto", value: details.contact, inline: false });
+    fields.push({ name: "Contact", value: details.contact, inline: false });
   }
 
   if (opts.includeMeta) {
     fields.push({
-      name: "Autor",
+      name: "Author",
       value: opts.authorTag,
       inline: true,
     });
     fields.push({
-      name: "Estado",
+      name: "Status",
       value: STATUS_LABEL[opts.status],
       inline: true,
     });
   }
 
   if (opts.note) {
-    fields.push({ name: "Nota", value: opts.note, inline: false });
+    fields.push({ name: "Note", value: opts.note, inline: false });
   }
 
   if (fields.length > 0) {
@@ -125,31 +125,31 @@ export function buildStatusEmbed(
   note?: string | null,
 ): Embed {
   const embed = new Embed()
-    .setTitle(`Oferta ${STATUS_LABEL[status]}`)
+    .setTitle(`Offer ${STATUS_LABEL[status]}`)
     .setColor(STATUS_COLOR[status] ?? EmbedColors.Blurple)
     .setFooter({
       text: `ID: ${offer.id} · ${STATUS_LABEL[status]}`,
     })
     .addFields([
-      { name: "Autor", value: `<@${offer.authorId}>`, inline: true },
-      { name: "Estado", value: STATUS_LABEL[status], inline: true },
+      { name: "Author", value: `<@${offer.authorId}>`, inline: true },
+      { name: "Status", value: STATUS_LABEL[status], inline: true },
       {
-        name: "Creada",
+        name: "Created",
         value: offer.createdAt
           ? `<t:${Math.floor(offer.createdAt.getTime() / 1000)}:R>`
-          : "N/D",
+          : "N/A",
         inline: true,
       },
     ]);
 
   if (note) {
-    embed.addFields([{ name: "Nota", value: note, inline: false }]);
+    embed.addFields([{ name: "Note", value: note, inline: false }]);
   }
 
   return embed;
 }
 
-/** Reconstruye el embed del usuario desde los datos guardados. */
+/** Reconstruye el embed del user desde los datos guardados. */
 export function getUserEmbedFromOffer(offer: Offer): Embed {
   const embedData = (offer.embed ?? {}) as Partial<APIEmbed>;
   return new Embed(embedData);
@@ -162,21 +162,23 @@ export function buildReviewButtons(
 ): ActionRow<Button> {
   const accept = new Button()
     .setCustomId(`offer:accept:${offerId}`)
-    .setLabel("✅ Aceptar")
+    .setLabel("✅ Accept")
     .setStyle(ButtonStyle.Success)
     .setDisabled(disabled);
 
   const reject = new Button()
     .setCustomId(`offer:reject:${offerId}`)
-    .setLabel("❌ Rechazar")
+    .setLabel("❌ Reject")
     .setStyle(ButtonStyle.Danger)
     .setDisabled(disabled);
 
   const requestChanges = new Button()
     .setCustomId(`offer:changes:${offerId}`)
-    .setLabel("✏️ Pedir cambios")
+    .setLabel("✏️ Request changes")
     .setStyle(ButtonStyle.Primary)
     .setDisabled(disabled);
 
   return new ActionRow<Button>().addComponents(accept, reject, requestChanges);
 }
+
+

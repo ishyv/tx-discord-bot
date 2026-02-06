@@ -133,7 +133,7 @@ export async function assertFeatureEnabled(
   await ctx.write({
     content:
       message ??
-      "Esta caracteristica esta deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.",
+      "This feature is disabled in this server. An administrator can enable it from the dashboard.",
     flags: MessageFlags.Ephemeral,
   });
   return false;

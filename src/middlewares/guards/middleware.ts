@@ -21,9 +21,9 @@ import { resolveRoleActionPermission } from "@/modules/guild-roles";
 import { isFeatureEnabled } from "@/modules/features";
 
 const DEFAULT_PERMISSION_DENIED_MESSAGE =
-  "[!] No tienes permisos suficientes para ejecutar este comando.";
+  "[!] You do not have sufficient permissions to execute this command.";
 const DEFAULT_OVERRIDE_DENIED_MESSAGE =
-  "[!] Un override configurado en el bot bloquea este comando.";
+  "[!] A bot-configured override is blocking this command.";
 
 /**
  * Guard middleware implementation.
@@ -61,7 +61,7 @@ export const guardMiddleware = createMiddleware<void>(
       const enabled = await isFeatureEnabled(guildId, metadata.feature as any);
       if (!enabled) {
         await context.write({
-          content: `Esta caracteristica (\`${metadata.feature}\`) esta deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.`,
+          content: `This feature (\`${metadata.feature}\`) is disabled in this server. An administrator can enable it from the dashboard.`,
           flags: MessageFlags.Ephemeral,
         });
         return stop("Feature disabled");

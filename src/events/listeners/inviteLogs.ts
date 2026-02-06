@@ -55,17 +55,17 @@ onInviteCreate(async (invite, client) => {
   const expiresAt = maxAge && maxAge > 0 ? createdSeconds + maxAge : null;
 
   const lines = [
-    `Usuario: ${userId ? `<@${userId}>` : "Desconocido"}`,
+    `User: ${userId ? `<@${userId}>` : "Desconocido"}`,
     `Invitacion: ${code ? `https://discord.gg/${code}` : "desconocida"}`,
-    `Canal: ${channelId ? `<#${channelId}>` : "desconocido"}`,
+    `Channel: ${channelId ? `<#${channelId}>` : "desconocido"}`,
     `Duracion: ${formatDuration(maxAge)}`,
     `Creada: <t:${createdSeconds}:f>`,
   ];
 
   if (expiresAt) {
-    lines.push(`Expira: <t:${expiresAt}:R>`);
+    lines.push(`Expires: <t:${expiresAt}:R>`);
   } else {
-    lines.push("Expira: Nunca");
+    lines.push("Expires: Nunca");
   }
 
   await logModerationAction(
@@ -79,3 +79,4 @@ onInviteCreate(async (invite, client) => {
     "generalLogs",
   );
 });
+

@@ -440,7 +440,7 @@ export class AutoroleService {
       const roleName = role.name;
 
       const guild = await client.guilds.fetch(rule.guildId).catch(() => null);
-      const guildName = guild?.name ?? "el servidor";
+      const guildName = guild?.name ?? "the server";
       const duration = rule.durationMs ? formatMs(rule.durationMs, true) : null;
 
       const lines = [
@@ -462,3 +462,4 @@ export class AutoroleService {
     }
   }
 }
+

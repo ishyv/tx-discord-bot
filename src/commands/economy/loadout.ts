@@ -97,66 +97,66 @@ export default class LoadoutCommand extends Command {
               typeof v === "number" && v < 1 && v > 0
                 ? `+${(v * 100).toFixed(0)}%`
                 : `+${v}`;
-            switch (k) {
-              case "luck":
-                return `${valueText} suerte`;
-              case "workBonusPct":
-                return `${valueText} trabajo`;
-              case "shopDiscountPct":
-                return `${valueText} descuento`;
-              case "weightCap":
-                return `${valueText} peso`;
-              case "slotCap":
-                return `${valueText} slots`;
-              case "dailyBonusCap":
-                return `${valueText} racha`;
-              default:
-                return "";
-            }
+              switch (k) {
+                case "luck":
+                  return `${valueText} luck`;
+                case "workBonusPct":
+                  return `${valueText} work`;
+                case "shopDiscountPct":
+                  return `${valueText} discount`;
+                case "weightCap":
+                  return `${valueText} weight`;
+                case "slotCap":
+                  return `${valueText} slots`;
+                case "dailyBonusCap":
+                  return `${valueText} streak`;
+                default:
+                  return "";
+              }
           })
           .filter(Boolean)
           .join(", ");
 
         embed.addFields({
           name: slotName,
-          value: `${item.emoji} **${item.name}**\n📊 ${statsText || "Sin stats"}`,
+          value: `${item.emoji} **${item.name}**\n📊 ${statsText || "No stats"}`,
           inline: true,
         });
       } else {
         embed.addFields({
           name: slotName,
-          value: "*Vacío*",
+          value: "*Empty*",
           inline: true,
         });
       }
     }
 
     // Stats summary
-    const totalStatsText = [
-      stats.luck > 0 ? `🍀 Suerte: +${stats.luck}` : "",
-      stats.workBonusPct > 0
-        ? `🛠️ Trabajo: +${(stats.workBonusPct * 100).toFixed(0)}%`
-        : "",
-      stats.shopDiscountPct > 0
-        ? `🏷️ Descuento: ${(stats.shopDiscountPct * 100).toFixed(0)}%`
-        : "",
-      stats.dailyBonusCap > 0 ? `📅 Racha: +${stats.dailyBonusCap}` : "",
-      stats.weightCap > 0 ? `⚖️ Peso: +${stats.weightCap}` : "",
-      stats.slotCap > 0 ? `📦 Slots: +${stats.slotCap}` : "",
-    ]
+      const totalStatsText = [
+        stats.luck > 0 ? `🍀 Luck: +${stats.luck}` : "",
+        stats.workBonusPct > 0
+          ? `🛠️ Work: +${(stats.workBonusPct * 100).toFixed(0)}%`
+          : "",
+        stats.shopDiscountPct > 0
+          ? `🏷️ Discount: ${(stats.shopDiscountPct * 100).toFixed(0)}%`
+          : "",
+        stats.dailyBonusCap > 0 ? `📅 Streak: +${stats.dailyBonusCap}` : "",
+        stats.weightCap > 0 ? `⚖️ Weight: +${stats.weightCap}` : "",
+        stats.slotCap > 0 ? `📦 Slots: +${stats.slotCap}` : "",
+      ]
       .filter(Boolean)
       .join("\n");
 
     if (totalStatsText) {
-      embed.addFields({
-        name: "📊 Stats Totales",
-        value: totalStatsText,
-        inline: false,
-      });
+        embed.addFields({
+          name: "📊 Total Stats",
+          value: totalStatsText,
+          inline: false,
+        });
     }
 
     const equippedCount = equipped.length;
-    embed.setFooter({ text: `${equippedCount}/7 slots ocupados` });
+    embed.setFooter({ text: `${equippedCount}/7 slots occupied` });
 
     await ctx.write({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }

@@ -6,7 +6,7 @@
  *
  * Alcance: solo constantes y tipos derivados; no contiene I/O, clientes ni logica de negocio.
  */
-export const DEFAULT_NO_API_RESPONSE = "Mejor comamos un poco de sushi! ??";
+export const DEFAULT_NO_API_RESPONSE = "No AI provider is configured right now.";
 
 export const PROVIDER_IDS = ["gemini", "openai"] as const;
 export type AIProviderId = (typeof PROVIDER_IDS)[number];
@@ -28,6 +28,8 @@ export const DEFAULT_TOP_K = 35;
 export const OPENAI_REQUEST_TIMEOUT_MS = 45_000;
 
 export const TRUNCATION_NOTICE =
-  "[La respuesta se corto por limite de tokens. Puedes pedir que continue.]";
+  "[The response was cut by token limits. You can ask to continue.]";
 export const SAFETY_BLOCK_MESSAGE =
-  "La respuesta fue bloqueada por filtros de seguridad.";
+  "The response was blocked by safety filters.";
+
+

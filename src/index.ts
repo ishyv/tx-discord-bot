@@ -31,6 +31,7 @@ import {
 	hasCriticalIssues,
 } from "@/dev/commandPreflight";
 import { prettyPrintDiscord50035 } from "@/dev/prettyCommandRegistrationError";
+import { loadContentRegistryOrThrow } from "@/modules/content";
 
 /**
  * Extend the interaction context with helpers that are used across commands.
@@ -70,6 +71,8 @@ client.setServices({
  */
 async function bootstrap(): Promise<void> {
   console.log("[bootstrap] Starting bot...");
+  await loadContentRegistryOrThrow();
+  console.log("[bootstrap] Content packs loaded successfully.");
   await getDb(); // initialize Mongo connection once at startup
   await client.start();
 
@@ -117,6 +120,15 @@ async function bootstrap(): Promise<void> {
 
 bootstrap().catch((error) => {
   console.error("[bootstrap] Failed to start bot:", error);
+  if (error && typeof error === "object" && "details" in (error as Record<string, unknown>)) {
+    const details = (error as { details?: unknown }).details;
+    if (Array.isArray(details)) {
+      for (const detail of details) {
+        console.error(`[bootstrap]   - ${String(detail)}`);
+      }
+    }
+  }
+  process.exit(1);
 });
 
 declare module "seyfert" {

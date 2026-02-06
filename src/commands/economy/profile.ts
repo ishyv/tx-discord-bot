@@ -37,7 +37,7 @@ const economyService = createEconomyAccountService(economyAccountRepo);
 
 @Declare({
   name: "profile",
-  description: "Muestra tu perfil económico completo.",
+  description: "📊 Show your economy profile (balance, inventory, achievements). For RPG profile use /rpg profile",
 })
 @BindDisabled(Features.Economy)
 @Cooldown({
@@ -167,7 +167,7 @@ export default class ProfileCommand extends Command {
             const totalVotes = stats.loveCount + stats.hateCount;
             if (totalVotes > 0) {
               embed.addFields({
-                name: "💝 Reputación",
+                name: "💝 Reputation",
                 value:
                   formatVoteCounts(stats.loveCount, stats.hateCount) +
                   `\nRatio: ${calculateLoveRatio(stats.loveCount, stats.hateCount)}% 💝`,

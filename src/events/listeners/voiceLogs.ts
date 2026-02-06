@@ -15,7 +15,7 @@ import { logModerationAction } from "@/utils/moderationLogger";
 const now = (): number => Math.floor(Date.now() / 1000);
 
 const formatUser = (userId: string | null | undefined): string =>
-  userId ? `<@${userId}>` : "Usuario desconocido";
+  userId ? `<@${userId}>` : "Unknown user";
 
 onVoiceStateUpdate(async (payload, client) => {
   const [state, oldState] = Array.isArray(payload) ? payload : [];
@@ -36,10 +36,10 @@ onVoiceStateUpdate(async (payload, client) => {
       client,
       guildId,
       {
-        title: "Salida de canal de voz",
+        title: "Left voice channel",
         description: [
-          `Usuario: ${formatUser(userId)}`,
-          `Canal: <#${oldChannelId}>`,
+          `User: ${formatUser(userId)}`,
+          `Channel: <#${oldChannelId}>`,
           `Hora: <t:${now()}:f>`,
         ].join("\n"),
         color: EmbedColors.Red,
@@ -53,10 +53,10 @@ onVoiceStateUpdate(async (payload, client) => {
       client,
       guildId,
       {
-        title: "Ingreso a canal de voz",
+        title: "Joined voice channel",
         description: [
-          `Usuario: ${formatUser(userId)}`,
-          `Canal: <#${newChannelId}>`,
+          `User: ${formatUser(userId)}`,
+          `Channel: <#${newChannelId}>`,
           `Hora: <t:${now()}:f>`,
         ].join("\n"),
         color: EmbedColors.Green,
@@ -67,14 +67,14 @@ onVoiceStateUpdate(async (payload, client) => {
 
   if (serverMute !== prevServerMute) {
     await logModerationAction(client, guildId, {
-      title: serverMute ? "Usuario muteado en voz" : "Mute de voz removido",
+      title: serverMute ? "User voice-muted" : "Voice mute removed",
       description: [
-        `Usuario: ${formatUser(userId)}`,
+        `User: ${formatUser(userId)}`,
         newChannelId
-          ? `Canal: <#${newChannelId}>`
+          ? `Channel: <#${newChannelId}>`
           : oldChannelId
-            ? `Canal: <#${oldChannelId}>`
-            : "Canal desconocido",
+            ? `Channel: <#${oldChannelId}>`
+            : "Unknown channel",
         `Hora: <t:${now()}:f>`,
       ].join("\n"),
       color: serverMute ? EmbedColors.Red : EmbedColors.Green,
@@ -84,15 +84,15 @@ onVoiceStateUpdate(async (payload, client) => {
   if (serverDeaf !== prevServerDeaf) {
     await logModerationAction(client, guildId, {
       title: serverDeaf
-        ? "Usuario ensordecido en voz"
+        ? "User voice-deafened"
         : "Ensordecimiento removido",
       description: [
-        `Usuario: ${formatUser(userId)}`,
+        `User: ${formatUser(userId)}`,
         newChannelId
-          ? `Canal: <#${newChannelId}>`
+          ? `Channel: <#${newChannelId}>`
           : oldChannelId
-            ? `Canal: <#${oldChannelId}>`
-            : "Canal desconocido",
+            ? `Channel: <#${oldChannelId}>`
+            : "Unknown channel",
         `Hora: <t:${now()}:f>`,
       ].join("\n"),
       color: serverDeaf ? EmbedColors.Red : EmbedColors.Green,
@@ -106,15 +106,15 @@ onChannelCreate(async (channel, client) => {
   if (!channel.isVoice()) return;
 
   const channelId = channel?.id;
-  const channelName = channel?.name ?? channelId ?? "Canal de voz";
+  const channelName = channel?.name ?? channelId ?? "Voice channel";
 
   await logModerationAction(
     client,
     channel.guildId,
     {
-      title: "Canal de voz creado",
+      title: "Voice channel created",
       description: [
-        `Canal: ${channelId ? `<#${channelId}>` : channelName} (${channelName})`,
+        `Channel: ${channelId ? `<#${channelId}>` : channelName} (${channelName})`,
         `Hora: <t:${now()}:f>`,
       ].join("\n"),
       color: EmbedColors.Blurple,
@@ -122,3 +122,4 @@ onChannelCreate(async (channel, client) => {
     "voiceLogs",
   );
 });
+

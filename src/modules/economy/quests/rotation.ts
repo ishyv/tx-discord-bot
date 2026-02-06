@@ -395,8 +395,8 @@ export async function generateExampleQuests(
   const examples: Omit<CreateQuestTemplateInput, "id">[] = [
     // Daily quests - Easy
     {
-      name: "Trabajador Diligente",
-      description: "Usa el comando /work para ganar monedas.",
+      name: "Diligent Worker",
+      description: "Use the /work command to earn coins.",
       category: "economy",
       difficulty: "easy",
       requirements: [{ type: "do_command", command: "work", count: 3 }],
@@ -410,8 +410,8 @@ export async function generateExampleQuests(
       featuredMultiplier: 1.5,
     },
     {
-      name: "Ahorrador Inicial",
-      description: "Deposita monedas en el banco.",
+      name: "First Saver",
+      description: "Deposit coins in the bank.",
       category: "economy",
       difficulty: "easy",
       requirements: [
@@ -425,8 +425,8 @@ export async function generateExampleQuests(
       maxCompletions: 1,
     },
     {
-      name: "Votante Activo",
-      description: "Vota positivamente a otros miembros.",
+      name: "Active Voter",
+      description: "Cast positive votes for other members.",
       category: "social",
       difficulty: "easy",
       requirements: [{ type: "vote_cast", voteType: "love", count: 2 }],
@@ -440,8 +440,8 @@ export async function generateExampleQuests(
 
     // Daily quests - Medium
     {
-      name: "Crafter Novato",
-      description: "Craftea items usando recetas.",
+      name: "Novice Crafter",
+      description: "Craft items using recipes.",
       category: "crafting",
       difficulty: "medium",
       requirements: [
@@ -458,8 +458,8 @@ export async function generateExampleQuests(
       featuredMultiplier: 1.5,
     },
     {
-      name: "Jugador de Minijuegos",
-      description: "Gana en el minijuego de trivia.",
+      name: "Minigame Player",
+      description: "Win the trivia minigame.",
       category: "minigame",
       difficulty: "medium",
       requirements: [{ type: "win_minigame", game: "trivia", count: 2 }],
@@ -473,8 +473,8 @@ export async function generateExampleQuests(
 
     // Weekly quests - Hard
     {
-      name: "Magnate Económico",
-      description: "Gasta una gran cantidad de monedas.",
+      name: "Economic Magnate",
+      description: "Spend a large amount of coins.",
       category: "economy",
       difficulty: "hard",
       requirements: [
@@ -491,8 +491,8 @@ export async function generateExampleQuests(
       featuredMultiplier: 2.0,
     },
     {
-      name: "Maestro Crafter",
-      description: "Craftea items avanzados.",
+      name: "Master Crafter",
+      description: "Craft advanced items.",
       category: "crafting",
       difficulty: "hard",
       requirements: [
@@ -509,8 +509,8 @@ export async function generateExampleQuests(
 
     // Weekly quests - Expert
     {
-      name: "Rey del Coinflip",
-      description: "Gana múltiples veces en coinflip.",
+      name: "Coinflip King",
+      description: "Win coinflip multiple times.",
       category: "minigame",
       difficulty: "expert",
       requirements: [{ type: "win_minigame", game: "coinflip", count: 10 }],
@@ -525,8 +525,8 @@ export async function generateExampleQuests(
       featuredMultiplier: 2.5,
     },
     {
-      name: "Filántropo",
-      description: "Vota positivamente muchas veces.",
+      name: "Philanthropist",
+      description: "Cast many positive votes.",
       category: "social",
       difficulty: "expert",
       requirements: [{ type: "vote_cast", voteType: "love", count: 20 }],
@@ -541,8 +541,8 @@ export async function generateExampleQuests(
 
     // Legendary quest
     {
-      name: "Leyenda Viva",
-      description: "Completa todas las tareas de un verdadero legendario.",
+      name: "Legend Viva",
+      description: "Complete all tasks of a true legend.",
       category: "general",
       difficulty: "legendary",
       requirements: [
@@ -576,3 +576,5 @@ export async function generateExampleQuests(
 
   return OkResult(created);
 }
+
+

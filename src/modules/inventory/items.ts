@@ -14,12 +14,34 @@ import {
   type ToolKind,
   type ToolTier,
 } from "./definitions";
+import {
+  getContentItemDefinition,
+  listContentItemDefinitions,
+} from "@/modules/content";
 
 // Re-export types for consumers
 export type { ItemDefinitionWithUse } from "./definitions";
 export type { RpgEquipmentSlot, ToolKind, ToolTier, RpgStats, ToolMetadata } from "./definitions";
 
+function listResolvedDefinitions(): ItemDefinitionWithUse[] {
+  const merged = new Map<string, ItemDefinitionWithUse>();
+
+  for (const [id, item] of Object.entries(ITEM_DEFINITIONS)) {
+    merged.set(id, item);
+  }
+
+  for (const item of listContentItemDefinitions()) {
+    merged.set(item.id, item);
+  }
+
+  return Array.from(merged.values());
+}
+
 export function getItemDefinition(id: ItemId): ItemDefinitionWithUse | null {
+  const contentItem = getContentItemDefinition(id);
+  if (contentItem) {
+    return contentItem;
+  }
   return ITEM_DEFINITIONS[id] ?? null;
 }
 
@@ -148,19 +170,32 @@ export function meetsTierRequirement(
 export function findItemsBySlot(
   slot: RpgEquipmentSlot,
 ): ItemDefinitionWithUse[] {
-  return Object.values(ITEM_DEFINITIONS).filter((def) => def.rpgSlot === slot);
+  return listResolvedDefinitions().filter((def) => def.rpgSlot === slot);
 }
 
 /** Find all items of a specific tool kind. */
 export function findToolsByKind(kind: ToolKind): ItemDefinitionWithUse[] {
-  return Object.values(ITEM_DEFINITIONS).filter(
+  return listResolvedDefinitions().filter(
     (def) => def.tool?.toolKind === kind,
   );
 }
 
 /** Find all items meeting a minimum tier. */
 export function findToolsByMinTier(minTier: ToolTier): ItemDefinitionWithUse[] {
-  return Object.values(ITEM_DEFINITIONS).filter(
+  return listResolvedDefinitions().filter(
     (def) => def.tool && def.tool.tier >= minTier,
   );
+}
+
+/** Get the category of an item. */
+export function getItemCategory(item: ItemDefinitionWithUse): "gear" | "tools" | "materials" | "quest" {
+  if (isTool(item)) return "tools";
+  // RPG items that are not tools generally fall into gear
+  if (isRpgItem(item)) return "gear";
+
+  // Heuristic: If it has value, it's a material/commodity.
+  // If no value and no stats, likely a quest item or special item.
+  if (item.value !== undefined && item.value > 0) return "materials";
+
+  return "quest"; // Default fallback for special/non-valued items
 }

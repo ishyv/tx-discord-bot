@@ -51,7 +51,7 @@ const slotOption = {
 
 @Declare({
   name: "equip",
-  description: "Equip an item from your inventory",
+  description: "🎒 Equip an economy item (perks/badges). For RPG equipment use /rpg equip",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })

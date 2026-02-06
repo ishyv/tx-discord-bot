@@ -39,7 +39,7 @@ export default class CloseTicketButton extends ComponentCommand {
   async run(ctx: ComponentContext<"Button">) {
     if (!ctx.guildId) {
       await ctx.write({
-        content: "[tickets] Este ticket ya no pertenece a un servidor valido.",
+        content: "[tickets] This ticket is no longer associated with a valid server.",
       });
       return;
     }
@@ -48,7 +48,7 @@ export default class CloseTicketButton extends ComponentCommand {
     const ticketChannelId = ctx.customId.split(":")[2];
     if (!ticketChannelId) {
       await ctx.write({
-        content: "[tickets] No se pudo resolver el canal del ticket.",
+        content: "[tickets] Could not resolve the ticket channel.",
       });
       return;
     }
@@ -68,7 +68,7 @@ export default class CloseTicketButton extends ComponentCommand {
           : undefined;
       channelMissing = code === 10003;
       ctx.client.logger?.error?.(
-        "[tickets] no se pudo obtener el canal del ticket",
+        "[tickets] failed to fetch ticket channel",
         {
           error,
           ticketChannelId,
@@ -79,15 +79,15 @@ export default class CloseTicketButton extends ComponentCommand {
     if (!ticketChannel) {
       if (channelMissing) {
         await closeTicket(guildId, ticketChannelId);
-        await ctx.write({
-          content:
-            "[tickets] El canal del ticket ya no existe. Se limpiaron los registros del ticket.",
-        });
-        return;
+      await ctx.write({
+        content:
+          "[tickets] The ticket channel no longer exists. Ticket records were cleaned up.",
+      });
+      return;
       }
       await ctx.write({
         content:
-          "[tickets] No se pudo acceder al canal del ticket. Revisa permisos e intentalo nuevamente.",
+          "[tickets] Could not access the ticket channel. Check permissions and try again.",
       });
       return;
     }
@@ -95,7 +95,7 @@ export default class CloseTicketButton extends ComponentCommand {
     try {
       await ctx.deferUpdate();
     } catch (error) {
-      ctx.client.logger?.warn?.("[tickets] no se pudo diferir la interaccion", {
+      ctx.client.logger?.warn?.("[tickets] failed to defer interaction", {
         error,
         ticketChannelId,
       });
@@ -103,7 +103,7 @@ export default class CloseTicketButton extends ComponentCommand {
 
     const guildChannels = await getGuildChannels(guildId).catch((error) => {
       ctx.client.logger?.error?.(
-        "[tickets] no se pudieron obtener los canales configurados",
+        "[tickets] failed to load configured channels",
         {
           error,
           guildId,
@@ -131,7 +131,7 @@ export default class CloseTicketButton extends ComponentCommand {
       : null;
     if (fetchedLogs?.channel && !logsChannel) {
       ctx.client.logger?.error?.(
-        "[tickets] el canal de logs configurado no es de texto",
+        "[tickets] configured logs channel is not a text channel",
         {
           guildId,
           ticketLogsChannelId,
@@ -141,10 +141,10 @@ export default class CloseTicketButton extends ComponentCommand {
 
     const closingEmbed = new Embed()
       .setColor(Colors.info)
-      .setTitle("Cerrando ticket")
-      .setDescription("El ticket se cerrara en breve...")
+      .setTitle("Closing ticket")
+      .setDescription("The ticket will be closed shortly...")
       .setFooter({
-        text: `Cerrado por ${ctx.author?.username ?? "desconocido"}`,
+        text: `Closed by ${ctx.author?.username ?? "unknown"}`,
       });
 
     await ctx.editOrReply({ embeds: [closingEmbed] });
@@ -159,21 +159,21 @@ export default class CloseTicketButton extends ComponentCommand {
         );
         const transcriptAttachment = new AttachmentBuilder()
           .setName("transcript.html")
-          .setDescription("Transcripcion del ticket")
+          .setDescription("Ticket transcript")
           .setFile("buffer", transcriptBuffer);
 
         await logsChannel.messages.write({
-          content: `Transcripcion del ticket: ${ticketChannel.name}`,
+          content: `Ticket transcript: ${ticketChannel.name}`,
           files: [transcriptAttachment],
         });
 
         closingEmbed.setDescription(
-          `${closingEmbed.data.description}\nLa transcripcion fue enviada a <#${resolvedLogsChannelId}>.`,
+          `${closingEmbed.data.description}\nThe transcript was sent to <#${resolvedLogsChannelId}>.`,
         );
         await ctx.editOrReply({ embeds: [closingEmbed] });
       } catch (error) {
         ctx.client.logger?.error?.(
-          "[tickets] fallo al generar o enviar la transcripcion",
+          "[tickets] failed to generate or send transcript",
           {
             error,
             guildId,
@@ -181,13 +181,13 @@ export default class CloseTicketButton extends ComponentCommand {
           },
         );
         closingEmbed.setDescription(
-          `${closingEmbed.data.description}\nNo se pudo generar la transcripcion del ticket.`,
+          `${closingEmbed.data.description}\nCould not generate the ticket transcript.`,
         );
         await ctx.editOrReply({ embeds: [closingEmbed] });
       }
     } else {
       closingEmbed.setDescription(
-        `${closingEmbed.data.description}\nNo hay canal de logs configurado, el ticket se cerrara sin transcripcion.`,
+        `${closingEmbed.data.description}\nNo logs channel is configured, the ticket will close without a transcript.`,
       );
       await ctx.editOrReply({ embeds: [closingEmbed] });
     }
@@ -208,7 +208,7 @@ export default class CloseTicketButton extends ComponentCommand {
 
       if (code !== 10003) {
         ctx.client.logger?.error?.(
-          "[tickets] fallo al borrar el canal del ticket",
+          "[tickets] failed to delete ticket channel",
           {
             error,
             guildId,
@@ -228,3 +228,4 @@ export default class CloseTicketButton extends ComponentCommand {
     // });
   }
 }
+

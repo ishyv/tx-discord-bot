@@ -1,6 +1,6 @@
 /**
  * Parsea una entrada de cantidad "inteligente" (ej: "all", "50%", "100", "max").
- * @param input La entrada del usuario (string).
+ * @param input La entrada del user (string).
  * @param total El total disponible (coins en mano o banco).
  * @returns La cantidad numérica parseada (entero positivo). Retorna 0 si es inválido o negativo.
  */
@@ -10,7 +10,7 @@ export function parseSmartAmount(input: string, total: number): number {
   const lower = input.toLowerCase().trim();
   const available = Number.isFinite(total) ? Math.max(0, total) : 0;
 
-  if (["all", "todo", "max", "maximo", "máximo"].includes(lower)) {
+  if (["all", "max"].includes(lower)) {
     return Math.floor(available);
   }
 
@@ -25,3 +25,5 @@ export function parseSmartAmount(input: string, total: number): number {
 
   return Math.floor(numeric);
 }
+
+

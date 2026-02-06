@@ -20,9 +20,10 @@ export default class UIRoleSelectHandler extends ComponentCommand {
     const ok = await resolveAndInvoke(ctx.customId, ctx);
     if (!ok) {
       await ctx.write({
-        content: "Este menú de selección de roles ya no está activo.",
+        content: "This role select menu is no longer active.",
         flags: MessageFlags.Ephemeral,
       });
     }
   }
 }
+

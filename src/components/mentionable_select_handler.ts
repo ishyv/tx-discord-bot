@@ -20,9 +20,10 @@ export default class UIMentionableSelectHandler extends ComponentCommand {
     const ok = await resolveAndInvoke(ctx.customId, ctx);
     if (!ok) {
       await ctx.write({
-        content: "Este menú de selección de menciones ya no está activo.",
+        content: "This mention select menu is no longer active.",
         flags: MessageFlags.Ephemeral,
       });
     }
   }
 }
+

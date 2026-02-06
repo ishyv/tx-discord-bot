@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "dropTables": [
+    {
+      "id": "mine_t1",
+      "action": "mine",
+      "profession": "miner",
+      "tier": 1,
+      "locationId": "stone_mine",
+      "entries": [
+        { "itemId": "stone", "chance": 1, "weight": 1, "minQty": 2, "maxQty": 5, "minToolTier": 1 }
+      ]
+    },
+    {
+      "id": "mine_t2",
+      "action": "mine",
+      "profession": "miner",
+      "tier": 2,
+      "locationId": "copper_mine",
+      "entries": [
+        { "itemId": "pyrite_ore", "chance": 0.75, "weight": 2, "minQty": 2, "maxQty": 5, "minToolTier": 2 },
+        { "itemId": "copper_ore", "chance": 0.45, "weight": 1, "minQty": 2, "maxQty": 4, "minToolTier": 2 }
+      ]
+    },
+    {
+      "id": "mine_t3",
+      "action": "mine",
+      "profession": "miner",
+      "tier": 3,
+      "locationId": "iron_mine",
+      "entries": [
+        { "itemId": "moon_silver_ore", "chance": 0.45, "weight": 2, "minQty": 2, "maxQty": 4, "minToolTier": 3 },
+        { "itemId": "pyrite_ore", "chance": 0.65, "weight": 1, "minQty": 2, "maxQty": 5, "minToolTier": 3 }
+      ]
+    },
+    {
+      "id": "mine_t4",
+      "action": "mine",
+      "profession": "miner",
+      "tier": 4,
+      "locationId": "silver_mine",
+      "entries": [
+        { "itemId": "moon_silver_ore", "chance": 0.45, "weight": 2, "minQty": 2, "maxQty": 4, "minToolTier": 4 },
+        { "itemId": "pyrite_ore", "chance": 0.8, "weight": 1, "minQty": 2, "maxQty": 5, "minToolTier": 4 },
+        { "itemId": "sunstone_shard", "chance": 0.15, "weight": 1, "minQty": 1, "maxQty": 2, "minToolTier": 4 }
+      ]
+    },
+    {
+      "id": "forest_t1",
+      "action": "forest",
+      "profession": "lumber",
+      "tier": 1,
+      "locationId": "oak_forest",
+      "entries": [
+        { "itemId": "oak_wood", "chance": 1, "weight": 1, "minQty": 2, "maxQty": 5, "minToolTier": 1 }
+      ]
+    },
+    {
+      "id": "forest_t2",
+      "action": "forest",
+      "profession": "lumber",
+      "tier": 2,
+      "locationId": "spruce_forest",
+      "entries": [
+        { "itemId": "resin_pine_wood", "chance": 0.75, "weight": 2, "minQty": 2, "maxQty": 5, "minToolTier": 2 },
+        { "itemId": "spruce_wood", "chance": 0.45, "weight": 1, "minQty": 2, "maxQty": 4, "minToolTier": 2 }
+      ]
+    },
+    {
+      "id": "forest_t3",
+      "action": "forest",
+      "profession": "lumber",
+      "tier": 3,
+      "locationId": "palm_forest",
+      "entries": [
+        { "itemId": "dark_oak_wood", "chance": 0.45, "weight": 2, "minQty": 2, "maxQty": 4, "minToolTier": 3 },
+        { "itemId": "resin_pine_wood", "chance": 0.65, "weight": 1, "minQty": 2, "maxQty": 5, "minToolTier": 3 }
+      ]
+    },
+    {
+      "id": "forest_t4",
+      "action": "forest",
+      "profession": "lumber",
+      "tier": 4,
+      "locationId": "pine_forest",
+      "entries": [
+        { "itemId": "dark_oak_wood", "chance": 0.45, "weight": 2, "minQty": 2, "maxQty": 4, "minToolTier": 4 },
+        { "itemId": "resin_pine_wood", "chance": 0.8, "weight": 1, "minQty": 2, "maxQty": 5, "minToolTier": 4 },
+        { "itemId": "amberheart_wood", "chance": 0.15, "weight": 1, "minQty": 1, "maxQty": 2, "minToolTier": 4 }
+      ]
+    }
+  ]
+}

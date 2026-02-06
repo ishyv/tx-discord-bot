@@ -182,7 +182,7 @@ export async function bumpChannelCount(
 }
 
 /**
- * Ajusta la reputación neta del usuario dentro de la ventana activa.
+ * Ajusta la reputación neta del user dentro de la ventana activa.
  */
 export async function bumpReputationDelta(
   guildId: GuildId,
@@ -285,3 +285,4 @@ export async function listReports(
 }
 
 export type { TopWindow, TopReport };
+

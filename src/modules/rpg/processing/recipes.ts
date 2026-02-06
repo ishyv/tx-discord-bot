@@ -6,19 +6,87 @@
  */
 
 import { PROCESSED_MATERIALS, PROCESSING_CONFIG } from "../config";
+import { getContentRegistry } from "@/modules/content";
+import { getItemDefinition } from "@/modules/inventory/items";
+
+export interface ProcessingRecipe {
+  readonly id: string;
+  readonly rawMaterialId: string;
+  readonly outputMaterialId: string;
+  readonly materialsPerBatch: number;
+  readonly outputPerBatch: number;
+}
+
+const LEGACY_PROCESSING_RECIPES: Record<string, ProcessingRecipe> = Object.entries(
+  PROCESSED_MATERIALS,
+).reduce<Record<string, ProcessingRecipe>>((acc, [rawMaterialId, outputMaterialId]) => {
+  acc[rawMaterialId] = {
+    id: `legacy_process_${rawMaterialId}`,
+    rawMaterialId,
+    outputMaterialId,
+    materialsPerBatch: PROCESSING_CONFIG.materialsRequired,
+    outputPerBatch: PROCESSING_CONFIG.outputQuantity,
+  };
+  return acc;
+}, {});
+
+/** Resolve processing recipe (content-first, legacy fallback). */
+export function getProcessingRecipe(rawMaterialId: string): ProcessingRecipe | null {
+  const registry = getContentRegistry();
+  const contentRecipe = registry?.findProcessingRecipeByInput(rawMaterialId);
+
+  if (contentRecipe) {
+    const input = contentRecipe.itemInputs[0];
+    const output = contentRecipe.itemOutputs[0];
+
+    if (input && output) {
+      return {
+        id: contentRecipe.id,
+        rawMaterialId: input.itemId,
+        outputMaterialId: output.itemId,
+        materialsPerBatch: input.quantity,
+        outputPerBatch: output.quantity,
+      };
+    }
+  }
+
+  return LEGACY_PROCESSING_RECIPES[rawMaterialId] ?? null;
+}
+
+/** List all raw material IDs that can be processed. */
+export function listProcessableMaterials(): string[] {
+  const ids = new Set<string>(Object.keys(LEGACY_PROCESSING_RECIPES));
+  const registry = getContentRegistry();
+
+  if (registry) {
+    for (const recipe of registry.listRecipesByType("processing")) {
+      const input = recipe.itemInputs[0];
+      if (input?.itemId) {
+        ids.add(input.itemId);
+      }
+    }
+  }
+
+  return Array.from(ids);
+}
 
 /** Get processed material for raw material. */
 export function getProcessedMaterial(rawMaterialId: string): string | null {
-  return PROCESSED_MATERIALS[rawMaterialId] ?? null;
+  return getProcessingRecipe(rawMaterialId)?.outputMaterialId ?? null;
 }
 
 /** Check if material can be processed. */
 export function canProcessMaterial(materialId: string): boolean {
-  return materialId in PROCESSED_MATERIALS;
+  return getProcessingRecipe(materialId) !== null;
 }
 
 /** Get material value (for fee calculation). */
 export function getMaterialValue(materialId: string): number {
+  const contentOrLegacyDef = getItemDefinition(materialId);
+  if (contentOrLegacyDef?.value !== undefined) {
+    return contentOrLegacyDef.value;
+  }
+
   // Base values for materials
   const values: Record<string, number> = {
     // Ores

@@ -48,14 +48,14 @@ export interface PaginationOptions {
     select?: string;
     next?: string;
   };
-  /** Si se indica, solo este usuario podrá usar los controles. */
+  /** Si se indica, solo este user podrá usar los controles. */
   ownerId?: string;
 }
 
 const DEFAULT_LABELS = {
-  previous: "Anterior",
-  select: "Seleccionar pagina",
-  next: "Siguiente",
+  previous: "Previous",
+  select: "Select page",
+  next: "Next",
 };
 
 const MAX_SELECT_OPTIONS = 25;
@@ -73,7 +73,7 @@ async function ensureOwner(
 ): Promise<boolean> {
   if (!ownerId || ownerId === actorId) return true;
   await ctx.write({
-    content: "No puedes usar esta paginacion.",
+    content: "You cannot use this pagination.",
     flags: MessageFlags.Ephemeral,
   });
   return false;
@@ -100,9 +100,9 @@ function buildPageOptions(
     const pageIndex = start + i;
     options.push(
       new StringSelectOption()
-        .setLabel(`Pagina ${pageIndex + 1}`)
+        .setLabel(`Page ${pageIndex + 1}`)
         .setValue(String(pageIndex + 1))
-        .setDescription(pageIndex === current ? "Actual" : ""),
+        .setDescription(pageIndex === current ? "Current" : ""),
     );
   }
   return options;
@@ -178,7 +178,7 @@ export function createPaginationUI(
 
         if (state.showPicker) {
           const select = new StringSelectMenu()
-            .setPlaceholder("Elige una pagina")
+            .setPlaceholder("Choose a page")
             .setValuesLength({ min: 1, max: 1 })
             .setOptions(buildPageOptions(totalPages, currentPage, pageWindow))
             .onSelect("pagination_select", async (menuCtx) => {
@@ -224,3 +224,4 @@ export async function startPagination(
   await ui.send();
   return ui;
 }
+

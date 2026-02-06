@@ -11,8 +11,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   // Material processing
   {
     id: "process_wood",
-    name: "🪵 Procesar Madera",
-    description: "Convierte palos en tablas de madera.",
+    name: "🪵 Process Wood",
+    description: "Convert sticks into wooden planks.",
     itemInputs: [{ itemId: "palo", quantity: 2 }],
     itemOutputs: [{ itemId: "tabla_madera", quantity: 1 }],
     xpReward: 5,
@@ -20,8 +20,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "process_stone",
-    name: "🪨 Pulir Piedra",
-    description: "Pulida de piedra bruta en bloques.",
+    name: "🪨 Polish Stone",
+    description: "Refine rough stone into blocks.",
     itemInputs: [{ itemId: "piedra_bruta", quantity: 2 }],
     itemOutputs: [{ itemId: "bloque_piedra", quantity: 1 }],
     xpReward: 3,
@@ -29,8 +29,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "process_iron",
-    name: "⚙️ Fundir Hierro",
-    description: "Funde mineral de hierro en lingotes.",
+    name: "⚙️ Smelt Iron",
+    description: "Smelt iron ore into ingots.",
     itemInputs: [{ itemId: "mineral_hierro", quantity: 2 }],
     currencyInput: { currencyId: "coins", amount: 10 },
     itemOutputs: [{ itemId: "lingote_hierro", quantity: 1 }],
@@ -42,8 +42,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   // Basic equipment crafting
   {
     id: "craft_leather_helmet",
-    name: "🪖 Casco de Cuero",
-    description: "Crea un casco básico de cuero.",
+    name: "🪖 Leather Helmet",
+    description: "Craft a basic leather helmet.",
     itemInputs: [{ itemId: "cuero", quantity: 3 }],
     currencyInput: { currencyId: "coins", amount: 50 },
     itemOutputs: [{ itemId: "casco_cuero", quantity: 1 }],
@@ -52,8 +52,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "craft_iron_helmet",
-    name: "⛑️ Casco de Hierro",
-    description: "Forja un casco resistente de hierro.",
+    name: "⛑️ Iron Helmet",
+    description: "Forge a durable iron helmet.",
     itemInputs: [
       { itemId: "lingote_hierro", quantity: 2 },
       { itemId: "casco_cuero", quantity: 1 },
@@ -66,8 +66,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "craft_iron_sword",
-    name: "⚔️ Espada de Hierro",
-    description: "Forja una espada de hierro afilada.",
+    name: "⚔️ Iron Sword",
+    description: "Forge a sharp iron sword.",
     itemInputs: [{ itemId: "lingote_hierro", quantity: 3 }],
     currencyInput: { currencyId: "coins", amount: 100 },
     itemOutputs: [{ itemId: "espada_hierro", quantity: 1 }],
@@ -76,8 +76,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "craft_steel_sword",
-    name: "🗡️ Espada de Acero",
-    description: "Forja una espada superior de acero.",
+    name: "🗡️ Steel Sword",
+    description: "Forge a superior steel sword.",
     itemInputs: [
       { itemId: "lingote_acero", quantity: 3 },
       { itemId: "espada_hierro", quantity: 1 },
@@ -93,8 +93,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   // Armor crafting
   {
     id: "craft_leather_armor",
-    name: "🦺 Armadura de Cuero",
-    description: "Cose una armadura ligera de cuero.",
+    name: "🦺 Leather Armor",
+    description: "Sew light leather armor.",
     itemInputs: [{ itemId: "cuero", quantity: 5 }],
     currencyInput: { currencyId: "coins", amount: 100 },
     itemOutputs: [{ itemId: "armadura_cuero", quantity: 1 }],
@@ -103,8 +103,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "craft_iron_armor",
-    name: "🛡️ Armadura de Hierro",
-    description: "Forja una armadura resistente.",
+    name: "🛡️ Iron Armor",
+    description: "Forge sturdy armor.",
     itemInputs: [
       { itemId: "lingote_hierro", quantity: 4 },
       { itemId: "armadura_cuero", quantity: 1 },
@@ -119,8 +119,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   // Accessory crafting
   {
     id: "craft_lucky_amulet",
-    name: "📿 Amuleto de Suerte",
-    description: "Crea un amuleto que atrae la fortuna.",
+    name: "📿 Lucky Amulet",
+    description: "Craft an amulet that attracts fortune.",
     itemInputs: [
       { itemId: "piedra_preciosa", quantity: 1 },
       { itemId: "cuerda", quantity: 1 },
@@ -134,8 +134,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   },
   {
     id: "craft_gold_ring",
-    name: "💍 Anillo de Oro",
-    description: "Forja un anillo dorado.",
+    name: "💍 Gold Ring",
+    description: "Forge a golden ring.",
     itemInputs: [{ itemId: "lingote_oro", quantity: 1 }],
     currencyInput: { currencyId: "coins", amount: 300 },
     itemOutputs: [{ itemId: "anillo_oro", quantity: 1 }],
@@ -148,8 +148,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   // Tool crafting
   {
     id: "craft_lantern",
-    name: "🏮 Linterna Mágica",
-    description: "Fabrica una linterna encantada.",
+    name: "🏮 Magic Lantern",
+    description: "Craft an enchanted lantern.",
     itemInputs: [
       { itemId: "lingote_hierro", quantity: 1 },
       { itemId: "piedra_preciosa", quantity: 1 },
@@ -164,8 +164,8 @@ export const DEFAULT_CRAFTING_RECIPES: CraftingRecipe[] = [
   // Advanced materials
   {
     id: "craft_steel_ingot",
-    name: "🔩 Lingote de Acero",
-    description: "Refina hierro en acero de mayor calidad.",
+    name: "🔩 Steel Ingot",
+    description: "Refine iron into higher quality steel.",
     itemInputs: [
       { itemId: "lingote_hierro", quantity: 2 },
       { itemId: "carbon", quantity: 1 },
@@ -198,3 +198,5 @@ export function listDefaultRecipes(): CraftingRecipe[] {
 export function recipeExists(id: string): boolean {
   return RECIPE_MAP.has(id);
 }
+
+

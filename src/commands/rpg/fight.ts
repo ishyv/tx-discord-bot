@@ -7,7 +7,6 @@
 import {
   Command,
   Declare,
-  SubCommand,
   GuildCommandContext,
   Options,
   createStringOption,
@@ -21,11 +20,11 @@ import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { rpgFightService } from "@/modules/rpg/combat/fight-service";
 import { rpgProfileRepo } from "@/modules/rpg/profile/repository";
 import { RpgViews } from "@/modules/rpg/views/embeds";
-import { CombatLogFormatter } from "@/modules/rpg/views/combat-log";
 import { HpBarRenderer } from "@/modules/rpg/views/hp-bar";
+import { buildRoundCard } from "@/modules/rpg/views/combat/round-card";
+import { COMBAT_CONFIG } from "@/modules/rpg/config";
 import { getItemDefinition } from "@/modules/inventory/items";
-import { createButton, replyEphemeral, getContextInfo } from "@/adapters/seyfert";
-import type { CombatMove } from "@/modules/rpg/types";
+import { createButton, replyEphemeral } from "@/adapters/seyfert";
 
 const options = {
   action: createStringOption({
@@ -65,8 +64,9 @@ export default class FightCommand extends Command {
 
     switch (action) {
       case "challenge":
+        await ctx.deferReply(false);
         if (!targetUser) {
-          await ctx.write({
+          await ctx.editOrReply({
             content: "❌ Please specify a user to challenge with the `user` option.",
             flags: MessageFlags.Ephemeral,
           });
@@ -76,14 +76,17 @@ export default class FightCommand extends Command {
         break;
 
       case "accept":
+        await ctx.deferReply(true);
         await this.showPendingChallenges(ctx, userId);
         break;
 
       case "status":
+        await ctx.deferReply(true);
         await this.showStatus(ctx, userId);
         break;
 
       case "forfeit":
+        await ctx.deferReply(true);
         await this.forfeit(ctx, userId);
         break;
     }
@@ -143,7 +146,7 @@ export default class FightCommand extends Command {
       };
 
       await replyEphemeral(ctx, {
-        content: messages[(error as {code?: string}).code ?? ""] ?? `❌ ${error.message}`,
+        content: messages[(error as { code?: string }).code ?? ""] ?? `❌ ${error.message}`,
       });
       return;
     }
@@ -177,7 +180,7 @@ export default class FightCommand extends Command {
 
     const row = new ActionRow<typeof acceptBtn>().addComponents(acceptBtn, declineBtn);
 
-    await ctx.write({
+    await ctx.editOrReply({
       content: `<@${targetId}>, you've been challenged to a duel!`,
       embeds: [embed],
       components: [row],
@@ -216,7 +219,7 @@ export default class FightCommand extends Command {
 
             const row = new ActionRow<typeof acceptBtn>().addComponents(acceptBtn);
 
-            await ctx.write({ embeds: [embed], components: [row], flags: 64 });
+            await ctx.editOrReply({ embeds: [embed], components: [row], flags: 64 });
             return;
           }
         }
@@ -260,18 +263,21 @@ export default class FightCommand extends Command {
       .setColor(0x800080);
 
     // HP bars
+    const p1User = await ctx.client.users.fetch(fight.p1Id);
+    const p2User = await ctx.client.users.fetch(fight.p2Id);
+    const p1Name = p1User?.username ?? "Player 1";
+    const p2Name = p2User?.username ?? "Player 2";
+
     const userHpBar = HpBarRenderer.render({
       current: fight.p1Id === userId ? fight.p1Hp : fight.p2Hp,
       max: fight.p1Id === userId ? fight.p1MaxHp : fight.p2MaxHp,
       length: 10,
-      showPercent: true,
     });
 
     const opponentHpBar = HpBarRenderer.render({
       current: fight.p1Id === userId ? fight.p2Hp : fight.p1Hp,
       max: fight.p1Id === userId ? fight.p2MaxHp : fight.p1MaxHp,
       length: 10,
-      showPercent: true,
     });
 
     embed.addFields(
@@ -279,9 +285,37 @@ export default class FightCommand extends Command {
       { name: opponent?.username ?? "Opponent", value: opponentHpBar, inline: true },
     );
 
+    // Timeout info
+    const lastAction = new Date(fight.lastActionAt).getTime();
+    const timeoutSeconds = COMBAT_CONFIG.roundTimeoutSeconds;
+    const expiresAt = lastAction + timeoutSeconds * 1000;
+    const timeLeft = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+
+    embed.addFields({
+      name: "⏱️ Round Timeout",
+      value: timeLeft > 0 ? `Action needed within **${timeLeft}s**` : "⚠️ Round is overdue!",
+      inline: false
+    });
+
+    // Show round card if there was a previous round
+    if (fight.lastRound) {
+      const roundEmbed = buildRoundCard(
+        fight.lastRound,
+        p1Name,
+        p2Name,
+        fight.p1MaxHp,
+        fight.p2MaxHp,
+        fight.lastRound.roundNumber
+      );
+      // We can't really "nest" embeds well, but we can send them together or merge info.
+      // The user said: "send Round Card + HP bars".
+      // I'll merge the description of the round card into the status if it's the latest.
+      embed.setDescription(`**Last Round Summary:**\n${roundEmbed.data.description}\n\n*Fight continues...*`);
+    }
+
     // Show move buttons if active
     if (fight.status === "active") {
-      const userPending = fight.p1Id === userId ? fight.p1PendingMove : fight.p2PendingMove;
+      const userPending = fight.p1Id === userId ? !fight.p1PendingMove : !fight.p2PendingMove;
 
       if (userPending) {
         embed.setFooter({ text: "⏳ Waiting for your move..." });
@@ -306,14 +340,17 @@ export default class FightCommand extends Command {
 
         const row = new ActionRow<typeof attackBtn>().addComponents(attackBtn, blockBtn, critBtn);
 
-        await ctx.write({ embeds: [embed], components: [row], flags: 64 });
+        await ctx.editOrReply({ embeds: [embed], components: [row], flags: 64 });
         return;
       } else {
-        embed.setFooter({ text: "✅ Move submitted! Waiting for opponent..." });
+        const opponentPending = fight.p1Id === userId ? !fight.p2PendingMove : !fight.p1PendingMove;
+        embed.setFooter({
+          text: opponentPending ? "✅ Move submitted! Waiting for opponent..." : "🔄 Both moves in! Processing..."
+        });
       }
     }
 
-    await ctx.write({ embeds: [embed], flags: 64 });
+    await ctx.editOrReply({ embeds: [embed], flags: 64 });
   }
 
   private async forfeit(ctx: GuildCommandContext, userId: string) {
@@ -336,101 +373,10 @@ export default class FightCommand extends Command {
       return;
     }
 
-    await ctx.write({ content: "🏳️ You have forfeited the fight." });
+    await ctx.editOrReply({ content: "🏳️ You have forfeited the fight." });
   }
 }
 
-// Component handlers
-@Declare({
-  name: "fight_accept",
-  description: "Accept a fight challenge",
-})
-export class FightAcceptHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId } = getContextInfo(ctx);
 
-    // @ts-ignore - custom_id access
-    const customId = ctx.customId as string;
-    const parts = customId.split("_");
-    const fightId = parts[2];
 
-    if (!fightId) return;
 
-    const result = await rpgFightService.accept(
-      { fightId, accepterId: userId },
-      (itemId) => {
-        const def = getItemDefinition(itemId);
-        return def?.stats
-          ? { atk: def.stats.atk, def: def.stats.def, hp: def.stats.hp }
-          : null;
-      },
-    );
-
-    if (result.isErr()) {
-      const messages: Record<string, string> = {
-        COMBAT_SESSION_EXPIRED: "❌ This challenge has expired.",
-        COMBAT_ALREADY_ACCEPTED: "❌ This fight has already been accepted.",
-        PROFILE_NOT_FOUND: "❌ Profile not found.",
-        CONCURRENT_MODIFICATION: "❌ This fight was already accepted by someone else.",
-      };
-
-      await replyEphemeral(ctx, {
-        content: messages[result.error.code] ?? `❌ ${result.error.message}`,
-      });
-      return;
-    }
-
-    // Start the fight!
-    await ctx.write({
-      content: "⚔️ **Fight Started!**",
-      embeds: [
-        new Embed()
-          .setTitle("⚔️ Round 1")
-          .setDescription("Both fighters prepare their moves...")
-          .setColor(0x800080),
-      ],
-    });
-  }
-}
-
-@Declare({
-  name: "fight_move",
-  description: "Submit a combat move",
-})
-export class FightMoveHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId } = getContextInfo(ctx);
-
-    // @ts-ignore - custom_id access
-    const customId = ctx.customId as string;
-    const parts = customId.split("_");
-    const fightId = parts[2];
-    const move = parts[parts.length - 1] as CombatMove;
-
-    if (!fightId || !move) return;
-
-    const result = await rpgFightService.submitMove({
-      fightId,
-      playerId: userId,
-      move,
-    });
-
-    if (result.isErr()) {
-      await replyEphemeral(ctx, { content: `❌ ${result.error.message}` });
-      return;
-    }
-
-    // Show updated status
-    const fightResult = result.unwrap();
-    if (fightResult.status === "completed") {
-      // Fight ended - show result
-      await ctx.write({
-        content: "🏆 **Combat Ended!**",
-      });
-    } else {
-      await replyEphemeral(ctx, {
-        content: `✅ You used **${CombatLogFormatter.formatMove(move)}**!`,
-      });
-    }
-  }
-}

@@ -188,6 +188,7 @@ export {
   ensureEquipmentIndexes,
   ensureCraftingIndexes,
   ensureStoreIndexes,
+  ensureMarketIndexes,
   getEconomyIndexStats,
   TTLConfig,
 } from "./db-indexes";

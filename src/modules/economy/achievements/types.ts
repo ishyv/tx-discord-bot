@@ -464,11 +464,11 @@ export const TIER_DISPLAY: Record<
   AchievementTier,
   { name: string; emoji: string; color: number }
 > = {
-  bronze: { name: "Bronce", emoji: "🥉", color: 0xcd7f32 },
-  silver: { name: "Plata", emoji: "🥈", color: 0xc0c0c0 },
-  gold: { name: "Oro", emoji: "🥇", color: 0xffd700 },
-  platinum: { name: "Platino", emoji: "💎", color: 0xe5e4e2 },
-  diamond: { name: "Diamante", emoji: "💠", color: 0xb9f2ff },
+  bronze: { name: "Bronze", emoji: "🥉", color: 0xcd7f32 },
+  silver: { name: "Silver", emoji: "🥈", color: 0xc0c0c0 },
+  gold: { name: "Gold", emoji: "🥇", color: 0xffd700 },
+  platinum: { name: "Platinum", emoji: "💎", color: 0xe5e4e2 },
+  diamond: { name: "Diamond", emoji: "💠", color: 0xb9f2ff },
 };
 
 /** Category display configuration. */
@@ -476,12 +476,12 @@ export const CATEGORY_DISPLAY: Record<
   AchievementCategory,
   { name: string; emoji: string }
 > = {
-  progression: { name: "Progresión", emoji: "📈" },
-  minigame: { name: "Minijuegos", emoji: "🎮" },
-  crafting: { name: "Crafteo", emoji: "⚒️" },
+  progression: { name: "Progression", emoji: "📈" },
+  minigame: { name: "Minigames", emoji: "🎮" },
+  crafting: { name: "Crafting", emoji: "⚒️" },
   social: { name: "Social", emoji: "👥" },
-  collection: { name: "Colección", emoji: "🎒" },
-  special: { name: "Especial", emoji: "✨" },
+  collection: { name: "Collection", emoji: "🎒" },
+  special: { name: "Special", emoji: "✨" },
 };
 
 /** XP reward cap per achievement. */
@@ -489,3 +489,5 @@ export const MAX_XP_REWARD = 500;
 
 /** Currency reward cap per achievement. */
 export const MAX_CURRENCY_REWARD = 1000;
+
+

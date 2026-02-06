@@ -32,7 +32,7 @@ export default class OfferModerationButtons extends ComponentCommand {
       ctx.member?.permissions?.has?.(["ManageMessages"]) === true;
     if (!canModerate) {
       await ctx.write({
-        content: "Necesitas permisos de ManageMessages para moderar ofertas.",
+        content: "You need ManageMessages permission to moderate offers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -43,14 +43,14 @@ export default class OfferModerationButtons extends ComponentCommand {
       const approved = await approveOffer(ctx.client, offerId, ctx.author.id);
       if (!approved) {
         await ctx.followup({
-          content: "Esta oferta ya fue procesada o no está pendiente.",
+          content: "This offer was already processed or is no longer pending.",
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       await ctx.followup({
-        content: `Oferta \`${offerId}\` aprobada y publicada (si hay canal configurado).`,
+        content: `Offer \`${offerId}\` approved and published (if a channel is configured).`,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -59,15 +59,15 @@ export default class OfferModerationButtons extends ComponentCommand {
     if (action === "reject") {
       const modal = new Modal()
         .setCustomId(`offer:reject-modal:${offerId}`)
-        .setTitle("Rechazar oferta")
+        .setTitle("Reject offer")
         .addComponents(
           new ActionRow<TextInput>().addComponents(
             new TextInput()
               .setCustomId("reason")
-              .setLabel("Motivo (opcional)")
+              .setLabel("Reason (optional)")
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(false)
-              .setPlaceholder("Explica por qué se rechaza"),
+              .setPlaceholder("Explain why it is being rejected"),
           ),
         );
       await ctx.interaction.modal(modal);
@@ -77,15 +77,15 @@ export default class OfferModerationButtons extends ComponentCommand {
     if (action === "changes") {
       const modal = new Modal()
         .setCustomId(`offer:changes-modal:${offerId}`)
-        .setTitle("Solicitar cambios")
+        .setTitle("Request changes")
         .addComponents(
           new ActionRow<TextInput>().addComponents(
             new TextInput()
               .setCustomId("note")
-              .setLabel("Qué cambiar")
+              .setLabel("What to change")
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(true)
-              .setPlaceholder("Ej: agrega rango salarial, aclara modalidad..."),
+              .setPlaceholder("Example: add salary range, clarify work mode..."),
           ),
         );
       await ctx.interaction.modal(modal);
@@ -93,3 +93,4 @@ export default class OfferModerationButtons extends ComponentCommand {
     }
   }
 }
+

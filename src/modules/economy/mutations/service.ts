@@ -43,7 +43,7 @@ async function checkActorPermission(
     return ErrResult(
       new CurrencyMutationError(
         "INSUFFICIENT_PERMISSIONS",
-        "No tienes permisos para realizar esta acción.",
+        "You do not have permission to perform this action.",
       ),
     );
   }
@@ -120,7 +120,7 @@ function validateTransferInput(
     return ErrResult(
       new CurrencyMutationError(
         "INVALID_AMOUNT",
-        "La cantidad debe ser un número positivo.",
+        "Amount must be a positive number.",
       ),
     );
   }
@@ -163,7 +163,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "ACTOR_BLOCKED",
-        "No se pudo acceder a tu cuenta.",
+        "Could not access your account.",
       ),
     );
   }
@@ -171,7 +171,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "TARGET_NOT_FOUND",
-        "No se pudo acceder a la cuenta del destinatario.",
+        "Could not access the recipient account.",
       ),
     );
   }
@@ -183,7 +183,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "ACTOR_BANNED",
-        "Tu cuenta tiene restricciones permanentes.",
+        "Your account has permanent restrictions.",
       ),
     );
   }
@@ -191,7 +191,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "ACTOR_BLOCKED",
-        "Tu cuenta tiene restricciones temporales.",
+        "Your account has temporary restrictions.",
       ),
     );
   }
@@ -199,7 +199,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "TARGET_BANNED",
-        "La cuenta del destinatario tiene restricciones permanentes.",
+        "The recipient account has permanent restrictions.",
       ),
     );
   }
@@ -207,7 +207,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "TARGET_BLOCKED",
-        "La cuenta del destinatario tiene restricciones temporales.",
+        "The recipient account has temporary restrictions.",
       ),
     );
   }
@@ -221,7 +221,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "ACTOR_BLOCKED",
-        "No se pudo acceder a tu cuenta.",
+        "Could not access your account.",
       ),
     );
   }
@@ -229,7 +229,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "TARGET_NOT_FOUND",
-        "Destinatario no encontrado.",
+        "Recipient not found.",
       ),
     );
   }
@@ -251,7 +251,7 @@ async function executeTransferTransaction(
     return ErrResult(
       new CurrencyMutationError(
         "INSUFFICIENT_FUNDS",
-        "No tienes suficientes fondos para esta transferencia.",
+        "You do not have enough funds for this transfer.",
       ),
     );
   }
@@ -282,7 +282,7 @@ async function executeTransferTransaction(
         return ErrResult(
           new CurrencyMutationError(
             "UPDATE_FAILED",
-            "No se pudo actualizar el balance del remitente.",
+            "Could not update sender balance.",
           ),
         );
       }
@@ -341,7 +341,7 @@ async function executeTransferTransaction(
       return ErrResult(
         new CurrencyMutationError(
           "INSUFFICIENT_FUNDS",
-          "No tienes suficientes fondos para esta transferencia.",
+          "You do not have enough funds for this transfer.",
         ),
       );
     }
@@ -550,7 +550,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
       return ErrResult(
         new CurrencyMutationError(
           "TARGET_NOT_FOUND",
-          "No se pudo acceder a la cuenta del objetivo.",
+          "Could not access the target account.",
         ),
       );
     }
@@ -561,7 +561,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
       return ErrResult(
         new CurrencyMutationError(
           "TARGET_BANNED",
-          "La cuenta del objetivo tiene restricciones permanentes.",
+          "The target account has permanent restrictions.",
         ),
       );
     }
@@ -569,7 +569,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
       return ErrResult(
         new CurrencyMutationError(
           "TARGET_BLOCKED",
-          "La cuenta del objetivo tiene restricciones temporales.",
+          "The target account has temporary restrictions.",
         ),
       );
     }
@@ -578,13 +578,13 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
     const userResult = await UserStore.get(targetId);
     if (userResult.isErr()) {
       return ErrResult(
-        new CurrencyMutationError("TARGET_NOT_FOUND", "Usuario no encontrado."),
+        new CurrencyMutationError("TARGET_NOT_FOUND", "User not found."),
       );
     }
     const user = userResult.unwrap();
     if (!user) {
       return ErrResult(
-        new CurrencyMutationError("TARGET_NOT_FOUND", "Usuario no existe."),
+        new CurrencyMutationError("TARGET_NOT_FOUND", "User does not exist."),
       );
     }
 
@@ -601,7 +601,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
         return ErrResult(
           new CurrencyMutationError(
             "UPDATE_FAILED",
-            "No se pudo actualizar la reputación.",
+            "Could not update reputation.",
           ),
         );
       }
@@ -611,7 +611,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
         return ErrResult(
           new CurrencyMutationError(
             "UPDATE_FAILED",
-            "Error al obtener estado actualizado.",
+            "Error getting updated state.",
           ),
         );
       }
@@ -640,7 +640,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
             return ErrResult(
               new CurrencyMutationError(
                 "UPDATE_FAILED",
-                "No se pudo actualizar el balance.",
+                "Could not update balance.",
               ),
             );
           }
@@ -691,7 +691,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
           return ErrResult(
             new CurrencyMutationError(
               "UPDATE_FAILED",
-              "No se pudo actualizar el balance de moneda.",
+              "Could not update currency balance.",
             ),
           );
         }
@@ -738,7 +738,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
       return ErrResult(
         new CurrencyMutationError(
           "UPDATE_FAILED",
-          "Error al actualizar el balance.",
+          "Error updating balance.",
         ),
       );
     }
@@ -748,7 +748,7 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
       return ErrResult(
         new CurrencyMutationError(
           "TARGET_NOT_FOUND",
-          "Usuario no encontrado después de actualizar.",
+          "User not found after update.",
         ),
       );
     }
@@ -817,3 +817,5 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
 /** Singleton instance. */
 export const currencyMutationService: CurrencyMutationService =
   new CurrencyMutationServiceImpl();
+
+

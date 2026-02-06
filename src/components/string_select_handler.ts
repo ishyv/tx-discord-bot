@@ -17,13 +17,16 @@ export default class UIStringSelectHandler extends ComponentCommand {
   }
 
   async run(ctx: ComponentContext<"StringSelect">) {
-    // await ctx.deferUpdate();
+    if (ctx.customId.includes("defer")) {
+      await ctx.deferUpdate();
+    }
     const ok = await resolveAndInvoke(ctx.customId, ctx);
     if (!ok) {
-      await ctx.write({
-        content: "Este menú de selección ya no está activo.",
+      await ctx.editOrReply({
+        content: "This select menu is no longer active.",
         flags: MessageFlags.Ephemeral,
       });
     }
   }
 }
+

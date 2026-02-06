@@ -21,10 +21,10 @@ export function buildAchievementBoardEmbed(
   username: string,
 ): Embed {
   const embed = new Embed()
-    .setTitle(`🏆 Logros de ${username}`)
+    .setTitle(`🏆 Achievements for ${username}`)
     .setDescription(
-      `**${view.unlockedCount}/${view.totalCount}** logros desbloqueados\n` +
-        `Progreso general: **${Math.round((view.unlockedCount / view.totalCount) * 100)}%**`,
+      `**${view.unlockedCount}/${view.totalCount}** achievements unlocked\n` +
+        `Overall progress: **${Math.round((view.unlockedCount / view.totalCount) * 100)}%**`,
     )
     .setColor(0xf1c40f)
     .setTimestamp();
@@ -49,7 +49,7 @@ export function buildAchievementBoardEmbed(
 
   if (tierLines.length > 0) {
     embed.addFields({
-      name: "📊 Por Tier",
+      name: "📊 By Tier",
       value: tierLines.join("\n"),
       inline: true,
     });
@@ -70,7 +70,7 @@ export function buildAchievementBoardEmbed(
 
   if (categoryLines.length > 0) {
     embed.addFields({
-      name: "📁 Por Categoría",
+      name: "📁 By Category",
       value: categoryLines.join("\n"),
       inline: true,
     });
@@ -82,10 +82,10 @@ export function buildAchievementBoardEmbed(
     const progress = next.progress;
     const progressBar = progress
       ? buildProgressBar(progress.percent)
-      : "🔒 Bloqueado";
+      : "🔒 Blocked";
 
     embed.addFields({
-      name: "🎯 Próximo Logro",
+      name: "🎯 Next Achievement",
       value: `${next.tierEmoji} **${next.name}**\n${progressBar} (${progress?.percent ?? 0}%)`,
       inline: false,
     });
@@ -98,7 +98,7 @@ export function buildAchievementBoardEmbed(
       .map((a) => `${a.tierEmoji} **${a.name}**`);
 
     embed.addFields({
-      name: "🎉 Desbloqueados Recientemente",
+      name: "🎉 Recently Unlocked",
       value: recentLines.join("\n"),
       inline: false,
     });
@@ -130,30 +130,30 @@ export function buildAchievementDetailEmbed(
         case "currency":
           return `💰 ${r.amount} ${r.currencyId}`;
         case "title":
-          return `🏷️ Título: "${r.titleName}"`;
+          return `🏷️ Title: "${r.titleName}"`;
         case "badge":
-          return `${r.badgeEmoji} Insignia: ${r.badgeName}`;
+          return `${r.badgeEmoji} Badge: ${r.badgeName}`;
         case "item":
           return `📦 ${r.quantity}x ${r.itemId}`;
         default:
           return "";
       }
     });
-    description += `\n\n**Recompensas:**\n${rewardLines.join("\n")}`;
+    description += `\n\n**Rewards:**\n${rewardLines.join("\n")}`;
   }
 
   // Add status
   if (achievement.isUnlocked) {
     const claimStatus = achievement.rewardsClaimed
-      ? "✅ Reclamado"
-      : "🎁 ¡Listo para reclamar!";
-    description += `\n\n**Estado:** ${claimStatus}`;
+      ? "✅ Claimed"
+      : "🎁 Ready to claim!";
+    description += `\n\n**Status:** ${claimStatus}`;
     if (achievement.unlockedAt) {
-      const date = achievement.unlockedAt.toLocaleDateString("es-ES");
-      description += `\n**Desbloqueado:** ${date}`;
+      const date = achievement.unlockedAt.toLocaleDateString("en-US");
+      description += `\n**Unlocked:** ${date}`;
     }
   } else {
-    description += "\n\n**Estado:** 🔒 Bloqueado";
+    description += "\n\n**Status:** 🔒 Blocked";
   }
 
   const embed = new Embed()
@@ -161,7 +161,7 @@ export function buildAchievementDetailEmbed(
     .setDescription(description)
     .setColor(tierInfo.color)
     .setFooter({
-      text: `Categoría: ${CATEGORY_DISPLAY[achievement.category].name}`,
+      text: `Category: ${CATEGORY_DISPLAY[achievement.category].name}`,
     });
 
   return embed;
@@ -188,9 +188,9 @@ export function buildCategoryAchievementsEmbed(
   }
 
   const embed = new Embed()
-    .setTitle(`${catInfo.emoji} Logros de ${catInfo.name}`)
+    .setTitle(`${catInfo.emoji} Achievements for ${catInfo.name}`)
     .setDescription(
-      `**${unlockedCount}/${achievements.length}** desbloqueados\n\n${lines.join("\n")}`,
+      `**${unlockedCount}/${achievements.length}** unlocked\n\n${lines.join("\n")}`,
     )
     .setColor(0x3498db);
 
@@ -210,15 +210,15 @@ export function buildTitlesEmbed(titles: TitleView[], username: string): Embed {
     lines.push(`${status} **${display}**`);
   }
 
-  let description = `Tienes **${titles.length}** títulos desbloqueados.`;
+  let description = `You have **${titles.length}** unlocked titles.`;
   if (equipped) {
-    description += `\nTítulo actual: **${equipped.name}**`;
+    description += `\nCurrent title: **${equipped.name}**`;
   }
   description +=
-    "\n\n" + (lines.length > 0 ? lines.join("\n") : "*No tienes títulos aún*");
+    "\n\n" + (lines.length > 0 ? lines.join("\n") : "*You do not have any titles yet*");
 
   const embed = new Embed()
-    .setTitle(`🏷️ Títulos de ${username}`)
+    .setTitle(`🏷️ Titles for ${username}`)
     .setDescription(description)
     .setColor(0x9b59b6);
 
@@ -232,8 +232,8 @@ export function buildTitleEquippedEmbed(title: TitleView): Embed {
   if (title.suffix) display = `${display}${title.suffix}`;
 
   const embed = new Embed()
-    .setTitle("🏷️ Título Equipado")
-    .setDescription(`Ahora llevas el título: **${display}**`)
+    .setTitle("🏷️ Title Equipped")
+    .setDescription(`You are now using the title: **${display}**`)
     .setColor(0x2ecc71);
 
   return embed;
@@ -252,9 +252,9 @@ export function buildRewardClaimEmbed(
   });
 
   const embed = new Embed()
-    .setTitle("🎉 Recompensas Reclamadas")
+    .setTitle("🎉 Rewards Claimed")
     .setDescription(
-      `Logro: **${achievementName}**\n\n**Recompensas obtenidas:**\n${rewardLines.join("\n")}`,
+      `Achievement: **${achievementName}**\n\n**Rewards earned:**\n${rewardLines.join("\n")}`,
     )
     .setColor(0x2ecc71);
 
@@ -294,7 +294,7 @@ export function buildAchievementUnlockedEmbed(
   const tierInfo = TIER_DISPLAY[achievement.tier];
 
   const embed = new Embed()
-    .setTitle(`${tierInfo.emoji} ¡Logro Desbloqueado!`)
+    .setTitle(`${tierInfo.emoji} Achievement Unlocked!`)
     .setDescription(
       `**${achievement.name}**\n\n${achievement.description}\n\n` +
         `Usa \`/achievements\` para ver tu progreso o \`/achievements claim ${achievement.id}\` para reclamar recompensas.`,
@@ -318,14 +318,16 @@ export function buildBadgeSlotsEmbed(
     if (badge) {
       lines.push(`**Slot ${slotNum}:** ${badge.emoji} ${badge.name}`);
     } else {
-      lines.push(`**Slot ${slotNum}:** *Vacío*`);
+      lines.push(`**Slot ${slotNum}:** *Empty*`);
     }
   }
 
   const embed = new Embed()
-    .setTitle(`🎖️ Insignias de ${username}`)
+    .setTitle(`🎖️ Badges for ${username}`)
     .setDescription(lines.join("\n"))
     .setColor(0xf39c12);
 
   return embed;
 }
+
+

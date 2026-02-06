@@ -166,10 +166,13 @@ export default class CraftCommand extends Command {
       const levelReq = recipe.requiredLevel
         ? ` (Lv.${recipe.requiredLevel}+)`
         : "";
+      const reqIssue = recipe.requirementIssue
+        ? `\n⚠️ ${recipe.requirementIssue}`
+        : "";
 
       embed.addFields({
         name: `${status} ${recipe.name}${levelReq}`,
-        value: `${recipe.description}\n📥 ${inputsText}\n📤 ${outputsText}${recipe.xpReward ? `\n⭐ +${recipe.xpReward} XP` : ""}`,
+        value: `${recipe.description}\n📥 ${inputsText}\n📤 ${outputsText}${recipe.xpReward ? `\n⭐ +${recipe.xpReward} XP` : ""}${reqIssue}`,
         inline: false,
       });
     }
@@ -252,6 +255,9 @@ export default class CraftCommand extends Command {
       }
       if (recipe.missingCurrency) {
         missingText += `\n❌ **Missing:** ${recipe.missingCurrency} ${recipe.currencyInput?.currencyId}`;
+      }
+      if (recipe.requirementIssue) {
+        missingText += `\n❌ **Requirement:** ${recipe.requirementIssue}`;
       }
     }
 

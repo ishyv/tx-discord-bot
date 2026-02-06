@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "pyrite_ore",
+      "name": "Pyrite Ore",
+      "description": "A bright ore used by novice miners.",
+      "emoji": ":yellow_circle:",
+      "maxStack": 99,
+      "weight": 3,
+      "canStack": true,
+      "value": 24,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 24,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "moon_silver_ore",
+      "name": "Moon Silver Ore",
+      "description": "A rare silver ore with cold shine.",
+      "emoji": ":white_circle:",
+      "maxStack": 99,
+      "weight": 4,
+      "canStack": true,
+      "value": 68,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 68,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "sunstone_shard",
+      "name": "Sunstone Shard",
+      "description": "A warm crystal fragment from deep veins.",
+      "emoji": ":orange_circle:",
+      "maxStack": 99,
+      "weight": 4,
+      "canStack": true,
+      "value": 132,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 132,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "resin_pine_wood",
+      "name": "Resin Pine Wood",
+      "description": "Dense pine rich in resin.",
+      "emoji": ":evergreen_tree:",
+      "maxStack": 99,
+      "weight": 2,
+      "canStack": true,
+      "value": 22,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 22,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "dark_oak_wood",
+      "name": "Dark Oak Wood",
+      "description": "A heavy and reliable hardwood.",
+      "emoji": ":deciduous_tree:",
+      "maxStack": 99,
+      "weight": 3,
+      "canStack": true,
+      "value": 58,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 58,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "amberheart_wood",
+      "name": "Amberheart Wood",
+      "description": "Premium wood with a warm amber core.",
+      "emoji": ":palm_tree:",
+      "maxStack": 99,
+      "weight": 3,
+      "canStack": true,
+      "value": 120,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 120,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "pyrite_ingot",
+      "name": "Pyrite Ingot",
+      "description": "Refined pyrite for tier 2 crafting.",
+      "emoji": ":yellow_square:",
+      "maxStack": 99,
+      "weight": 3,
+      "canStack": true,
+      "value": 42,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 42,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "moon_silver_ingot",
+      "name": "Moon Silver Ingot",
+      "description": "Refined moon silver for advanced tools.",
+      "emoji": ":white_large_square:",
+      "maxStack": 99,
+      "weight": 4,
+      "canStack": true,
+      "value": 120,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 120,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "sunstone_core",
+      "name": "Sunstone Core",
+      "description": "Condensed core from sunstone shards.",
+      "emoji": ":orange_square:",
+      "maxStack": 99,
+      "weight": 5,
+      "canStack": true,
+      "value": 260,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 260,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "resin_pine_plank",
+      "name": "Resin Pine Plank",
+      "description": "Processed resin pine for tool shafts.",
+      "emoji": ":wood:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 36,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 36,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "dark_oak_plank",
+      "name": "Dark Oak Plank",
+      "description": "Processed dark oak for sturdy builds.",
+      "emoji": ":wood:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 92,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 92,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "amberheart_plank",
+      "name": "Amberheart Plank",
+      "description": "Processed amberheart for masterwork tools.",
+      "emoji": ":wood:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 188,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 188,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    }
+  ]
+}

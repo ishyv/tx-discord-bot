@@ -23,14 +23,14 @@ export default class TicketSelectHandler extends ComponentCommand {
     const allowed = await assertFeatureEnabled(
       ctx as any,
       Features.Tickets,
-      "El sistema de tickets está deshabilitado actualmente.",
+      "The ticket system is currently disabled.",
     );
     if (!allowed) return;
 
     const selection = ctx.interaction.values?.[0];
     if (!selection) {
       await ctx.write({
-        content: "Selecciona una opción válida para continuar.",
+        content: "Select a valid option to continue.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -39,7 +39,7 @@ export default class TicketSelectHandler extends ComponentCommand {
     const category = getTicketCategory(selection);
     if (!category) {
       await ctx.write({
-        content: "La opción seleccionada ya no está disponible.",
+        content: "The selected option is no longer available.",
         flags: MessageFlags.Ephemeral,
       });
       return;

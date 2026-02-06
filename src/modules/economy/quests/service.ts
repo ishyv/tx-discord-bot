@@ -123,11 +123,11 @@ export interface QuestService {
 function buildRequirementDescription(req: QuestRequirement): string {
   switch (req.type) {
     case "do_command":
-      return `Usa el comando "/${req.command}" ${req.count} veces`;
+      return `Use the command "/${req.command}" ${req.count} veces`;
     case "spend_currency":
       return `Gasta ${req.amount} ${req.currencyId}`;
     case "craft_recipe":
-      return `Craftea la receta "${req.recipeId}" ${req.count} veces`;
+      return `Craft recipe "${req.recipeId}" ${req.count} times`;
     case "win_minigame":
       return `Gana ${req.count} veces en ${req.game}`;
     case "vote_cast":
@@ -912,3 +912,5 @@ async function applyReward(
 }
 
 export const questService: QuestService = new QuestServiceImpl();
+
+

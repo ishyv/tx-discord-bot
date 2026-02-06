@@ -46,7 +46,7 @@ const options = {
 };
 
 @Declare({
-  name: "store",
+  name: "store-settings",
   description: "Configure store rotation, featured items, and pricing",
 })
 @Options(options)

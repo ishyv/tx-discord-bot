@@ -20,9 +20,10 @@ export default class UIUserSelectHandler extends ComponentCommand {
     const ok = await resolveAndInvoke(ctx.customId, ctx);
     if (!ok) {
       await ctx.write({
-        content: "Este menú de selección de usuarios ya no está activo.",
+        content: "This user select menu is no longer active.",
         flags: MessageFlags.Ephemeral,
       });
     }
   }
 }
+

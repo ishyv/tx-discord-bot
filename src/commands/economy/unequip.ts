@@ -51,7 +51,7 @@ const slotOption = {
 
 @Declare({
   name: "unequip",
-  description: "Desequipar un item de un slot",
+  description: "🎒 Unequip an economy item. For RPG equipment use /rpg unequip",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -115,14 +115,14 @@ async function showEquippedSlots(
   const equippedSlots = EQUIPMENT_SLOTS.filter((slot) => loadout.slots[slot]);
 
   if (equippedSlots.length === 0) {
-    await replyEphemeral(ctx, { content: "No tienes ningún item equipado." });
+    await replyEphemeral(ctx, { content: "You have no equipped items." });
     return;
   }
 
   const embed = new Embed()
     .setColor(EmbedColors.Orange)
-    .setTitle("🔧 Selecciona un Slot para Desequipar")
-    .setDescription("Haz clic en el botón del slot que quieres vaciar.");
+    .setTitle("🔧 Select a slot to unequip")
+    .setDescription("Click the button for the slot you'd like to clear.");
 
   // Show current equipment
   for (const slot of equippedSlots) {
@@ -180,7 +180,7 @@ async function promptUnequip(
 
   if (!equipped) {
     await replyEphemeral(ctx, {
-      content: `No tienes nada equipado en ${getSlotDisplayName(slot)}.`,
+      content: `Nothing is equipped in ${getSlotDisplayName(slot)}.`,
     });
     return;
   }
@@ -192,21 +192,21 @@ async function promptUnequip(
 
   const embed = new Embed()
     .setColor(EmbedColors.Yellow)
-    .setTitle("🔧 Confirmar Desequipamiento")
+    .setTitle("🔧 Confirm Unequip")
     .setDescription(
-      `¿Deseas desequipar **${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}** de **${getSlotDisplayName(slot)}**?\n\n` +
-        "El item volverá a tu inventario.",
+      `Do you want to unequip **${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}** from **${getSlotDisplayName(slot)}**?\n\n` +
+        "The item will return to your inventory.",
     );
 
   const confirmBtn = createButton({
     customId: `unequip_confirm_${userId}`,
-    label: "✅ Desequipar",
+    label: "✅ Unequip",
     style: ButtonStyle.Success,
   });
 
   const cancelBtn = createButton({
     customId: `unequip_cancel_${userId}`,
-    label: "❌ Cancelar",
+    label: "❌ Cancel",
     style: ButtonStyle.Secondary,
   });
 
@@ -258,7 +258,7 @@ export class UnequipConfirmHandler extends SubCommand {
     const pending = pendingUnequips.get(userId);
     if (!pending || pending.guildId !== guildId) {
       await replyEphemeral(ctx, {
-        content: "❌ No tienes un desequipamiento pendiente o ha expirado.",
+        content: "❌ You have no pending unequip request or it has expired.",
       });
       return;
     }
@@ -273,15 +273,15 @@ export class UnequipConfirmHandler extends SubCommand {
 
     if (result.isErr()) {
       const error = result.error;
-      const messages: Record<string, string> = {
-        SLOT_EMPTY: "❌ No hay nada equipado en este slot.",
-        ACCOUNT_BLOCKED: "⛔ Tu cuenta tiene restricciones.",
-        ACCOUNT_BANNED: "🚫 Tu cuenta está suspendida.",
-        RATE_LIMITED: "⏱️ Demasiados cambios. Espera un momento.",
-      };
+        const messages: Record<string, string> = {
+          SLOT_EMPTY: "❌ There's nothing equipped in that slot.",
+          ACCOUNT_BLOCKED: "⛔ Your account has restrictions.",
+          ACCOUNT_BANNED: "🚫 Your account is suspended.",
+          RATE_LIMITED: "⏱️ Too many changes. Please wait a moment.",
+        };
 
       await replyEphemeral(ctx, {
-        content: messages[error.code] ?? "❌ Error al desequipar el item.",
+        content: messages[error.code] ?? "❌ Error unequipping the item.",
       });
       return;
     }
@@ -289,9 +289,9 @@ export class UnequipConfirmHandler extends SubCommand {
     const operation = result.unwrap();
     const def = getEquipableItemDefinition(operation.itemId);
 
-    await replyEphemeral(ctx, {
-      content: `✅ Desequipado ${def?.name ?? operation.itemId} de ${getSlotDisplayName(operation.slot)}. El item volvió a tu inventario.`,
-    });
+      await replyEphemeral(ctx, {
+        content: `✅ Unequipped ${def?.name ?? operation.itemId} from ${getSlotDisplayName(operation.slot)}. The item has returned to your inventory.`,
+      });
   }
 }
 
@@ -304,6 +304,6 @@ export class UnequipCancelHandler extends SubCommand {
     const { userId } = getContextInfo(ctx);
     pendingUnequips.delete(userId);
 
-    await replyEphemeral(ctx, { content: "❌ Desequipamiento cancelado." });
+    await replyEphemeral(ctx, { content: "❌ Unequip canceled." });
   }
 }

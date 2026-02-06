@@ -46,6 +46,10 @@ export interface CraftingRecipe {
   };
   /** Minimum progression level required. */
   readonly requiredLevel?: number;
+  /** Required RPG profession path (miner/lumber). */
+  readonly professionRequirement?: "miner" | "lumber";
+  /** Minimum tool tier required to craft. */
+  readonly tierRequirement?: number;
   /** XP granted for crafting this recipe. */
   readonly xpReward: number;
   /** Whether this recipe is enabled. */
@@ -66,6 +70,8 @@ export interface CraftingRecipeView {
     readonly sector: EconomySector;
   };
   readonly requiredLevel?: number;
+  readonly professionRequirement?: "miner" | "lumber";
+  readonly tierRequirement?: number;
   readonly xpReward: number;
   readonly enabled: boolean;
   /** Whether user can craft (has materials). */
@@ -74,6 +80,8 @@ export interface CraftingRecipeView {
   readonly missingItems: RecipeItemInput[];
   /** Missing currency if cannot craft. */
   readonly missingCurrency?: number;
+  /** Requirement message if profession/tier requirement is not met. */
+  readonly requirementIssue?: string;
 }
 
 /** Input for crafting operation. */
@@ -96,6 +104,7 @@ export interface CraftResult {
   readonly currencyId?: CurrencyId;
   readonly guildFee?: number;
   readonly xpGained: number;
+  readonly warnings?: string[];
   readonly correlationId: string;
   readonly timestamp: Date;
 }
@@ -108,6 +117,8 @@ export type CraftingErrorCode =
   | "INSUFFICIENT_CURRENCY"
   | "LEVEL_REQUIRED"
   | "CAPACITY_EXCEEDED"
+  | "PROFESSION_REQUIRED"
+  | "TIER_REQUIRED"
   | "ACCOUNT_BLOCKED"
   | "ACCOUNT_BANNED"
   | "RATE_LIMITED"

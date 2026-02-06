@@ -161,7 +161,7 @@ export const VOTE_BADGES: readonly VoteBadge[] = [
   },
   {
     id: "lover_25",
-    name: "Romántico",
+    name: "Romantic",
     emoji: "💘",
     description: "Diste 25 love votes",
     requirement: { type: "love", threshold: 25 },
@@ -190,3 +190,4 @@ export interface GuildVoteAggregates {
   readonly hateGiven: number;
   readonly lastUpdated: Date;
 }
+

@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "pickaxe_lv2",
+      "name": "Pyrite Pickaxe",
+      "description": "Tier 2 pickaxe reinforced with pyrite.",
+      "emoji": ":pick:",
+      "maxStack": 1,
+      "weight": 6,
+      "canStack": false,
+      "value": 200,
+      "rpgSlot": "tool",
+      "tool": {
+        "toolKind": "pickaxe",
+        "tier": 2,
+        "maxDurability": 25
+      },
+      "market": {
+        "tradable": true,
+        "category": "tools",
+        "suggestedPrice": 200,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "pickaxe_lv3",
+      "name": "Moon Silver Pickaxe",
+      "description": "Tier 3 pickaxe forged with moon silver.",
+      "emoji": ":pick:",
+      "maxStack": 1,
+      "weight": 7,
+      "canStack": false,
+      "value": 420,
+      "rpgSlot": "tool",
+      "tool": {
+        "toolKind": "pickaxe",
+        "tier": 3,
+        "maxDurability": 50
+      },
+      "market": {
+        "tradable": true,
+        "category": "tools",
+        "suggestedPrice": 420,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "pickaxe_lv4",
+      "name": "Sunstone Pickaxe",
+      "description": "Tier 4 master pickaxe with sunstone core.",
+      "emoji": ":pick:",
+      "maxStack": 1,
+      "weight": 8,
+      "canStack": false,
+      "value": 950,
+      "rpgSlot": "tool",
+      "tool": {
+        "toolKind": "pickaxe",
+        "tier": 4,
+        "maxDurability": 70
+      },
+      "market": {
+        "tradable": true,
+        "category": "tools",
+        "suggestedPrice": 950,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "axe_lv2",
+      "name": "Resin Pine Axe",
+      "description": "Tier 2 axe with resin pine handle.",
+      "emoji": ":axe:",
+      "maxStack": 1,
+      "weight": 5,
+      "canStack": false,
+      "value": 190,
+      "rpgSlot": "tool",
+      "tool": {
+        "toolKind": "axe",
+        "tier": 2,
+        "maxDurability": 25
+      },
+      "market": {
+        "tradable": true,
+        "category": "tools",
+        "suggestedPrice": 190,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "axe_lv3",
+      "name": "Dark Oak Axe",
+      "description": "Tier 3 axe built for dense forests.",
+      "emoji": ":axe:",
+      "maxStack": 1,
+      "weight": 6,
+      "canStack": false,
+      "value": 400,
+      "rpgSlot": "tool",
+      "tool": {
+        "toolKind": "axe",
+        "tier": 3,
+        "maxDurability": 50
+      },
+      "market": {
+        "tradable": true,
+        "category": "tools",
+        "suggestedPrice": 400,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    },
+    {
+      "id": "axe_lv4",
+      "name": "Amberheart Axe",
+      "description": "Tier 4 master axe with amberheart core.",
+      "emoji": ":axe:",
+      "maxStack": 1,
+      "weight": 7,
+      "canStack": false,
+      "value": 900,
+      "rpgSlot": "tool",
+      "tool": {
+        "toolKind": "axe",
+        "tier": 4,
+        "maxDurability": 70
+      },
+      "market": {
+        "tradable": true,
+        "category": "tools",
+        "suggestedPrice": 900,
+        "minPrice": 1,
+        "maxPrice": 5000
+      }
+    }
+  ]
+}

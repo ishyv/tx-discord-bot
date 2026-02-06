@@ -11,7 +11,7 @@
  * Q: Por que usar un enum en lugar de solo strings?
  * A: Porque si uno de los identificadores cambia, es mas facil actualizarlo en un solo lugar.
  * Si se usaran strings sueltos en el codigo, se podria romper la consistencia. A la hora de referenciar
- * estos canales en otros modulos, usar <CoreChannelNames.NombreDelCanal> asegura que siempre se use
+ * estos canales en otros modulos, usar <CoreChannelNames.NombreDelChannel> asegura que siempre se use
  * el mismo identificador.
  */
 export enum CoreChannelNames {
@@ -36,19 +36,21 @@ export enum CoreChannelNames {
  */
 export const CORE_CHANNEL_DEFINITIONS: Record<string, string> = {
   // Pares de: identificar : descripción humana del canal
-  [CoreChannelNames.MessageLogs]: "Registro de mensajes moderados",
-  [CoreChannelNames.VoiceLogs]: "Registro de actividad en voz",
-  [CoreChannelNames.TicketLogs]: "Seguimiento de tickets",
-  [CoreChannelNames.Tickets]: "Canal de tickets",
-  [CoreChannelNames.TicketCategory]: "Categoría de tickets",
-  [CoreChannelNames.PointsLog]: "Log de puntos",
-  [CoreChannelNames.GeneralLogs]: "Eventos generales del servidor",
-  [CoreChannelNames.BanSanctions]: "Historial de sanciones",
-  [CoreChannelNames.Staff]: "Alertas para el staff",
-  [CoreChannelNames.Suggestions]: "Sugerencias",
-  [CoreChannelNames.RepRequests]: "Solicitudes de Reputación",
-  [CoreChannelNames.OffersReview]: "Revisión de ofertas laborales",
-  [CoreChannelNames.ApprovedOffers]: "Publicación de ofertas aprobadas",
+  [CoreChannelNames.MessageLogs]: "Moderation message logs",
+  [CoreChannelNames.VoiceLogs]: "Voice activity logs",
+  [CoreChannelNames.TicketLogs]: "Ticket tracking logs",
+  [CoreChannelNames.Tickets]: "Ticket channel",
+  [CoreChannelNames.TicketCategory]: "Ticket category",
+  [CoreChannelNames.PointsLog]: "Points log",
+  [CoreChannelNames.GeneralLogs]: "General Server Events",
+  [CoreChannelNames.BanSanctions]: "Sanction history",
+  [CoreChannelNames.Staff]: "Staff alerts",
+  [CoreChannelNames.Suggestions]: "Suggestions",
+  [CoreChannelNames.RepRequests]: "Reputation Requests",
+  [CoreChannelNames.OffersReview]: "Job offer review",
+  [CoreChannelNames.ApprovedOffers]: "Approved offers publication",
 };
 
 export type CoreChannelName = keyof typeof CORE_CHANNEL_DEFINITIONS;
+
+

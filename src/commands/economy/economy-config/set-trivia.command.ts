@@ -79,7 +79,7 @@ const options = {
 };
 
 @Declare({
-  name: "trivia",
+  name: "trivia-settings",
   description: "Configure trivia settings (multipliers, streaks, limits)",
 })
 @Options(options)

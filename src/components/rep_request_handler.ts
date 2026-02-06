@@ -80,7 +80,7 @@ export default class RepRequestHandler extends ComponentCommand {
     if (!guildId) {
       await ctx.write({
         content:
-          "No se pudo determinar el servidor para procesar la solicitud.",
+          "Could not determine the guild for this request.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -89,7 +89,7 @@ export default class RepRequestHandler extends ComponentCommand {
     const enabled = await assertFeatureEnabled(
       ctx as any,
       Features.Reputation,
-      "El sistema de reputacion esta deshabilitado en este servidor.",
+      "The reputation system is disabled in this server.",
     );
     if (!enabled) return;
 
@@ -97,15 +97,15 @@ export default class RepRequestHandler extends ComponentCommand {
       // Show a modal so reviewers can set a custom reputation delta.
       const modal = new Modal()
         .setCustomId(`rep:modal:${targetId}`)
-        .setTitle("Establecer Reputacion Manual")
+        .setTitle("Set Manual Reputation")
         .addComponents(
           new ActionRow<TextInput>().addComponents(
             new TextInput()
               .setCustomId("amount")
-              .setLabel("Cantidad (-5 a 5, no 0)")
+              .setLabel("Amount (-5 to 5, not 0)")
               .setStyle(TextInputStyle.Short)
               .setRequired(true)
-              .setPlaceholder("Ej: 3, -2"),
+              .setPlaceholder("Ex: 3, -2"),
           ),
         );
       await ctx.interaction.modal(modal);
@@ -131,7 +131,7 @@ export default class RepRequestHandler extends ComponentCommand {
       const totalMinutes = Math.round((penalty + commandInterval) / 60_000);
 
       await ctx.write({
-        content: `Se extendio el cooldown ${penaltyMinutes}m adicionales (total ~${totalMinutes}m) para <@${targetId}>.`,
+        content: `Extended cooldown by ${penaltyMinutes}m (total ~${totalMinutes}m) for <@${targetId}>.`,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -146,7 +146,7 @@ export default class RepRequestHandler extends ComponentCommand {
     const totalResult = await adjustUserReputation(targetId, amount);
     if (totalResult.isErr()) {
       await ctx.write({
-        content: "No se pudo actualizar la reputacion.",
+        content: "Could not update reputation.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -198,11 +198,11 @@ export default class RepRequestHandler extends ComponentCommand {
       ctx.client,
       guildId,
       {
-        title: "Solicitud de Reputacion Revisada",
-        description: `Se ${amount > 0 ? "agrego" : "removio"} ${Math.abs(amount)} punto(s) a <@${targetId}> via solicitud.`,
+        title: "Reputation Request Reviewed",
+        description: `${amount > 0 ? "Added" : "Removed"} ${Math.abs(amount)} point(s) ${amount > 0 ? "to" : "from"} <@${targetId}> via request.`,
         fields: [
           { name: "Total", value: `${total}`, inline: true },
-          { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+          { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
         ],
         actorId: ctx.author.id,
       },

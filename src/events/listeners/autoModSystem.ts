@@ -1,20 +1,20 @@
 /**
  * AutoMod Event Listener: Activación del sistema de moderación automática.
  *
- * Propósito: Disparar el análisis AutoMod en cada mensaje de usuario
+ * Propósito: Disparar el análisis AutoMod en cada mensaje de user
  * cuando la función está habilitada para el guild específico.
  *
  * Encaje en el sistema: Primer eslabón de la cadena AutoMod.
  * Conecta eventos de Discord con AutoModSystem.getInstance().analyzeUserMessage().
  *
  * Flujo de activación (orden crítico):
- *   1. Filtrar bots (solo usuarios reales)
+ *   1. Filtrar bots (solo users reales)
  *   2. Verificar guildId disponible
  *   3. Consultar feature flag AutoMod para el guild
  *   4. Si habilitado, delegar a AutoModSystem para análisis completo
  *
  * Invariantes clave:
- *   - Solo procesa mensajes de usuarios no-bots
+ *   - Solo procesa mensajes de users no-bots
  *   - Respeta configuración por guild via feature flags
  *   - No maneja errores directamente (AutoModSystem tiene su propio error handling)
  *
@@ -33,7 +33,7 @@ import { AutoModSystem } from "@/systems/automod";
 import { isFeatureEnabled, Features } from "@/modules/features";
 
 /**
- * Listener principal: Analiza mensajes de usuarios para detección de contenido malicioso.
+ * Listener principal: Analiza mensajes de users para detección de contenido malicioso.
  *
  * Propósito: Punto de entrada del sistema AutoMod que filtra eventos
  * y delega el análisis completo al sistema centralizado.
@@ -48,7 +48,7 @@ import { isFeatureEnabled, Features } from "@/modules/features";
  * @param client Instancia del bot de Seyfert
  *
  * Side effects:
- *   - Puede aplicar timeout a usuarios (via AutoModSystem)
+ *   - Puede aplicar timeout a users (via AutoModSystem)
  *   - Puede enviar notificaciones al staff
  *   - Puede escribir en caché persistente
  *
@@ -73,3 +73,4 @@ onMessageCreate(async (message, client) => {
 
   await AutoModSystem.getInstance(client).analyzeUserMessage(message);
 });
+

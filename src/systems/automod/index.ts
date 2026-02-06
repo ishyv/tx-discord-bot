@@ -232,8 +232,8 @@ export class AutoModSystem {
         title: "AutoMod: LinkSpam",
         description: [
           "Detectado posible spam de links.",
-          `Usuario: <@${userId}>`,
-          `Canal: ${channelLabel}`,
+          `User: <@${userId}>`,
+          `Channel: ${channelLabel}`,
           messageUrl ? `Mensaje: ${messageUrl}` : "",
         ]
           .filter(Boolean)
@@ -279,8 +279,8 @@ export class AutoModSystem {
               {
                 title: "AutoMod LinkSpam",
                 description: [
-                  `Usuario: <@${userId}>`,
-                  channelId ? `Canal: <#${channelId}>` : "Canal: desconocido",
+                  `User: <@${userId}>`,
+                  channelId ? `Channel: <#${channelId}>` : "Channel: desconocido",
                   messageUrl ? `Mensaje: ${messageUrl}` : "",
                 ]
                   .filter(Boolean)
@@ -750,3 +750,4 @@ export class AutoModSystem {
       });
   }
 }
+

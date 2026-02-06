@@ -19,6 +19,10 @@ export type AuditOperationType =
   | "item_equip"
   | "item_unequip"
   | "item_use"
+  | "market_list"
+  | "market_buy"
+  | "market_cancel"
+  | "market_expire"
   | "config_update"
   | "daily_claim"
   | "work_claim"
@@ -26,7 +30,14 @@ export type AuditOperationType =
   | "xp_grant"
   | "rollback"
   | "craft"
-  | "quest_complete";
+  | "quest_complete"
+  | "combat_challenge"
+  | "combat_move_submit"
+  | "combat_round_resolve"
+  | "combat_timeout_default"
+  | "combat_complete"
+  | "combat_forfeit"
+  | "combat_expire";
 
 /** Audit log entry for economy operations. */
 export interface EconomyAuditEntry {

@@ -27,7 +27,7 @@ export default class EmbedDesignerModalHandler extends ModalCommand {
     const session = getEmbedDesignerSession(messageId);
     if (!session) {
       await ctx.write({
-        content: "Esta edición expiró o no es válida.",
+        content: "This edit has expired or is invalid.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -46,3 +46,4 @@ export default class EmbedDesignerModalHandler extends ModalCommand {
     await applyEmbedModalUpdate(ctx as any, messageId, action as any, payload);
   }
 }
+

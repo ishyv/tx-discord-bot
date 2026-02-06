@@ -11,9 +11,13 @@
  * - Search is case-insensitive and matches both name and ID.
  */
 
-import { getItemDefinition } from "@/modules/inventory/items";
-import type { ItemInventory } from "@/modules/inventory/inventory";
-import type { InventoryItem } from "@/modules/inventory/definitions";
+import {
+  getItemDefinition,
+  getItemCategory,
+  getToolMaxDurability,
+} from "@/modules/inventory/items";
+import type { ModernInventory } from "@/modules/inventory/inventory";
+import { getTotalQuantity } from "@/modules/inventory/instances";
 import {
   type InventoryItemView,
   type InventorySummaryView,
@@ -24,15 +28,29 @@ import {
   MAX_INVENTORY_PAGE_SIZE,
 } from "../account/types";
 
-/** Convert raw inventory item to view with definitions. */
-function toItemView(item: InventoryItem): InventoryItemView {
-  const def = getItemDefinition(item.id);
+/** Convert inventory entry to view with definitions. */
+function toItemView(itemId: string, rawEntry: any): InventoryItemView {
+  const def = getItemDefinition(itemId);
+  // Reconstruct entry type roughly if needed, or rely on properties
+  const quantity = getTotalQuantity(rawEntry);
+  const isInstanceBased = rawEntry.type === "instances";
+  const instances = isInstanceBased
+    ? rawEntry.instances.map((inst: any) => ({
+      instanceId: inst.instanceId,
+      durability: inst.durability,
+      maxDurability: def ? (getToolMaxDurability(def) ?? 100) : 100,
+    }))
+    : undefined;
+
   return {
-    id: item.id,
-    name: def?.name ?? item.id,
+    id: itemId,
+    name: def?.name ?? itemId,
     emoji: def?.emoji ?? "📦",
-    quantity: Math.trunc(item.quantity),
+    quantity,
     description: def?.description ?? "",
+    category: def ? getItemCategory(def) : "materials",
+    isInstanceBased,
+    instances,
   };
 }
 
@@ -65,25 +83,30 @@ function matchesSearch(item: InventoryItemView, search: string): boolean {
   );
 }
 
+/** Filter items by category. */
+function matchesFilter(
+  item: InventoryItemView,
+  filter: InventoryPaginationOptions["filter"],
+): boolean {
+  if (!filter || filter === "all") return true;
+  return item.category === filter;
+}
+
 /**
  * Build inventory summary (statistics only, no pagination).
  */
 export function buildInventorySummary(
-  inventory: ItemInventory,
+  inventory: ModernInventory,
 ): InventorySummaryView {
-  const entries = Object.values(inventory).filter(
-    (entry): entry is InventoryItem =>
-      !!entry &&
-      typeof entry.id === "string" &&
-      typeof entry.quantity === "number" &&
-      entry.quantity > 0,
+  const entries = Object.entries(inventory).filter(
+    ([_, entry]) => !!entry && getTotalQuantity(entry) > 0,
   );
 
   if (entries.length === 0) {
     return EMPTY_INVENTORY_SUMMARY;
   }
 
-  const views = entries.map(toItemView);
+  const views = entries.map(([id, entry]) => toItemView(id, entry));
 
   // Sort by quantity descending for top items
   const topItems = [...views]
@@ -104,7 +127,7 @@ export function buildInventorySummary(
  * Build paginated inventory view with sorting and filtering.
  */
 export function buildInventoryPage(
-  inventory: ItemInventory,
+  inventory: ModernInventory,
   options: Partial<InventoryPaginationOptions> = {},
 ): InventoryPageView {
   const opts = {
@@ -119,12 +142,8 @@ export function buildInventoryPage(
   );
 
   // Get valid items
-  const entries = Object.values(inventory).filter(
-    (entry): entry is InventoryItem =>
-      !!entry &&
-      typeof entry.id === "string" &&
-      typeof entry.quantity === "number" &&
-      entry.quantity > 0,
+  const entries = Object.entries(inventory).filter(
+    ([_, entry]) => !!entry && getTotalQuantity(entry) > 0,
   );
 
   if (entries.length === 0) {
@@ -138,7 +157,12 @@ export function buildInventoryPage(
   }
 
   // Convert to views
-  let views = entries.map(toItemView);
+  let views = entries.map(([id, entry]) => toItemView(id, entry));
+
+  // Apply category filter
+  if (opts.filter && opts.filter !== "all") {
+    views = views.filter((item) => matchesFilter(item, opts.filter));
+  }
 
   // Apply search filter
   if (opts.search) {
@@ -183,18 +207,19 @@ export function buildInventoryPage(
  * Useful for exports or admin views.
  */
 export function buildFullInventory(
-  inventory: ItemInventory,
+  inventory: ModernInventory,
   options: Omit<Partial<InventoryPaginationOptions>, "page"> = {},
 ): InventoryItemView[] {
-  const entries = Object.values(inventory).filter(
-    (entry): entry is InventoryItem =>
-      !!entry &&
-      typeof entry.id === "string" &&
-      typeof entry.quantity === "number" &&
-      entry.quantity > 0,
+  const entries = Object.entries(inventory).filter(
+    ([_, entry]) => !!entry && getTotalQuantity(entry) > 0,
   );
 
-  let views = entries.map(toItemView);
+  let views = entries.map(([id, entry]) => toItemView(id, entry));
+
+  // Apply category filter
+  if (options.filter && options.filter !== "all") {
+    views = views.filter((item) => matchesFilter(item, options.filter));
+  }
 
   // Apply search filter
   if (options.search) {
@@ -227,15 +252,11 @@ export function buildFullInventory(
  * Useful for checking if pagination is needed.
  */
 export function getInventoryPaginationInfo(
-  inventory: ItemInventory,
+  inventory: ModernInventory,
   pageSize: number = DEFAULT_INVENTORY_PAGINATION.pageSize,
 ): { totalItems: number; totalPages: number; needsPagination: boolean } {
   const entries = Object.values(inventory).filter(
-    (entry): entry is InventoryItem =>
-      !!entry &&
-      typeof entry.id === "string" &&
-      typeof entry.quantity === "number" &&
-      entry.quantity > 0,
+    (entry) => !!entry && getTotalQuantity(entry) > 0,
   );
 
   const totalItems = entries.length;

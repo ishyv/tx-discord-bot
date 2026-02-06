@@ -6,7 +6,7 @@
 import { recordTicketClosure } from "@/modules/tickets/service";
 
 /**
- * Cierra un ticket a nivel de estado (guild + usuarios) de forma tolerante a fallos.
+ * Cierra un ticket a nivel de estado (guild + users) de forma tolerante a fallos.
  * Side effects: invoca `recordTicketClosure` que limpia `pendingTickets` y
  * referencias en `openTickets`.
  * Gotchas: pensado para llamarse después de eliminar el canal en Discord; si el
@@ -25,3 +25,4 @@ export async function closeTicket(
     });
   }
 }
+

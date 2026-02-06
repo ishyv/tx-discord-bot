@@ -299,7 +299,7 @@ export function buildTransferAlertMessage(
     none: "",
     warning: "Transferencia significativa",
     alert: "Gran transferencia detectada",
-    critical: "Transferencia masiva - Requiere atención",
+    critical: "Mass transfer - Requires attention",
   };
 
   if (level === "none") return "";
@@ -311,3 +311,4 @@ export function buildTransferAlertMessage(
     `👥 Para: <@${recipientId}>`
   );
 }
+

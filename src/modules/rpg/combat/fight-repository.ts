@@ -89,13 +89,13 @@ class RpgFightRepoImpl implements RpgFightRepo {
 
   async ensureIndexes(): Promise<void> {
     const col = await this.collection();
-    
+
     // TTL index on expiresAt for automatic cleanup
     await col.createIndex(
       { expiresAt: 1 },
       { expireAfterSeconds: 0, name: "ttl_expiresAt" }
     );
-    
+
     // Query indexes
     await col.createIndex({ p1Id: 1, status: 1 }, { name: "p1_status" });
     await col.createIndex({ p2Id: 1, status: 1 }, { name: "p2_status" });
@@ -117,7 +117,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
       const col = await this.collection();
       const doc = await col.findOne({ _id: fightId });
       if (!doc) return OkResult(null);
-      
+
       const parsed = RpgFightSchema.safeParse(doc);
       if (!parsed.success) {
         return ErrResult(new Error(`Corrupted fight data: ${parsed.error.message}`));
@@ -136,7 +136,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
         $or: [{ p1Id: userId }, { p2Id: userId }],
       });
       if (!doc) return OkResult(null);
-      
+
       const parsed = RpgFightSchema.safeParse(doc);
       if (!parsed.success) {
         return ErrResult(new Error(`Corrupted fight data: ${parsed.error.message}`));
@@ -155,7 +155,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
         p2Id: userId,
       });
       if (!doc) return OkResult(null);
-      
+
       const parsed = RpgFightSchema.safeParse(doc);
       if (!parsed.success) {
         return ErrResult(new Error(`Corrupted fight data: ${parsed.error.message}`));
@@ -174,7 +174,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
     try {
       const col = await this.collection();
       const now = new Date();
-      
+
       // Atomic CAS: only accept if still pending
       const result = await col.findOneAndUpdate(
         { _id: fightId, status: "pending" },
@@ -186,15 +186,16 @@ class RpgFightRepoImpl implements RpgFightRepo {
             p1Hp: p1Snapshot.maxHp,
             p2Hp: p2Snapshot.maxHp,
             acceptedAt: now.toISOString(),
+            lastActionAt: now.toISOString(),
           },
         },
         { returnDocument: "after" }
       );
-      
+
       if (!result) {
         return OkResult(null); // Fight not found or not pending
       }
-      
+
       return OkResult(result);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));
@@ -208,20 +209,25 @@ class RpgFightRepoImpl implements RpgFightRepo {
   ): Promise<Result<RpgFightData | null, Error>> {
     try {
       const col = await this.collection();
-      
+
       // Determine which field to update
       const updateField = playerId === "p1" ? "p1PendingMove" : "p2PendingMove";
-      
+
       const result = await col.findOneAndUpdate(
         { _id: fightId, status: "active" },
-        { $set: { [updateField]: move } },
+        {
+          $set: {
+            [updateField]: move,
+            lastActionAt: new Date().toISOString()
+          }
+        },
         { returnDocument: "after" }
       );
-      
+
       if (!result) {
         return OkResult(null);
       }
-      
+
       return OkResult(result);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));
@@ -236,7 +242,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
   ): Promise<Result<RpgFightData | null, Error>> {
     try {
       const col = await this.collection();
-      
+
       const result = await col.findOneAndUpdate(
         { _id: fightId, status: "active" },
         {
@@ -247,15 +253,16 @@ class RpgFightRepoImpl implements RpgFightRepo {
             p1PendingMove: null,
             p2PendingMove: null,
             currentRound: round.roundNumber + 1,
+            lastActionAt: new Date().toISOString(),
           },
         },
         { returnDocument: "after" }
       );
-      
+
       if (!result) {
         return OkResult(null);
       }
-      
+
       return OkResult(result);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));
@@ -269,7 +276,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
     try {
       const col = await this.collection();
       const now = new Date();
-      
+
       const result = await col.findOneAndUpdate(
         { _id: fightId, status: "active" },
         {
@@ -281,11 +288,11 @@ class RpgFightRepoImpl implements RpgFightRepo {
         },
         { returnDocument: "after" }
       );
-      
+
       if (!result) {
         return OkResult(null);
       }
-      
+
       return OkResult(result);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));
@@ -296,7 +303,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
     try {
       const col = await this.collection();
       const now = new Date();
-      
+
       const result = await col.findOneAndUpdate(
         { _id: fightId, status: { $in: ["pending", "active"] } },
         {
@@ -307,11 +314,11 @@ class RpgFightRepoImpl implements RpgFightRepo {
         },
         { returnDocument: "after" }
       );
-      
+
       if (!result) {
         return OkResult(null);
       }
-      
+
       return OkResult(result);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));
@@ -322,13 +329,13 @@ class RpgFightRepoImpl implements RpgFightRepo {
     try {
       const col = await this.collection();
       const now = new Date();
-      
+
       // Winner is the other player
       const fight = await col.findOne({ _id: fightId });
       if (!fight) return OkResult(null);
-      
+
       const winnerId = forfeiterId === fight.p1Id ? fight.p2Id : fight.p1Id;
-      
+
       const result = await col.findOneAndUpdate(
         { _id: fightId, status: "active" },
         {
@@ -340,11 +347,11 @@ class RpgFightRepoImpl implements RpgFightRepo {
         },
         { returnDocument: "after" }
       );
-      
+
       if (!result) {
         return OkResult(null);
       }
-      
+
       return OkResult(result);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));
@@ -358,7 +365,7 @@ class RpgFightRepoImpl implements RpgFightRepo {
   ): Promise<Result<RpgFightData[], Error>> {
     try {
       const col = await this.collection();
-      
+
       const filter: Record<string, unknown> = {};
       if (query.status) filter.status = query.status;
       if (query.p1Id) filter.p1Id = query.p1Id;
@@ -366,14 +373,14 @@ class RpgFightRepoImpl implements RpgFightRepo {
       if (query.userId) {
         filter.$or = [{ p1Id: query.userId }, { p2Id: query.userId }];
       }
-      
+
       const docs = await col
         .find(filter)
         .sort({ createdAt: -1 })
         .skip(page * pageSize)
         .limit(pageSize)
         .toArray();
-      
+
       return OkResult(docs);
     } catch (error) {
       return ErrResult(error instanceof Error ? error : new Error(String(error)));

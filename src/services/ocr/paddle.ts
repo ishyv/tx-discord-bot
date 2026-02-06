@@ -153,7 +153,7 @@ async function createOcrService(): Promise<PaddleOcrServiceClass | null> {
 
     if (!PaddleOcrService) {
       console.error(
-        "OCR: PaddleOcrService no está disponible tras importar el módulo.",
+        "OCR: PaddleOcrService is unavailable after importing the module.",
       );
       return null;
     }
@@ -179,7 +179,7 @@ async function createOcrService(): Promise<PaddleOcrServiceClass | null> {
       },
     });
   } catch (error) {
-    console.error("OCR: no se pudo inicializar PaddleOCR", error);
+    console.error("OCR: failed to initialize PaddleOCR", error);
     return null;
   }
 }
@@ -311,3 +311,4 @@ export async function recognizeText(buffer: ArrayBuffer): Promise<string> {
     return "";
   }
 }
+

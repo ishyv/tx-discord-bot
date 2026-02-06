@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "process_pyrite_ore",
+      "name": "Refine Pyrite",
+      "description": "Smelt pyrite ore into pyrite ingots.",
+      "type": "processing",
+      "itemInputs": [
+        { "itemId": "pyrite_ore", "quantity": 2 }
+      ],
+      "itemOutputs": [
+        { "itemId": "pyrite_ingot", "quantity": 1 }
+      ],
+      "xpReward": 6,
+      "enabled": true
+    },
+    {
+      "id": "process_moon_silver_ore",
+      "name": "Refine Moon Silver",
+      "description": "Smelt moon silver ore into moon silver ingots.",
+      "type": "processing",
+      "itemInputs": [
+        { "itemId": "moon_silver_ore", "quantity": 2 }
+      ],
+      "itemOutputs": [
+        { "itemId": "moon_silver_ingot", "quantity": 1 }
+      ],
+      "xpReward": 10,
+      "enabled": true
+    },
+    {
+      "id": "process_sunstone_shard",
+      "name": "Compress Sunstone",
+      "description": "Compress shards into a stable sunstone core.",
+      "type": "processing",
+      "itemInputs": [
+        { "itemId": "sunstone_shard", "quantity": 2 }
+      ],
+      "itemOutputs": [
+        { "itemId": "sunstone_core", "quantity": 1 }
+      ],
+      "xpReward": 14,
+      "enabled": true
+    },
+    {
+      "id": "process_resin_pine_wood",
+      "name": "Saw Resin Pine",
+      "description": "Cut resin pine wood into planks.",
+      "type": "processing",
+      "itemInputs": [
+        { "itemId": "resin_pine_wood", "quantity": 2 }
+      ],
+      "itemOutputs": [
+        { "itemId": "resin_pine_plank", "quantity": 1 }
+      ],
+      "xpReward": 6,
+      "enabled": true
+    },
+    {
+      "id": "process_dark_oak_wood",
+      "name": "Saw Dark Oak",
+      "description": "Cut dark oak wood into planks.",
+      "type": "processing",
+      "itemInputs": [
+        { "itemId": "dark_oak_wood", "quantity": 2 }
+      ],
+      "itemOutputs": [
+        { "itemId": "dark_oak_plank", "quantity": 1 }
+      ],
+      "xpReward": 10,
+      "enabled": true
+    },
+    {
+      "id": "process_amberheart_wood",
+      "name": "Saw Amberheart",
+      "description": "Cut amberheart wood into planks.",
+      "type": "processing",
+      "itemInputs": [
+        { "itemId": "amberheart_wood", "quantity": 2 }
+      ],
+      "itemOutputs": [
+        { "itemId": "amberheart_plank", "quantity": 1 }
+      ],
+      "xpReward": 14,
+      "enabled": true
+    },
+    {
+      "id": "craft_miner_pickaxe_t2",
+      "name": "Forge Pyrite Pickaxe",
+      "description": "Build a tier 2 pickaxe for miner progression.",
+      "type": "crafting",
+      "itemInputs": [
+        { "itemId": "pyrite_ingot", "quantity": 8 },
+        { "itemId": "resin_pine_plank", "quantity": 4 }
+      ],
+      "currencyInput": { "currencyId": "coins", "amount": 240 },
+      "itemOutputs": [
+        { "itemId": "pickaxe_lv2", "quantity": 1 }
+      ],
+      "guildFee": { "currencyId": "coins", "amount": 20, "sector": "trade" },
+      "professionRequirement": "miner",
+      "tierRequirement": 1,
+      "requiredLevel": 1,
+      "xpReward": 32,
+      "enabled": true
+    },
+    {
+      "id": "craft_miner_pickaxe_t3",
+      "name": "Forge Moon Silver Pickaxe",
+      "description": "Build a tier 3 pickaxe for miner progression.",
+      "type": "crafting",
+      "itemInputs": [
+        { "itemId": "moon_silver_ingot", "quantity": 10 },
+        { "itemId": "dark_oak_plank", "quantity": 5 }
+      ],
+      "currencyInput": { "currencyId": "coins", "amount": 620 },
+      "itemOutputs": [
+        { "itemId": "pickaxe_lv3", "quantity": 1 }
+      ],
+      "guildFee": { "currencyId": "coins", "amount": 45, "sector": "trade" },
+      "professionRequirement": "miner",
+      "tierRequirement": 2,
+      "requiredLevel": 4,
+      "xpReward": 56,
+      "enabled": true
+    },
+    {
+      "id": "craft_miner_pickaxe_t4",
+      "name": "Forge Sunstone Pickaxe",
+      "description": "Build a tier 4 pickaxe for miner progression.",
+      "type": "crafting",
+      "itemInputs": [
+        { "itemId": "sunstone_core", "quantity": 12 },
+        { "itemId": "amberheart_plank", "quantity": 6 }
+      ],
+      "currencyInput": { "currencyId": "coins", "amount": 1300 },
+      "itemOutputs": [
+        { "itemId": "pickaxe_lv4", "quantity": 1 }
+      ],
+      "guildFee": { "currencyId": "coins", "amount": 90, "sector": "trade" },
+      "professionRequirement": "miner",
+      "tierRequirement": 3,
+      "requiredLevel": 6,
+      "xpReward": 90,
+      "enabled": true
+    },
+    {
+      "id": "craft_lumber_axe_t2",
+      "name": "Forge Resin Pine Axe",
+      "description": "Build a tier 2 axe for lumber progression.",
+      "type": "crafting",
+      "itemInputs": [
+        { "itemId": "resin_pine_plank", "quantity": 8 },
+        { "itemId": "pyrite_ingot", "quantity": 4 }
+      ],
+      "currencyInput": { "currencyId": "coins", "amount": 240 },
+      "itemOutputs": [
+        { "itemId": "axe_lv2", "quantity": 1 }
+      ],
+      "guildFee": { "currencyId": "coins", "amount": 20, "sector": "trade" },
+      "professionRequirement": "lumber",
+      "tierRequirement": 1,
+      "requiredLevel": 1,
+      "xpReward": 32,
+      "enabled": true
+    },
+    {
+      "id": "craft_lumber_axe_t3",
+      "name": "Forge Dark Oak Axe",
+      "description": "Build a tier 3 axe for lumber progression.",
+      "type": "crafting",
+      "itemInputs": [
+        { "itemId": "dark_oak_plank", "quantity": 10 },
+        { "itemId": "moon_silver_ingot", "quantity": 5 }
+      ],
+      "currencyInput": { "currencyId": "coins", "amount": 620 },
+      "itemOutputs": [
+        { "itemId": "axe_lv3", "quantity": 1 }
+      ],
+      "guildFee": { "currencyId": "coins", "amount": 45, "sector": "trade" },
+      "professionRequirement": "lumber",
+      "tierRequirement": 2,
+      "requiredLevel": 4,
+      "xpReward": 56,
+      "enabled": true
+    },
+    {
+      "id": "craft_lumber_axe_t4",
+      "name": "Forge Amberheart Axe",
+      "description": "Build a tier 4 axe for lumber progression.",
+      "type": "crafting",
+      "itemInputs": [
+        { "itemId": "amberheart_plank", "quantity": 12 },
+        { "itemId": "sunstone_core", "quantity": 6 }
+      ],
+      "currencyInput": { "currencyId": "coins", "amount": 1300 },
+      "itemOutputs": [
+        { "itemId": "axe_lv4", "quantity": 1 }
+      ],
+      "guildFee": { "currencyId": "coins", "amount": 90, "sector": "trade" },
+      "professionRequirement": "lumber",
+      "tierRequirement": 3,
+      "requiredLevel": 6,
+      "xpReward": 90,
+      "enabled": true
+    }
+  ]
+}
+

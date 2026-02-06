@@ -7,6 +7,8 @@
 
 import { GATHERING_CONFIG } from "../config";
 import type { GatheringLocation, ToolTierInfo } from "./types";
+import { getContentRegistry } from "@/modules/content";
+import { getItemDefinition } from "@/modules/inventory/items";
 
 /** Get durability for a tool tier. */
 export function getToolDurability(tier: number): number {
@@ -16,6 +18,11 @@ export function getToolDurability(tier: number): number {
 
 /** Get tier from tool ID. */
 export function getToolTier(toolId: string): number {
+  const itemDef = getItemDefinition(toolId);
+  if (itemDef?.tool?.tier !== undefined) {
+    return itemDef.tool.tier;
+  }
+
   // Check for tier suffix: "pickaxe_lv2", "pickaxe_3", "pickaxe lv.4"
   const match = toolId.match(/(?:lv\.?|level|_|\s)(\d)/i);
   if (match) {
@@ -27,6 +34,14 @@ export function getToolTier(toolId: string): number {
 
 /** Check if tool is valid for gathering. */
 export function isValidGatheringTool(toolId: string, locationType: "mine" | "forest"): boolean {
+  const itemDef = getItemDefinition(toolId);
+  if (itemDef?.tool) {
+    if (locationType === "mine") {
+      return itemDef.tool.toolKind === "pickaxe";
+    }
+    return itemDef.tool.toolKind === "axe";
+  }
+
   const lowerId = toolId.toLowerCase();
   if (locationType === "mine") {
     return lowerId.includes("pickaxe");
@@ -61,8 +76,48 @@ export const DEFAULT_LOCATIONS: GatheringLocation[] = [
 /** Location lookup map. */
 const locationMap = new Map(DEFAULT_LOCATIONS.map((l) => [l.id, l]));
 
+function toGatheringLocation(location: {
+  id: string;
+  name: string;
+  action: "mine" | "forest";
+  requiredTier: number;
+  materials: string[];
+}): GatheringLocation {
+  return {
+    id: location.id,
+    name: location.name,
+    type: location.action,
+    requiredTier: location.requiredTier,
+    materials: location.materials,
+  };
+}
+
+/** List locations (content first, then legacy fallback). */
+export function listLocations(type?: "mine" | "forest"): GatheringLocation[] {
+  const registry = getContentRegistry();
+  if (registry) {
+    const locations = registry
+      .getLocations()
+      .map((location) => toGatheringLocation(location));
+    if (type) {
+      return locations.filter((location) => location.type === type);
+    }
+    return locations;
+  }
+
+  if (type) {
+    return DEFAULT_LOCATIONS.filter((location) => location.type === type);
+  }
+  return DEFAULT_LOCATIONS.slice();
+}
+
 /** Get location by ID. */
 export function getLocation(locationId: string): GatheringLocation | undefined {
+  const registry = getContentRegistry();
+  const contentLocation = registry?.getLocationById(locationId);
+  if (contentLocation) {
+    return toGatheringLocation(contentLocation);
+  }
   return locationMap.get(locationId);
 }
 
@@ -83,7 +138,7 @@ export function getLocationMaterial(location: GatheringLocation): string {
 
 /** Get material for a specific tier (deterministic). */
 export function getMaterialForTier(type: "mine" | "forest", tier: number): string {
-  const location = DEFAULT_LOCATIONS.find(
+  const location = listLocations(type).find(
     (l) => l.type === type && l.requiredTier === tier,
   );
   return location?.materials[0] ?? (type === "mine" ? "stone" : "oak_wood");

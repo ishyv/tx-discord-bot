@@ -77,9 +77,9 @@ const sessions = new Map<string, EmbedDesignerSession>();
 const SESSION_TTL_MS = 10 * 60 * 1000;
 
 const defaultDraft: EmbedDraft = {
-  title: "Título de ejemplo",
-  description: "Describe tu contenido aquí.",
-  footer: "Pie de página opcional",
+  title: "Example title",
+  description: "Describe your content here.",
+  footer: "Optional footer",
   color: null,
   fields: [],
 };
@@ -149,8 +149,8 @@ function buildSelectOptions(
   defs: EmbedFieldDefinition[],
 ): StringSelectOption[] {
   const options = [
-    new StringSelectOption({ label: "Título", value: "title" }),
-    new StringSelectOption({ label: "Descripción", value: "description" }),
+    new StringSelectOption({ label: "Title", value: "title" }),
+    new StringSelectOption({ label: "Description", value: "description" }),
     new StringSelectOption({ label: "Footer", value: "footer" }),
     new StringSelectOption({ label: "Color (hex)", value: "color" }),
   ];
@@ -169,7 +169,7 @@ function buildSelectComponent(selectId: string, defs: EmbedFieldDefinition[]) {
   const select = new StringSelectMenu()
     .setCustomId(selectId)
     .setOptions(opts)
-    .setPlaceholder("Selecciona qué editar")
+    .setPlaceholder("Select what to edit")
     .setValuesLength({ min: 1, max: 1 });
 
   return new ActionRow<StringSelectMenu>().addComponents(select);
@@ -179,12 +179,12 @@ function buildButtons(session: EmbedDesignerSession) {
   const submit = new Button()
     .setCustomId(session.submitId)
     .setStyle(ButtonStyle.Success)
-    .setLabel("Enviar");
+    .setLabel("Send");
 
   const cancel = new Button()
     .setCustomId(session.cancelId)
     .setStyle(ButtonStyle.Secondary)
-    .setLabel("Cancelar");
+    .setLabel("Cancel");
 
   return new ActionRow<Button>().addComponents(submit, cancel);
 }
@@ -193,12 +193,12 @@ function buildFieldMutators(session: EmbedDesignerSession) {
   const add = new Button()
     .setCustomId(session.addFieldId)
     .setStyle(ButtonStyle.Primary)
-    .setLabel("Añadir campo");
+    .setLabel("Add field");
 
   const remove = new Button()
     .setCustomId(session.removeFieldId)
     .setStyle(ButtonStyle.Danger)
-    .setLabel("Quitar último campo");
+    .setLabel("Remove last field");
 
   return new ActionRow<Button>().addComponents(add, remove);
 }
@@ -216,14 +216,14 @@ function isExpired(session: EmbedDesignerSession): boolean {
 
 function getRequiredIssues(session: EmbedDesignerSession): string[] {
   const issues: string[] = [];
-  if (!session.draft.title.trim()) issues.push("Agrega un título");
-  if (!session.draft.description.trim()) issues.push("Agrega una descripción");
+  if (!session.draft.title.trim()) issues.push("Add a title");
+  if (!session.draft.description.trim()) issues.push("Add a description");
 
   for (const def of session.fieldDefs) {
     if (!def.required) continue;
     const field = session.draft.fields.find((f) => f.key === def.key);
     if (!field || !field.value.trim()) {
-      issues.push(`Completa: ${def.label}`);
+      issues.push(`Complete: ${def.label}`);
     }
   }
 
@@ -241,7 +241,7 @@ async function renderSession(
 
   await ctx.editOrReply?.(
     {
-      content: "Previsualiza y edita tu embed:",
+      content: "Preview and edit your embed:",
       embeds: [embed],
       components: [selectRow, buttonsRow, mutatorsRow],
       flags: MessageFlags.Ephemeral,
@@ -270,7 +270,7 @@ export async function startEmbedDesigner(
   const baseEmbed = buildEmbedFromDraft(draft);
   const sent = (await ctx.editOrReply(
     {
-      content: options.content ?? "Configura tu embed usando el menú:",
+      content: options.content ?? "Configure your embed using the menu:",
       embeds: [baseEmbed],
       components: [],
       flags: MessageFlags.Ephemeral,
@@ -282,7 +282,7 @@ export async function startEmbedDesigner(
   if (!messageId) {
     await ctx.write({
       content:
-        "No pude iniciar el diseñador de embeds (mensaje no disponible).",
+        "Could not start the embed designer (message unavailable).",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -294,7 +294,7 @@ export async function startEmbedDesigner(
       const session = sessions.get(messageId) ?? null;
       if (!ensureSessionOwner(session, interactionCtx.author.id)) {
         await interactionCtx.write({
-          content: "Solo quien inició este flujo puede editar el embed.",
+          content: "Only the user who started this flow can edit the embed.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -302,7 +302,7 @@ export async function startEmbedDesigner(
       if (isExpired(session)) {
         sessions.delete(messageId);
         await interactionCtx.write({
-          content: "Esta edición expiró. Ejecuta el comando nuevamente.",
+          content: "This edit session expired. Run the command again.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -311,19 +311,19 @@ export async function startEmbedDesigner(
       const selection = interactionCtx.interaction.values?.[0];
       if (!selection) return;
 
-      const modal = new Modal().setTitle("Editar embed");
+      const modal = new Modal().setTitle("Edit embed");
 
       if (selection === "color") {
         modal.setCustomId(`embed:modal:${messageId}:color`).addComponents(
           new ActionRow<TextInput>().addComponents(
             new TextInput()
               .setCustomId("value")
-              .setLabel("Color hex (ej: #00ffaa)")
+              .setLabel("Hex color (ex: #00ffaa)")
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
               .setPlaceholder(
                 session.draft.color
-                  ? `Actual: ${session.draft.color.toString(16)}`
+                  ? `Current: ${session.draft.color.toString(16)}`
                   : "#00ffaa",
               ),
           ),
@@ -341,9 +341,9 @@ export async function startEmbedDesigner(
                 .setCustomId("value")
                 .setLabel(
                   selection === "title"
-                    ? "Título"
+                    ? "Title"
                     : selection === "description"
-                      ? "Descripción"
+                      ? "Description"
                       : "Footer",
                 )
                 .setStyle(
@@ -352,7 +352,7 @@ export async function startEmbedDesigner(
                     : TextInputStyle.Short,
                 )
                 .setRequired(selection !== "footer")
-                .setPlaceholder("Ingresa el texto"),
+                .setPlaceholder("Enter text"),
             ),
           );
       } else if (selection.startsWith("field:")) {
@@ -373,7 +373,7 @@ export async function startEmbedDesigner(
                 .setStyle(TextInputStyle.Paragraph)
                 .setRequired(def?.required ?? false)
                 .setPlaceholder(
-                  def?.placeholder ?? current.value ?? "Ingresa el contenido",
+                  def?.placeholder ?? current.value ?? "Enter content",
                 ),
             ),
           );
@@ -391,7 +391,7 @@ export async function startEmbedDesigner(
       const session = sessions.get(messageId) ?? null;
       if (!ensureSessionOwner(session, interactionCtx.author.id)) {
         await interactionCtx.write({
-          content: "Solo quien inició este flujo puede enviar el embed.",
+          content: "Only the user who started this flow can send the embed.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -399,7 +399,7 @@ export async function startEmbedDesigner(
       if (isExpired(session)) {
         sessions.delete(messageId);
         await interactionCtx.write({
-          content: "Esta edición expiró. Ejecuta el comando nuevamente.",
+          content: "This edit session expired. Run the command again.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -408,7 +408,7 @@ export async function startEmbedDesigner(
       const issues = getRequiredIssues(session);
       if (issues.length > 0) {
         await interactionCtx.write({
-          content: `Faltan datos:\n- ${issues.join("\n- ")}`,
+          content: `Missing data:\n- ${issues.join("\n- ")}`,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -421,7 +421,7 @@ export async function startEmbedDesigner(
         const message =
           error instanceof Error
             ? error.message
-            : "No se pudo procesar el embed.";
+            : "Could not process the embed.";
         await interactionCtx.write({
           content: message,
           flags: MessageFlags.Ephemeral,
@@ -432,7 +432,7 @@ export async function startEmbedDesigner(
       sessions.delete(messageId);
       await interactionCtx.editOrReply(
         {
-          content: "Embed enviado.",
+          content: "Embed sent.",
           embeds: [embed],
           components: [],
           flags: MessageFlags.Ephemeral,
@@ -448,7 +448,7 @@ export async function startEmbedDesigner(
       const session = sessions.get(messageId) ?? null;
       if (!ensureSessionOwner(session, interactionCtx.author.id)) {
         await interactionCtx.write({
-          content: "Solo quien inició este flujo puede cancelar.",
+          content: "Only the user who started this flow can cancel.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -456,7 +456,7 @@ export async function startEmbedDesigner(
       sessions.delete(messageId);
       await interactionCtx.editOrReply(
         {
-          content: "Edición cancelada.",
+          content: "Edit canceled.",
           components: [],
           embeds: [],
           flags: MessageFlags.Ephemeral,
@@ -472,7 +472,7 @@ export async function startEmbedDesigner(
       const session = sessions.get(messageId) ?? null;
       if (!ensureSessionOwner(session, interactionCtx.author.id)) {
         await interactionCtx.write({
-          content: "Solo quien inició este flujo puede editar el embed.",
+          content: "Only the user who started this flow can edit the embed.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -480,7 +480,7 @@ export async function startEmbedDesigner(
       if (isExpired(session)) {
         sessions.delete(messageId);
         await interactionCtx.write({
-          content: "Esta edición expiró. Ejecuta el comando nuevamente.",
+          content: "This edit session expired. Run the command again.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -488,14 +488,14 @@ export async function startEmbedDesigner(
 
       const modal = new Modal()
         .setCustomId(`embed:modal:${messageId}:addfield`)
-        .setTitle("Añadir campo");
+        .setTitle("Add field");
 
       modal.addComponents(
         new ActionRow<TextInput>().addComponents(
           new TextInput()
             .setCustomId("label")
-            .setLabel("Etiqueta")
-            .setPlaceholder("Ej: Requisitos")
+            .setLabel("Label")
+            .setPlaceholder("Ex: Requirements")
             .setRequired(false)
             .setStyle(TextInputStyle.Short),
         ),
@@ -504,8 +504,8 @@ export async function startEmbedDesigner(
         new ActionRow<TextInput>().addComponents(
           new TextInput()
             .setCustomId("value")
-            .setLabel("Valor")
-            .setPlaceholder("Contenido del campo")
+            .setLabel("Value")
+            .setPlaceholder("Field content")
             .setRequired(false)
             .setStyle(TextInputStyle.Paragraph),
         ),
@@ -531,7 +531,7 @@ export async function startEmbedDesigner(
       const session = sessions.get(messageId) ?? null;
       if (!ensureSessionOwner(session, interactionCtx.author.id)) {
         await interactionCtx.write({
-          content: "Solo quien inició este flujo puede editar el embed.",
+          content: "Only the user who started this flow can edit the embed.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -539,7 +539,7 @@ export async function startEmbedDesigner(
       if (isExpired(session)) {
         sessions.delete(messageId);
         await interactionCtx.write({
-          content: "Esta edición expiró. Ejecuta el comando nuevamente.",
+          content: "This edit session expired. Run the command again.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -547,7 +547,7 @@ export async function startEmbedDesigner(
 
       if (session.draft.fields.length === 0) {
         await interactionCtx.write({
-          content: "No hay campos para quitar.",
+          content: "There are no fields to remove.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -584,7 +584,7 @@ export async function startEmbedDesigner(
   const fieldMutatorsRow = buildFieldMutators(session);
 
   await ctx.editOrReply({
-    content: options.content ?? "Configura tu embed usando el menú:",
+    content: options.content ?? "Configure your embed using the menu:",
     embeds: [buildEmbedFromDraft(draft)],
     components: [selectRow, buttonsRow, fieldMutatorsRow],
     flags: MessageFlags.Ephemeral,
@@ -606,7 +606,7 @@ export async function applyEmbedModalUpdate(
   const session = sessions.get(messageId) ?? null;
   if (!ensureSessionOwner(session, ctx.author.id)) {
     await ctx.write({
-      content: "Solo quien inició este flujo puede editar el embed.",
+      content: "Only the user who started this flow can edit the embed.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -615,7 +615,7 @@ export async function applyEmbedModalUpdate(
   if (!session || isExpired(session)) {
     sessions.delete(messageId);
     await ctx.write({
-      content: "Esta edición expiró. Ejecuta el comando nuevamente.",
+      content: "This edit session expired. Run the command again.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -625,15 +625,14 @@ export async function applyEmbedModalUpdate(
   if (target === "addfield") {
     const nextFieldIndex = draft.fields.length + 1;
     const rawLabel = (payload.label ?? "").trim();
-    const label = rawLabel || `Campo ${nextFieldIndex}`;
+    const label = rawLabel || `Field ${nextFieldIndex}`;
     const value = (payload.value ?? "").trim();
     const inlineRaw = (payload.inline ?? "").trim().toLowerCase();
     const inline =
       inlineRaw === "true" ||
       inlineRaw === "1" ||
       inlineRaw === "yes" ||
-      inlineRaw === "si" ||
-      inlineRaw === "sí";
+      inlineRaw === "si";
 
     const newField: EmbedFieldDraft = {
       key: `field${nextFieldIndex}`,

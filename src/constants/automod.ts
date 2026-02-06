@@ -46,7 +46,7 @@ const SPAM_BOT = "🚫 Spam bot.";
 /**
  * Filtros de spam con acciones asociadas (timeout, advertencias).
  *
- * Categorías principales:
+ * Categorys principales:
  *   - Dominios sospechosos (.xyz, .click, .info, .ru, .biz, .online, .club)
  *   - Enlaces directos a mensajería (t.me, wa.me)
  *   - Contenido para adultos
@@ -55,7 +55,7 @@ const SPAM_BOT = "🚫 Spam bot.";
  *   - Promociones engañosas (crypto, nitro gratis)
  *
  * Comportamiento:
- *   - mute=true: Aplica timeout de 5 minutos al usuario
+ *   - mute=true: Aplica timeout de 5 minutos al user
  *   - mute=false: Solo envía advertencia al staff
  *   - warnMessage: Mensaje personalizado para notificación
  *
@@ -321,3 +321,5 @@ const PHRASES: string[] = Array.from(
 // Impacto: Staff recibe notificaciones que deben descartar manualmente.
 // Solución futura: Considerar scoring o contexto para reducir sensibilidad.
 export const scamFilterList: RegExp[] = PHRASES.map(phraseToSpamRegex);
+
+

@@ -18,6 +18,23 @@ export type ToolKind = "pickaxe" | "axe";
 /** Tool tier (1-4). */
 export type ToolTier = 1 | 2 | 3 | 4;
 
+/** Marketplace categories for tradable items. */
+export type MarketCategory =
+  | "materials"
+  | "consumables"
+  | "components"
+  | "gear"
+  | "tools";
+
+/** Optional market metadata for player marketplace listings. */
+export interface MarketMetadata {
+  tradable: boolean;
+  category: MarketCategory;
+  suggestedPrice?: number;
+  minPrice?: number;
+  maxPrice?: number;
+}
+
 /** Tool metadata for items that can be used as gathering tools. */
 export interface ToolMetadata {
   /** Kind of tool. */
@@ -56,6 +73,8 @@ export type ItemDefinition = {
   stats?: RpgStats;
   /** Tool metadata for gathering tools. */
   tool?: ToolMetadata;
+  /** Marketplace metadata (data-driven tradability rules). */
+  market?: MarketMetadata;
 };
 
 export type InventoryItem = {
@@ -329,6 +348,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     value: 150,
     rpgSlot: "tool",
     tool: { toolKind: "pickaxe", tier: 2, maxDurability: 25 },
+    market: {
+      tradable: true,
+      category: "tools",
+      suggestedPrice: 150,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   pickaxe_lv3: {
     id: "pickaxe_lv3",
@@ -341,6 +367,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     value: 350,
     rpgSlot: "tool",
     tool: { toolKind: "pickaxe", tier: 3, maxDurability: 50 },
+    market: {
+      tradable: true,
+      category: "tools",
+      suggestedPrice: 350,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   pickaxe_lv4: {
     id: "pickaxe_lv4",
@@ -353,6 +386,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     value: 800,
     rpgSlot: "tool",
     tool: { toolKind: "pickaxe", tier: 4, maxDurability: 70 },
+    market: {
+      tradable: true,
+      category: "tools",
+      suggestedPrice: 800,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
 
   // Tools - Axes
@@ -379,6 +419,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     value: 130,
     rpgSlot: "tool",
     tool: { toolKind: "axe", tier: 2, maxDurability: 25 },
+    market: {
+      tradable: true,
+      category: "tools",
+      suggestedPrice: 130,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   axe_lv3: {
     id: "axe_lv3",
@@ -391,6 +438,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     value: 300,
     rpgSlot: "tool",
     tool: { toolKind: "axe", tier: 3, maxDurability: 50 },
+    market: {
+      tradable: true,
+      category: "tools",
+      suggestedPrice: 300,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   axe_lv4: {
     id: "axe_lv4",
@@ -403,6 +457,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     value: 700,
     rpgSlot: "tool",
     tool: { toolKind: "axe", tier: 4, maxDurability: 70 },
+    market: {
+      tradable: true,
+      category: "tools",
+      suggestedPrice: 700,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
 
   // Materials - Mining (stackable)
@@ -415,6 +476,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 2,
     canStack: true,
     value: 5,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 5,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   copper_ore: {
     id: "copper_ore",
@@ -425,6 +493,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 3,
     canStack: true,
     value: 15,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 15,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   iron_ore: {
     id: "iron_ore",
@@ -435,6 +510,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 4,
     canStack: true,
     value: 30,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 30,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   silver_ore: {
     id: "silver_ore",
@@ -445,6 +527,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 4,
     canStack: true,
     value: 50,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 50,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   gold_ore: {
     id: "gold_ore",
@@ -455,6 +544,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 5,
     canStack: true,
     value: 100,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 100,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
 
   // Materials - Woodcutting (stackable)
@@ -467,6 +563,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 2,
     canStack: true,
     value: 5,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 5,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   spruce_wood: {
     id: "spruce_wood",
@@ -477,6 +580,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 2,
     canStack: true,
     value: 15,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 15,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   palm_wood: {
     id: "palm_wood",
@@ -487,6 +597,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 2,
     canStack: true,
     value: 30,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 30,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   pine_wood: {
     id: "pine_wood",
@@ -497,6 +614,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 2,
     canStack: true,
     value: 50,
+    market: {
+      tradable: true,
+      category: "materials",
+      suggestedPrice: 50,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
 
   // Processed Materials (stackable)
@@ -509,6 +633,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 3,
     canStack: true,
     value: 30,
+    market: {
+      tradable: true,
+      category: "components",
+      suggestedPrice: 30,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   iron_ingot: {
     id: "iron_ingot",
@@ -519,6 +650,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 4,
     canStack: true,
     value: 60,
+    market: {
+      tradable: true,
+      category: "components",
+      suggestedPrice: 60,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   silver_ingot: {
     id: "silver_ingot",
@@ -529,6 +667,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 4,
     canStack: true,
     value: 100,
+    market: {
+      tradable: true,
+      category: "components",
+      suggestedPrice: 100,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
   gold_ingot: {
     id: "gold_ingot",
@@ -539,6 +684,13 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 5,
     canStack: true,
     value: 200,
+    market: {
+      tradable: true,
+      category: "components",
+      suggestedPrice: 200,
+      minPrice: 1,
+      maxPrice: 5000,
+    },
   },
 
   // Processed Wood (planks)

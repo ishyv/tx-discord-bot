@@ -10,16 +10,16 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   // Head items
   {
     id: "casco_cuero",
-    name: "Casco de Cuero",
-    description: "Un casco básico de cuero. Proporciona poca protección.",
+    name: "Leather Helmet",
+    description: "A basic leather helmet. Provides low protection.",
     emoji: "🪖",
     slot: "head",
     stats: { luck: 1, weightCap: 5 },
   },
   {
     id: "casco_hierro",
-    name: "Casco de Hierro",
-    description: "Un casco de hierro resistente.",
+    name: "Iron Helmet",
+    description: "A durable iron helmet.",
     emoji: "⛑️",
     slot: "head",
     stats: { luck: 2, workBonusPct: 0.02, weightCap: 10 },
@@ -27,8 +27,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "corona_oro",
-    name: "Corona Dorada",
-    description: "Una corona que simboliza riqueza.",
+    name: "Golden Crown",
+    description: "A crown that symbolizes wealth.",
     emoji: "👑",
     slot: "head",
     stats: { luck: 5, shopDiscountPct: 0.05, dailyBonusCap: 1 },
@@ -38,16 +38,16 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   // Chest items
   {
     id: "camisa_tela",
-    name: "Camisa de Tela",
-    description: "Ropa común y corriente.",
+    name: "Cloth Shirt",
+    description: "Ordinary clothing.",
     emoji: "👕",
     slot: "chest",
     stats: { weightCap: 5, slotCap: 1 },
   },
   {
     id: "armadura_cuero",
-    name: "Armadura de Cuero",
-    description: "Armadura ligera de cuero.",
+    name: "Leather Armor",
+    description: "Light leather armor.",
     emoji: "🦺",
     slot: "chest",
     stats: { weightCap: 15, slotCap: 2, workBonusPct: 0.02 },
@@ -55,8 +55,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "armadura_hierro",
-    name: "Armadura de Hierro",
-    description: "Armadura resistente de hierro.",
+    name: "Iron Armor",
+    description: "Sturdy iron armor.",
     emoji: "🛡️",
     slot: "chest",
     stats: { weightCap: 25, slotCap: 3, workBonusPct: 0.05 },
@@ -66,16 +66,16 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   // Legs items
   {
     id: "pantalones_tela",
-    name: "Pantalones de Tela",
-    description: "Pantalones comunes.",
+    name: "Cloth Pants",
+    description: "Common pants.",
     emoji: "👖",
     slot: "legs",
     stats: { weightCap: 5 },
   },
   {
     id: "grebas_hierro",
-    name: "Grebas de Hierro",
-    description: "Protección para las piernas.",
+    name: "Iron Greaves",
+    description: "Leg protection.",
     emoji: "🦵",
     slot: "legs",
     stats: { weightCap: 15, luck: 1 },
@@ -85,16 +85,16 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   // Weapon items
   {
     id: "espada_hierro",
-    name: "Espada de Hierro",
-    description: "Una espada básica pero confiable.",
+    name: "Iron Sword",
+    description: "A basic but reliable sword.",
     emoji: "⚔️",
     slot: "weapon",
     stats: { workBonusPct: 0.03, luck: 1 },
   },
   {
     id: "espada_acero",
-    name: "Espada de Acero",
-    description: "Una espada forjada en acero.",
+    name: "Steel Sword",
+    description: "A sword forged in steel.",
     emoji: "🗡️",
     slot: "weapon",
     stats: { workBonusPct: 0.07, luck: 2 },
@@ -102,8 +102,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "hacha_guerra",
-    name: "Hacha de Guerra",
-    description: "Un hacha pesada para trabajos duros.",
+    name: "War Axe",
+    description: "A heavy axe for hard work.",
     emoji: "🪓",
     slot: "weapon",
     stats: { workBonusPct: 0.1, weightCap: 10 },
@@ -113,16 +113,16 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   // Offhand items
   {
     id: "escudo_madera",
-    name: "Escudo de Madera",
-    description: "Un escudo básico de madera.",
+    name: "Wooden Shield",
+    description: "A basic wooden shield.",
     emoji: "🛡️",
     slot: "offhand",
     stats: { luck: 1, weightCap: 10 },
   },
   {
     id: "escudo_hierro",
-    name: "Escudo de Hierro",
-    description: "Un escudo resistente.",
+    name: "Iron Shield",
+    description: "A sturdy shield.",
     emoji: "🔰",
     slot: "offhand",
     stats: { luck: 2, weightCap: 15, shopDiscountPct: 0.03 },
@@ -130,8 +130,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "linterna",
-    name: "Linterna Mágica",
-    description: "Ilumina tu camino y trae suerte.",
+    name: "Magic Lantern",
+    description: "Lights your path and brings luck.",
     emoji: "🏮",
     slot: "offhand",
     stats: { luck: 3, workBonusPct: 0.02 },
@@ -141,16 +141,16 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   // Accessory items (accessory1 and accessory2 share pool)
   {
     id: "anillo_oro",
-    name: "Anillo de Oro",
-    description: "Un anillo que atrae riqueza.",
+    name: "Gold Ring",
+    description: "A ring that attracts wealth.",
     emoji: "💍",
     slot: "accessory1", // Can also go in accessory2
     stats: { shopDiscountPct: 0.03, luck: 1 },
   },
   {
     id: "amuleto_suerte",
-    name: "Amuleto de Suerte",
-    description: "Aumenta tu suerte en todo.",
+    name: "Lucky Amulet",
+    description: "Increases your luck in everything.",
     emoji: "📿",
     slot: "accessory1",
     stats: { luck: 3, dailyBonusCap: 1 },
@@ -158,8 +158,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "cinturon_carga",
-    name: "Cinturón de Carga",
-    description: "Aumenta tu capacidad de carga.",
+    name: "Load Belt",
+    description: "Increases your carrying capacity.",
     emoji: "🎒",
     slot: "accessory1",
     stats: { weightCap: 20, slotCap: 2 },
@@ -167,8 +167,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "pulsera_trabajo",
-    name: "Pulsera del Trabajador",
-    description: "Aumenta tu eficiencia laboral.",
+    name: "Worker Bracelet",
+    description: "Increases your work efficiency.",
     emoji: "⌚",
     slot: "accessory2",
     stats: { workBonusPct: 0.05 },
@@ -176,8 +176,8 @@ export const EQUIPABLE_ITEM_DEFINITIONS: EquipableItemDefinition[] = [
   },
   {
     id: "collar_riqueza",
-    name: "Collar de Riqueza",
-    description: "Atrae riqueza y oportunidades.",
+    name: "Wealth Necklace",
+    description: "Attracts wealth and opportunities.",
     emoji: "📿",
     slot: "accessory2",
     stats: { shopDiscountPct: 0.05, workBonusPct: 0.03 },
@@ -216,16 +216,18 @@ export function listEquipableItemDefinitions(): EquipableItemDefinition[] {
 
 /** Slot display names for UI. */
 export const SLOT_DISPLAY_NAMES: Record<string, string> = {
-  head: "👤 Cabeza",
-  chest: "👕 Pecho",
-  legs: "👖 Piernas",
-  weapon: "⚔️ Arma",
-  offhand: "🛡️ Mano izquierda",
-  accessory1: "💍 Accesorio 1",
-  accessory2: "📿 Accesorio 2",
+  head: "👤 Head",
+  chest: "👕 Chest",
+  legs: "👖 Legs",
+  weapon: "⚔️ Weapon",
+  offhand: "🛡️ Offhand",
+  accessory1: "💍 Accessory 1",
+  accessory2: "📿 Accessory 2",
 };
 
 /** Get display name for a slot. */
 export function getSlotDisplayName(slot: string): string {
   return SLOT_DISPLAY_NAMES[slot] ?? slot;
 }
+
+

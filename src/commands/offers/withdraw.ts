@@ -9,8 +9,8 @@ import { withdrawOffer, getActiveOffer } from "@/modules/offers";
 import { ensureGuildContext } from "./shared";
 
 @Declare({
-  name: "withdraw",
-  description: "Withdraw your active offer",
+  name: "retract",
+  description: "Retract your active offer",
 })
 export default class OfferWithdrawCommand extends SubCommand {
   async run(ctx: GuildCommandContext) {

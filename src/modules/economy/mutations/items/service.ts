@@ -124,7 +124,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "INSUFFICIENT_PERMISSIONS",
-          "No tienes permisos para realizar esta acción.",
+          "You do not have permission to perform this action.",
         ),
       );
     }
@@ -143,7 +143,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "INVALID_QUANTITY",
-          "La cantidad debe ser un número distinto de cero.",
+          "Amount must be a non-zero number.",
         ),
       );
     }
@@ -154,7 +154,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "TARGET_NOT_FOUND",
-          "No se pudo acceder a la cuenta del objetivo.",
+          "Could not access the target account.",
         ),
       );
     }
@@ -165,7 +165,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "TARGET_BANNED",
-          "La cuenta del objetivo tiene restricciones permanentes.",
+          "The target account has permanent restrictions.",
         ),
       );
     }
@@ -173,7 +173,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "TARGET_BLOCKED",
-          "La cuenta del objetivo tiene restricciones temporales.",
+          "The target account has temporary restrictions.",
         ),
       );
     }
@@ -182,7 +182,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
     const userResult = await UserStore.get(targetId);
     if (userResult.isErr() || !userResult.unwrap()) {
       return ErrResult(
-        new ItemMutationError("TARGET_NOT_FOUND", "Usuario no encontrado."),
+        new ItemMutationError("TARGET_NOT_FOUND", "User not found."),
       );
     }
 
@@ -249,7 +249,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "UPDATE_FAILED",
-          "Error al actualizar el inventario.",
+          "Error updating inventory.",
         ),
       );
     }
@@ -260,7 +260,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "UPDATE_FAILED",
-          "Error al obtener estado actualizado.",
+          "Error getting updated state.",
         ),
       );
     }
@@ -326,3 +326,5 @@ class ItemMutationServiceImpl implements ItemMutationService {
 
 export const itemMutationService: ItemMutationService =
   new ItemMutationServiceImpl();
+
+

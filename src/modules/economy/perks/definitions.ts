@@ -20,34 +20,37 @@ const costCurve =
 export const PERK_DEFINITIONS: PerkDefinition[] = [
   {
     id: "weight_boost",
-    name: "💪 Peso extra",
-    description: "Aumenta la capacidad de peso de tu inventario.",
+    name: "💪 Extra Weight",
+    description: "Increases your inventory weight capacity.",
     maxLevel: 10,
     effects: [{ type: "weight_cap", value: 20 }],
     cost: costCurve(400, 1.35, "coins"),
   },
   {
     id: "slot_boost",
-    name: "🧳 Más slots",
-    description: "Aumenta la cantidad máxima de slots en tu inventario.",
+    name: "🧳 More slots",
+    description: "Increases the maximum inventory slot count.",
     maxLevel: 6,
     effects: [{ type: "slot_cap", value: 2 }],
     cost: costCurve(650, 1.45, "coins"),
   },
   {
     id: "work_focus",
-    name: "🛠️ Experiencia laboral",
-    description: "Incrementa el pago de /work.",
+    name: "🛠️ Work Experience",
+    description: "Increases /work payout.",
     maxLevel: 5,
     effects: [{ type: "work_bonus_pct", value: 0.05 }],
     cost: costCurve(900, 1.5, "coins", 2),
   },
   {
     id: "daily_bonus_cap",
-    name: "🎁 Racha extendida",
-    description: "Aumenta el tope de bonus diario por racha.",
+    name: "🎁 Extended Streak",
+    description: "Increases the daily streak bonus cap.",
     maxLevel: 5,
     effects: [{ type: "daily_bonus_cap", value: 1 }],
     cost: costCurve(500, 1.4, "coins", 3),
   },
 ];
+
+
+

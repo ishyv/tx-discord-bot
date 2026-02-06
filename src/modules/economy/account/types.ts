@@ -89,6 +89,13 @@ export interface InventoryItemView {
   readonly emoji: string;
   readonly quantity: number;
   readonly description: string;
+  readonly category: "gear" | "tools" | "materials" | "quest";
+  readonly isInstanceBased: boolean;
+  readonly instances?: {
+    instanceId: string;
+    durability: number;
+    maxDurability: number;
+  }[];
 }
 
 /** Summary statistics for inventory. */
@@ -118,6 +125,8 @@ export interface InventoryPaginationOptions {
   readonly sortOrder?: "asc" | "desc";
   /** Optional filter by item name/id substring. */
   readonly search?: string;
+  /** Optional filter by category. */
+  readonly filter?: "all" | "gear" | "tools" | "materials" | "quest";
 }
 
 // ============================================================================
@@ -241,6 +250,7 @@ export const DEFAULT_INVENTORY_PAGINATION: Required<
   pageSize: 6,
   sortBy: "name",
   sortOrder: "asc",
+  filter: "all",
 };
 
 /** Maximum items per page for inventory. */

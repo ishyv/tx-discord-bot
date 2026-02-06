@@ -73,8 +73,8 @@ async function ensureOffersIndexes(): Promise<void> {
     if (conflicting) {
       console.error(
         `[offers] Índice conflictivo detectado: '${conflicting.name}'. ` +
-          "Se requiere un índice UNIQUE con partialFilterExpression por estado para garantizar 1 oferta activa por autor. " +
-          `Solución: eliminar el índice '${conflicting.name}' y reiniciar el bot para que se regenere.`,
+          "A UNIQUE index with partialFilterExpression by status is required to guarantee 1 active offer per author. " +
+          `Fix: remove the index '${conflicting.name}' and restart the bot so it can be recreated.`,
       );
       return;
     }
@@ -255,3 +255,4 @@ export async function removeOffer(id: OfferId): Promise<Result<boolean>> {
   if (res.isErr()) return ErrResult(res.error);
   return OkResult(res.unwrap());
 }
+

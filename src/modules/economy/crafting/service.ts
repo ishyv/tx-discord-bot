@@ -21,6 +21,10 @@ import {
   type CapacityLimits,
 } from "@/modules/inventory/capacity";
 import { getItemDefinition } from "@/modules/inventory/items";
+import { isInstanceBased } from "@/modules/inventory/instances";
+import { itemInstanceService } from "@/modules/economy/mutations/items/instance-service";
+import { rpgProfileRepo } from "@/modules/rpg/profile/repository";
+import { getToolTierFromItemId } from "@/modules/rpg/gathering/definitions";
 import { craftingRepo } from "./repository";
 import type {
   CraftingRecipeView,
@@ -74,6 +78,38 @@ function hasRequiredItems(
   }
 
   return { sufficient: missing.length === 0, missing };
+}
+
+interface UserCraftingContext {
+  readonly profession: "miner" | "lumber" | null;
+  readonly toolTier: number;
+}
+
+async function getUserCraftingContext(userId: UserId): Promise<UserCraftingContext> {
+  const profileResult = await rpgProfileRepo.findById(userId);
+  if (profileResult.isErr() || !profileResult.unwrap()) {
+    return { profession: null, toolTier: 0 };
+  }
+
+  const profile = profileResult.unwrap()!;
+  const profession = profile.starterKitType;
+
+  const equippedWeapon = profile.loadout.weapon;
+  const equippedItemId =
+    typeof equippedWeapon === "string"
+      ? equippedWeapon
+      : equippedWeapon?.itemId ?? null;
+
+  if (!equippedItemId) {
+    return { profession, toolTier: 0 };
+  }
+
+  const toolDef = getItemDefinition(equippedItemId);
+  if (toolDef?.tool?.tier !== undefined) {
+    return { profession, toolTier: toolDef.tool.tier };
+  }
+
+  return { profession, toolTier: getToolTierFromItemId(equippedItemId) };
 }
 
 /** Check if outputs would exceed capacity. */
@@ -141,9 +177,10 @@ class CraftingServiceImpl implements CraftingService {
     guildId: GuildId,
     userId: UserId,
   ): Promise<Result<CraftingRecipeView[], Error>> {
-    const [recipesResult, userResult] = await Promise.all([
+    const [recipesResult, userResult, craftingContext] = await Promise.all([
       craftingRepo.getRecipes(guildId),
       UserStore.get(userId),
+      getUserCraftingContext(userId),
     ]);
 
     if (recipesResult.isErr()) return ErrResult(recipesResult.error);
@@ -175,11 +212,26 @@ class CraftingServiceImpl implements CraftingService {
         }
       }
 
+      const meetsProfession =
+        !recipe.professionRequirement ||
+        recipe.professionRequirement === craftingContext.profession;
+      const meetsTier =
+        !recipe.tierRequirement ||
+        craftingContext.toolTier >= recipe.tierRequirement;
+
+      let requirementIssue: string | undefined;
+      if (!meetsProfession && recipe.professionRequirement) {
+        requirementIssue = `Requires ${recipe.professionRequirement} profession path`;
+      } else if (!meetsTier && recipe.tierRequirement) {
+        requirementIssue = `Requires tool tier ${recipe.tierRequirement}`;
+      }
+
       views.push({
         ...recipe,
-        canCraft: hasItems && hasCurrency,
+        canCraft: hasItems && hasCurrency && meetsProfession && meetsTier,
         missingItems: missing,
         missingCurrency,
+        requirementIssue,
       });
     }
 
@@ -203,7 +255,7 @@ class CraftingServiceImpl implements CraftingService {
 
     if (quantity < 1 || !Number.isFinite(quantity)) {
       return ErrResult(
-        new CraftingErrorClass("CRAFT_FAILED", "Cantidad inválida."),
+        new CraftingErrorClass("CRAFT_FAILED", "Invalid quantity."),
       );
     }
 
@@ -215,7 +267,7 @@ class CraftingServiceImpl implements CraftingService {
         return ErrResult(
           new CraftingErrorClass(
             "FEATURE_DISABLED",
-            "Crafting está deshabilitado en este servidor.",
+            "Crafting is disabled in this server.",
           ),
         );
       }
@@ -235,20 +287,20 @@ class CraftingServiceImpl implements CraftingService {
     const recipeResult = await craftingRepo.getRecipe(guildId, recipeId);
     if (recipeResult.isErr()) {
       return ErrResult(
-        new CraftingErrorClass("CRAFT_FAILED", "Error al obtener la receta."),
+        new CraftingErrorClass("CRAFT_FAILED", "Error getting the recipe."),
       );
     }
     const recipe = recipeResult.unwrap();
     if (!recipe) {
       return ErrResult(
-        new CraftingErrorClass("RECIPE_NOT_FOUND", "Receta no encontrada."),
+        new CraftingErrorClass("RECIPE_NOT_FOUND", "Recipe not found."),
       );
     }
     if (!recipe.enabled) {
       return ErrResult(
         new CraftingErrorClass(
           "RECIPE_DISABLED",
-          "Esta receta está desactivada.",
+          "This recipe is disabled.",
         ),
       );
     }
@@ -259,7 +311,7 @@ class CraftingServiceImpl implements CraftingService {
       return ErrResult(
         new CraftingErrorClass(
           "CRAFT_FAILED",
-          "No se pudo acceder a la cuenta.",
+          "Could not access the account.",
         ),
       );
     }
@@ -268,7 +320,7 @@ class CraftingServiceImpl implements CraftingService {
       return ErrResult(
         new CraftingErrorClass(
           "ACCOUNT_BLOCKED",
-          "Tu cuenta tiene restricciones temporales.",
+          "Your account has temporary restrictions.",
         ),
       );
     }
@@ -276,7 +328,7 @@ class CraftingServiceImpl implements CraftingService {
       return ErrResult(
         new CraftingErrorClass(
           "ACCOUNT_BANNED",
-          "Tu cuenta tiene restricciones permanentes.",
+          "Your account has permanent restrictions.",
         ),
       );
     }
@@ -294,10 +346,36 @@ class CraftingServiceImpl implements CraftingService {
         return ErrResult(
           new CraftingErrorClass(
             "LEVEL_REQUIRED",
-            `Necesitas nivel ${recipe.requiredLevel} para esta receta.`,
+            `You need level ${recipe.requiredLevel} for this recipe.`,
           ),
         );
       }
+    }
+
+    // Check profession and tool tier requirements
+    const craftingContext = await getUserCraftingContext(userId);
+    if (
+      recipe.professionRequirement &&
+      craftingContext.profession !== recipe.professionRequirement
+    ) {
+      return ErrResult(
+        new CraftingErrorClass(
+          "PROFESSION_REQUIRED",
+          `You need profession ${recipe.professionRequirement} for this recipe.`,
+        ),
+      );
+    }
+
+    if (
+      recipe.tierRequirement &&
+      craftingContext.toolTier < recipe.tierRequirement
+    ) {
+      return ErrResult(
+        new CraftingErrorClass(
+          "TIER_REQUIRED",
+          `You need tool tier ${recipe.tierRequirement} for this recipe.`,
+        ),
+      );
     }
 
     // Calculate scaled inputs/outputs
@@ -312,6 +390,16 @@ class CraftingServiceImpl implements CraftingService {
         quantity: output.quantity * quantity,
       }),
     );
+
+    const stackableOutputs: RecipeItemOutput[] = [];
+    const instanceOutputs: RecipeItemOutput[] = [];
+    for (const output of scaledOutputs) {
+      if (isInstanceBased(output.itemId)) {
+        instanceOutputs.push(output);
+      } else {
+        stackableOutputs.push(output);
+      }
+    }
 
     const scaledCurrencyAmount = recipe.currencyInput
       ? recipe.currencyInput.amount * quantity
@@ -352,7 +440,7 @@ class CraftingServiceImpl implements CraftingService {
         }
 
         // Check output capacity
-        if (!checkOutputCapacity(snapshot.inventory, scaledOutputs)) {
+        if (!checkOutputCapacity(snapshot.inventory, stackableOutputs)) {
           return ErrResult(new Error("CAPACITY_EXCEEDED"));
         }
 
@@ -372,8 +460,8 @@ class CraftingServiceImpl implements CraftingService {
           }
         }
 
-        // Add outputs
-        for (const output of scaledOutputs) {
+        // Add stackable outputs
+        for (const output of stackableOutputs) {
           const current = newInventory[output.itemId];
           if (current) {
             newInventory[output.itemId] = {
@@ -454,7 +542,7 @@ class CraftingServiceImpl implements CraftingService {
           return ErrResult(
             new CraftingErrorClass(
               "INSUFFICIENT_ITEMS",
-              "No tienes los materiales necesarios.",
+              "You do not have the required materials.",
             ),
           );
         }
@@ -462,7 +550,7 @@ class CraftingServiceImpl implements CraftingService {
           return ErrResult(
             new CraftingErrorClass(
               "INSUFFICIENT_CURRENCY",
-              "No tienes suficiente moneda.",
+              "You do not have enough currency.",
             ),
           );
         }
@@ -470,19 +558,38 @@ class CraftingServiceImpl implements CraftingService {
           return ErrResult(
             new CraftingErrorClass(
               "CAPACITY_EXCEEDED",
-              "No tienes espacio suficiente en el inventario.",
+              "You do not have enough inventory space.",
             ),
           );
         }
         return ErrResult(
           new CraftingErrorClass(
             "CRAFT_FAILED",
-            "Error al craftear. Intenta de nuevo.",
+            "Error crafting item. Try again.",
           ),
         );
       }
 
       const commit = result.unwrap();
+      const warnings: string[] = [];
+
+      for (const output of instanceOutputs) {
+        const grantResult = await itemInstanceService.grantInstances({
+          actorId: userId,
+          targetId: userId,
+          guildId,
+          itemId: output.itemId,
+          count: output.quantity,
+          reason: `Craft output ${recipeId}`,
+          correlationId,
+        });
+
+        if (grantResult.isErr()) {
+          const warning = `Could not grant ${output.quantity}x ${output.itemId} as instance: ${grantResult.error.message}`;
+          warnings.push(warning);
+          console.error("[CraftingService] Instance output grant failed:", warning);
+        }
+      }
 
       // Deposit guild fee if applicable
       if (recipe.guildFee && scaledGuildFee && scaledGuildFee > 0) {
@@ -542,6 +649,7 @@ class CraftingServiceImpl implements CraftingService {
           currencyId: recipe.currencyInput?.currencyId,
           guildFee: scaledGuildFee,
           xpGained,
+          warnings,
         },
       });
 
@@ -556,6 +664,7 @@ class CraftingServiceImpl implements CraftingService {
         currencyId: recipe.currencyInput?.currencyId,
         guildFee: scaledGuildFee,
         xpGained,
+        warnings: warnings.length > 0 ? warnings : undefined,
         correlationId,
         timestamp: new Date(),
       });
@@ -564,3 +673,6 @@ class CraftingServiceImpl implements CraftingService {
 }
 
 export const craftingService: CraftingService = new CraftingServiceImpl();
+
+
+

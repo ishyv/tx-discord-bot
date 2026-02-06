@@ -24,7 +24,7 @@ export default createMiddleware<void>(async ({ context, next, pass }) => {
   if (typeof inCooldown === "number") {
     const remainingMs = Math.max(0, Math.ceil(inCooldown));
     await context.write({
-      content: `Estas usando un comando muy seguido, intenta nuevamente en ${Formatter.timestamp(new Date(Date.now() + remainingMs), TimestampStyle.RelativeTime)}`,
+      content: `You are using this command too frequently. Try again ${Formatter.timestamp(new Date(Date.now() + remainingMs), TimestampStyle.RelativeTime)}.`,
     });
     // WHY: pass() stops the chain without triggering onMiddlewaresError.
     return pass();

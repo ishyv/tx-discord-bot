@@ -1,5 +1,5 @@
 /**
- * Hooks tipados para eventos de baneos en el servidor.
+ * Hooks tipados para eventos de baneos en the server.
  * Permite registrar listeners para altas y bajas de bans con una API uniforme.
  */
 import type { ResolveEventParams } from "seyfert";
@@ -35,3 +35,4 @@ export const onceGuildBanRemove = guildBanRemoveHook.once;
 export const offGuildBanRemove = guildBanRemoveHook.off;
 export const emitGuildBanRemove = guildBanRemoveHook.emit;
 export const clearGuildBanRemoveListeners = guildBanRemoveHook.clear;
+

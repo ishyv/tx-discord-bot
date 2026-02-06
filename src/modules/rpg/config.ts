@@ -48,6 +48,9 @@ export const COMBAT_CONFIG = {
   /** Combat session TTL in minutes. */
   sessionTtlMinutes: 5,
 
+  /** Round timeout in seconds (Phase 12.3). */
+  roundTimeoutSeconds: 60,
+
   /** Round escalation: ATK boost every N rounds. */
   escalationRounds: 10,
   escalationBoostPercent: 2,

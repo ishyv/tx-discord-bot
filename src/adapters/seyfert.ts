@@ -161,7 +161,7 @@ export async function replyEphemeral(
   ctx: GuildCommandContext,
   options: { content?: string; embeds?: any[]; components?: any[] },
 ) {
-  return ctx.write({
+  return ctx.editOrReply({
     ...options,
     flags: MessageFlags.Ephemeral,
   });

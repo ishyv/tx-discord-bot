@@ -48,6 +48,11 @@ export async function getDb(): Promise<Db> {
   return dbInstance;
 }
 
+/** Backward-compatible alias used by older test/integration helpers. */
+export async function connectDb(): Promise<Db> {
+  return getDb();
+}
+
 export async function getMongoClient(): Promise<MongoClient> {
   if (!client) {
     client = new MongoClient(getUri());

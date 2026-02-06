@@ -34,12 +34,8 @@ import type { StoreError } from "@/modules/economy/store";
 // Options for buy subcommand
 const buyOptions = {
   item: createStringOption({
-    description: "Item to buy",
+    description: "Item ID to buy (e.g., iron_ore, copper_ingot)",
     required: true,
-    choices: Object.values(ITEM_DEFINITIONS).map((item) => ({
-      name: item.name,
-      value: item.id,
-    })),
   }),
   quantity: createIntegerOption({
     description: "Quantity to buy (default: 1)",
@@ -51,12 +47,8 @@ const buyOptions = {
 // Options for sell subcommand
 const sellOptions = {
   item: createStringOption({
-    description: "Item to sell",
+    description: "Item ID to sell (e.g., iron_ore, copper_ingot)",
     required: true,
-    choices: Object.values(ITEM_DEFINITIONS).map((item) => ({
-      name: item.name,
-      value: item.id,
-    })),
   }),
   quantity: createIntegerOption({
     description: "Quantity to sell (default: 1)",

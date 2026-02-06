@@ -29,6 +29,8 @@ export const FightRoundSchema = z.object({
   p2Damage: z.number().int().min(0),
   p1Hp: z.number().int().min(0),
   p2Hp: z.number().int().min(0),
+  p1TimeoutDefaulted: z.boolean().default(false),
+  p2TimeoutDefaulted: z.boolean().default(false),
   resolvedAt: z.string().datetime(),
 });
 
@@ -44,43 +46,44 @@ export const FightStatusSchema = z.enum([
 /** Main fight document schema. */
 export const RpgFightSchema = z.object({
   _id: z.string(),
-  
+
   // Players
   p1Id: z.string(),
   p2Id: z.string(),
-  
+
   // Snapshots (set on accept)
   p1Snapshot: FightPlayerSnapshotSchema.nullable(),
   p2Snapshot: FightPlayerSnapshotSchema.nullable(),
-  
+
   // Current state
   currentRound: z.number().int().min(1).default(1),
   p1Hp: z.number().int().min(0),
   p2Hp: z.number().int().min(0),
-  
+
   // Pending moves for current round
   p1PendingMove: CombatMoveSchema.nullable().default(null),
   p2PendingMove: CombatMoveSchema.nullable().default(null),
-  
+
   // RNG seed for reproducibility
   seed: z.number().int(),
-  
+
   // Status and lifecycle
   status: FightStatusSchema.default("pending"),
   winnerId: z.string().nullable().default(null),
-  
+
   // Rounds history
   rounds: z.array(FightRoundSchema).default([]),
-  
+
   // Timing
   createdAt: z.string().datetime(),
   acceptedAt: z.string().datetime().nullable().default(null),
+  lastActionAt: z.string().datetime(), // Updated on every move/resolve
   expiresAt: z.string().datetime(), // TTL index target
   finishedAt: z.string().datetime().nullable().default(null),
-  
+
   // Audit
   correlationId: z.string(),
-  guildId: z.string().optional(),
+  guildId: z.string().optional().nullable(),
 });
 
 export type RpgFightData = z.infer<typeof RpgFightSchema>;
@@ -117,6 +120,7 @@ export function createFightData(
     rounds: [],
     createdAt: now.toISOString(),
     acceptedAt: null,
+    lastActionAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     finishedAt: null,
     correlationId,

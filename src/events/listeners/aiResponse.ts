@@ -97,7 +97,7 @@ function buildContinueRow(options: {
     .onClick("ai_continue", async (ctx) => {
       if (ctx.author?.id !== options.authorId) {
         await ctx.write({
-          content: "Solo quien solicito la respuesta puede continuar.",
+          content: "Only the requesting user can continue.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -231,3 +231,4 @@ function stripBotMention(content: string, botId: string): string {
   }
   return out;
 }
+

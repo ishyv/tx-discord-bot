@@ -69,6 +69,10 @@ export function defaultLoadout(): Loadout {
 // Coerce dates from strings/numbers; default to now if invalid
 const DateSchema = z.coerce.date().catch(() => new Date());
 
+/** Starter kit path types. */
+export const StarterKitTypeSchema = z.enum(["miner", "lumber"]);
+export type StarterKitType = z.infer<typeof StarterKitTypeSchema>;
+
 /** Main RPG Profile schema. */
 export const RpgProfileSchema = z.object({
   // Equipment loadout (8 slots)
@@ -82,6 +86,10 @@ export const RpgProfileSchema = z.object({
   // Combat state
   isFighting: z.boolean().catch(false),
   activeFightId: z.string().nullable().catch(null),
+
+  // Onboarding state
+  starterKitType: StarterKitTypeSchema.nullable().catch(null),
+  starterKitClaimedAt: z.coerce.date().nullable().catch(null),
 
   // Metadata
   createdAt: DateSchema,
@@ -196,6 +204,8 @@ export function repairRpgProfile(data: unknown): RpgProfileData {
     losses: 0,
     isFighting: false,
     activeFightId: null,
+    starterKitType: null,
+    starterKitClaimedAt: null,
     createdAt: now,
     updatedAt: now,
     version: 0,

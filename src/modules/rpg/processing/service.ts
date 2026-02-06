@@ -27,12 +27,11 @@ import { rpgProfileRepo } from "../profile/repository";
 import { RpgError } from "../profile/types";
 import type { ProcessingResult, ProcessingInput, ProcessingBatchResult } from "./types";
 import {
+  getProcessingRecipe,
   getProcessedMaterial,
   canProcessMaterial,
   calculateFee,
   calculateSuccessChance,
-  MATERIALS_PER_BATCH,
-  OUTPUT_PER_BATCH,
 } from "./recipes";
 
 export interface RpgProcessingService {
@@ -74,16 +73,6 @@ async function getUserLuckLevel(guildId: string | undefined, userId: UserId): Pr
 class RpgProcessingServiceImpl implements RpgProcessingService {
   async process(input: ProcessingInput): Promise<Result<ProcessingResult, RpgError>> {
     const correlationId = input.correlationId ?? this.generateCorrelationId();
-    
-    // Calculate batches from quantity (floor to pairs)
-    const requestedQty = input.quantity ?? 2;
-    const batches = Math.floor(requestedQty / MATERIALS_PER_BATCH);
-    
-    if (batches < 1) {
-      return ErrResult(
-        new RpgError("INSUFFICIENT_MATERIALS", `Need at least ${MATERIALS_PER_BATCH} materials to process`),
-      );
-    }
 
     // Step 1: Validate profile
     const profileResult = await rpgProfileRepo.findById(input.userId);
@@ -91,17 +80,30 @@ class RpgProcessingServiceImpl implements RpgProcessingService {
       return ErrResult(new RpgError("PROFILE_NOT_FOUND", "RPG profile not found"));
     }
 
-    // Step 2: Validate material can be processed
-    if (!canProcessMaterial(input.rawMaterialId)) {
+    // Step 2: Resolve processing recipe (content-first, legacy fallback)
+    const recipe = getProcessingRecipe(input.rawMaterialId);
+    if (!recipe || !canProcessMaterial(input.rawMaterialId)) {
       return ErrResult(
         new RpgError("PROCESSING_FAILED", "This material cannot be processed"),
       );
     }
 
-    const outputMaterialId = getProcessedMaterial(input.rawMaterialId);
+    const outputMaterialId = recipe.outputMaterialId ?? getProcessedMaterial(input.rawMaterialId);
     if (!outputMaterialId) {
       return ErrResult(
         new RpgError("PROCESSING_FAILED", "No processing recipe found for this material"),
+      );
+    }
+
+    // Calculate batches from quantity (floor to recipe input quantity)
+    const requestedQty = input.quantity ?? recipe.materialsPerBatch;
+    const batches = Math.floor(requestedQty / recipe.materialsPerBatch);
+    if (batches < 1) {
+      return ErrResult(
+        new RpgError(
+          "INSUFFICIENT_MATERIALS",
+          `Need at least ${recipe.materialsPerBatch} materials to process`,
+        ),
       );
     }
 
@@ -112,7 +114,7 @@ class RpgProcessingServiceImpl implements RpgProcessingService {
     }
 
     const inventory = normalizeModernInventory(userResult.unwrap()!.inventory);
-    const requiredMaterials = MATERIALS_PER_BATCH * batches;
+    const requiredMaterials = recipe.materialsPerBatch * batches;
     const availableMaterials = getModernItemQuantity(inventory, input.rawMaterialId);
 
     if (availableMaterials < requiredMaterials) {
@@ -236,7 +238,7 @@ class RpgProcessingServiceImpl implements RpgProcessingService {
     }
 
     // Step 10: Grant output for successes
-    const outputGained = successes * OUTPUT_PER_BATCH;
+    const outputGained = successes * recipe.outputPerBatch;
     
     if (outputGained > 0) {
       const addResult = await itemMutationService.adjustItemQuantity(
@@ -275,6 +277,9 @@ class RpgProcessingServiceImpl implements RpgProcessingService {
         batchesAttempted: batches,
         batchesSucceeded: successes,
         batchesFailed: failures,
+        recipeId: recipe.id,
+        outputPerBatch: recipe.outputPerBatch,
+        materialsPerBatch: recipe.materialsPerBatch,
         successChance,
         luckLevel,
         feePaid: totalFee,
@@ -306,8 +311,9 @@ class RpgProcessingServiceImpl implements RpgProcessingService {
     guildId?: string,
     userId?: string,
   ): Promise<{ canProcess: boolean; outputId: string | null; successChance: number; fee: number }> {
-    const canProcess = canProcessMaterial(materialId);
-    const outputId = getProcessedMaterial(materialId);
+    const recipe = getProcessingRecipe(materialId);
+    const canProcess = !!recipe;
+    const outputId = recipe?.outputMaterialId ?? getProcessedMaterial(materialId);
     
     let luckLevel = 0;
     if (guildId && userId) {
@@ -315,7 +321,7 @@ class RpgProcessingServiceImpl implements RpgProcessingService {
     }
     
     const successChance = calculateSuccessChance(luckLevel);
-    const fee = calculateFee(materialId, 1);
+    const fee = canProcess ? calculateFee(materialId, 1) : 0;
 
     return {
       canProcess,

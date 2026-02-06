@@ -24,10 +24,11 @@ export default class UIButtonHandler extends ComponentCommand {
 
     const ok = await resolveAndInvoke(ctx.customId, ctx);
     if (!ok) {
-      await ctx.write({
-        content: "Este botón ya no está activo.",
+      await ctx.editOrReply({
+        content: "This button is no longer active.",
         flags: MessageFlags.Ephemeral,
       });
     }
   }
 }
+

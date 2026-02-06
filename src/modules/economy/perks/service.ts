@@ -233,7 +233,7 @@ class PerkServiceImpl implements PerkService {
     const ensureResult = await economyAccountRepo.ensure(userId);
     if (ensureResult.isErr()) {
       return ErrResult(
-        new PerkError("UPDATE_FAILED", "No se pudo acceder a la cuenta."),
+        new PerkError("UPDATE_FAILED", "Could not access the account."),
       );
     }
     const { account } = ensureResult.unwrap();
@@ -241,7 +241,7 @@ class PerkServiceImpl implements PerkService {
       return ErrResult(
         new PerkError(
           "ACCOUNT_BLOCKED",
-          "Tu cuenta tiene restricciones temporales.",
+          "Your account has temporary restrictions.",
         ),
       );
     }
@@ -249,7 +249,7 @@ class PerkServiceImpl implements PerkService {
       return ErrResult(
         new PerkError(
           "ACCOUNT_BANNED",
-          "Tu cuenta tiene restricciones permanentes.",
+          "Your account has permanent restrictions.",
         ),
       );
     }
@@ -339,14 +339,14 @@ class PerkServiceImpl implements PerkService {
         }
         if (message === "LEVEL_REQUIRED") {
           return ErrResult(
-            new PerkError("LEVEL_REQUIRED", "No tienes el nivel requerido."),
+            new PerkError("LEVEL_REQUIRED", "You do not meet the required level."),
           );
         }
         if (message === "INSUFFICIENT_FUNDS") {
           return ErrResult(
             new PerkError(
               "INSUFFICIENT_FUNDS",
-              "No tienes suficientes fondos.",
+              "You do not have enough funds.",
             ),
           );
         }
@@ -354,12 +354,12 @@ class PerkServiceImpl implements PerkService {
           return ErrResult(
             new PerkError(
               "CONFLICT",
-              "Compra en conflicto. Intentalo nuevamente.",
+              "Purchase conflict. Try again.",
             ),
           );
         }
         return ErrResult(
-          new PerkError("UPDATE_FAILED", "No se pudo completar la compra."),
+          new PerkError("UPDATE_FAILED", "Could not complete purchase."),
         );
       }
 
@@ -412,3 +412,4 @@ class PerkServiceImpl implements PerkService {
 }
 
 export const perkService: PerkService = new PerkServiceImpl();
+

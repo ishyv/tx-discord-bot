@@ -14,8 +14,8 @@ export const suite: Suite = {
       ops: [ops.read],
       async run() {
         const inventory: ItemInventory = {
-          palo: { id: "palo", quantity: 3 },
-          espada: { id: "espada", quantity: 2 },
+          stick: { id: "stick", quantity: 3 },
+          sword: { id: "sword", quantity: 2 },
         };
 
         const stats = calculateCapacity(inventory);
@@ -49,10 +49,10 @@ export const suite: Suite = {
       ops: [ops.update],
       async run() {
         const inventory: ItemInventory = {
-          palo: { id: "palo", quantity: 3 },
+          stick: { id: "stick", quantity: 3 },
         };
 
-        const stats = simulateCapacityAfterAdd(inventory, "palo", 2);
+        const stats = simulateCapacityAfterAdd(inventory, "stick", 2);
 
         assertEqual(
           stats.currentWeight,
@@ -72,7 +72,7 @@ export const suite: Suite = {
       async run() {
         const inventory: ItemInventory = {};
 
-        const stats = simulateCapacityAfterAdd(inventory, "espada", 3);
+        const stats = simulateCapacityAfterAdd(inventory, "sword", 3);
 
         assertEqual(
           stats.currentWeight,

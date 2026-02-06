@@ -16,11 +16,10 @@ import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { rpgGatheringService } from "@/modules/rpg/gathering/service";
 import { rpgProfileService } from "@/modules/rpg/profile/service";
-import { getLocation, DEFAULT_LOCATIONS } from "@/modules/rpg/gathering/definitions";
-import { ITEM_DEFINITIONS } from "@/modules/inventory/definitions";
+import { getLocation, listLocations } from "@/modules/rpg/gathering/definitions";
+import { getItemDefinition } from "@/modules/inventory/items";
 
-const locationChoices = DEFAULT_LOCATIONS
-  .filter((l) => l.type === "forest")
+const locationChoices = listLocations("forest")
   .map((l) => ({
     name: `${l.name} (Tier ${l.requiredTier})`,
     value: l.id,
@@ -108,7 +107,9 @@ export default class CutDownCommand extends Command {
 
     const gather = result.unwrap();
     const location = getLocation(locationId)!;
-    const materialName = ITEM_DEFINITIONS[gather.materialsGained[0]!.id]?.name ?? gather.materialsGained[0]!.id;
+    const materialName =
+      getItemDefinition(gather.materialsGained[0]!.id)?.name ??
+      gather.materialsGained[0]!.id;
 
     // Build response
     let response = `🪓 **Cutting at ${location.name}**\n\n`;

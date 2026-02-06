@@ -1,5 +1,5 @@
 /**
- * Repositorio de usuarios.
+ * Repositorio de users.
  *
  * Responsabilidad:
  * - Encapsular el acceso a la colección `users` (MongoDB).
@@ -411,3 +411,4 @@ export async function incrementReputation(
     typeof rep === "number" ? Math.max(0, Math.trunc(rep)) : 0;
   return OkResult(normalizedRep);
 }
+

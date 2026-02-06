@@ -10,6 +10,7 @@ import type {
   RpgProcessingConfig,
   RpgGatheringConfig,
   RpgUpgradeConfig,
+  RpgOnboardingConfig,
 } from "./types";
 import type { RpgConfigData } from "./repository";
 
@@ -53,12 +54,34 @@ export const DEFAULT_UPGRADE_CONFIG: RpgUpgradeConfig = {
   resetDurabilityOnUpgrade: true,
 };
 
+/** Default onboarding configuration. */
+export const DEFAULT_ONBOARDING_CONFIG: RpgOnboardingConfig = {
+  enabled: true,
+  starterKits: {
+    miner: {
+      toolId: "pickaxe",
+      gear: [
+        { id: "leather_helmet", qty: 1 },
+        { id: "leather_chest", qty: 1 },
+      ],
+    },
+    lumber: {
+      toolId: "axe",
+      gear: [
+        { id: "leather_helmet", qty: 1 },
+        { id: "leather_chest", qty: 1 },
+      ],
+    },
+  },
+};
+
 /** Default complete RPG configuration. */
 export const DEFAULT_RPG_CONFIG = {
   combat: DEFAULT_COMBAT_CONFIG,
   processing: DEFAULT_PROCESSING_CONFIG,
   gathering: DEFAULT_GATHERING_CONFIG,
   upgrades: DEFAULT_UPGRADE_CONFIG,
+  onboarding: DEFAULT_ONBOARDING_CONFIG,
 };
 
 /** Convert DB data to domain model. */

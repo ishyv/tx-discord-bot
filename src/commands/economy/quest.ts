@@ -1,8 +1,8 @@
 /**
- * Quest Command - Individual Quest Management.
+ * Quest Command - Unified Quest Management.
  *
- * Purpose: View quest details, check progress, and claim rewards.
- * Subcommands: view, claim, progress, list.
+ * Purpose: View quest board, manage individual quests, check progress, and claim rewards.
+ * Subcommands: board, view, claim, progress, list.
  */
 
 import {
@@ -16,17 +16,35 @@ import {
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
-import { questService, questRepo } from "@/modules/economy/quests";
+import {
+  questService,
+  questRepo,
+  questRotationService,
+  type QuestRotationType,
+} from "@/modules/economy/quests";
 import {
   buildQuestDetailEmbed,
   buildClaimResultEmbed,
   buildQuestErrorEmbed,
   buildQuestSuccessEmbed,
+  buildQuestBoardEmbed,
 } from "@/modules/economy/quests/ui";
+
+const boardOptions = {
+  tab: createStringOption({
+    description: "Tab to display (daily, weekly, featured)",
+    choices: [
+      { name: "📅 Daily", value: "daily" },
+      { name: "📆 Weekly", value: "weekly" },
+      { name: "⭐ Featured", value: "featured" },
+    ],
+    required: false,
+  }),
+};
 
 @Declare({
   name: "quest",
-  description: "📜 Manage your individual quests",
+  description: "📜 Manage your quests and view the quest board",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -36,22 +54,123 @@ import {
   interval: 5000,
   uses: { default: 5 },
 })
+@Options(boardOptions)
 export default class QuestCommand extends Command {
-  // Default: show help
-  async run(ctx: CommandContext) {
-    await ctx.write({
-      embeds: [
-        buildQuestSuccessEmbed(
-          "Quest Commands",
-          "Use the following subcommands:\n\n" +
-          "`/quest view <id>` - View quest details\n" +
-          "`/quest claim <id>` - Claim rewards from a completed quest\n" +
-          "`/quest progress` - View your overall progress\n" +
-          "`/quest list` - List available quests\n\n" +
-          "Or use `/quests` for the interactive Quest Board.",
-        ),
-      ],
-    });
+  // Default: show quest board
+  async run(ctx: CommandContext<typeof boardOptions>) {
+    const guildId = ctx.guildId;
+    const userId = ctx.author.id;
+
+    if (!guildId) {
+      await ctx.write({
+        embeds: [
+          buildQuestErrorEmbed(
+            "This command can only be used in a server.",
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Ensure rotations exist
+    const rotationStatus =
+      await questRotationService.ensureCurrentRotations(guildId);
+    if (rotationStatus.isErr()) {
+      await ctx.write({
+        embeds: [
+          buildQuestErrorEmbed(
+            `Error loading quests: ${rotationStatus.error.message}`,
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Get quest board
+    const boardResult = await questService.getQuestBoard(guildId, userId);
+    if (boardResult.isErr()) {
+      await ctx.write({
+        embeds: [
+          buildQuestErrorEmbed(
+            `Error loading quests: ${boardResult.error.message}`,
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const board = boardResult.unwrap();
+    const activeTab = (ctx.options.tab as QuestRotationType) ?? "daily";
+
+    // Build embed
+    const embed = buildQuestBoardEmbed(board, ctx.author.username, activeTab);
+
+    await ctx.write({ embeds: [embed] });
+  }
+}
+
+// Subcommand: board (explicit access to quest board)
+@Declare({
+  name: "board",
+  description: "Open the interactive Quest Board",
+})
+@Options(boardOptions)
+export class QuestBoardSubCommand extends SubCommand {
+  async run(ctx: CommandContext<typeof boardOptions>) {
+    const guildId = ctx.guildId;
+    const userId = ctx.author.id;
+
+    if (!guildId) {
+      await ctx.write({
+        embeds: [
+          buildQuestErrorEmbed(
+            "This command can only be used in a server.",
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Ensure rotations exist
+    const rotationStatus =
+      await questRotationService.ensureCurrentRotations(guildId);
+    if (rotationStatus.isErr()) {
+      await ctx.write({
+        embeds: [
+          buildQuestErrorEmbed(
+            `Error loading quests: ${rotationStatus.error.message}`,
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Get quest board
+    const boardResult = await questService.getQuestBoard(guildId, userId);
+    if (boardResult.isErr()) {
+      await ctx.write({
+        embeds: [
+          buildQuestErrorEmbed(
+            `Error loading quests: ${boardResult.error.message}`,
+          ),
+        ],
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const board = boardResult.unwrap();
+    const activeTab = (ctx.options.tab as QuestRotationType) ?? "daily";
+
+    // Build embed
+    const embed = buildQuestBoardEmbed(board, ctx.author.username, activeTab);
+
+    await ctx.write({ embeds: [embed] });
   }
 }
 

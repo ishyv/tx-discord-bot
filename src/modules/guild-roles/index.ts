@@ -44,7 +44,7 @@ export interface ModerationActionDefinition {
 
 export const DEFAULT_MODERATION_ACTIONS: readonly ModerationActionDefinition[] =
   Object.freeze([
-    { key: "timeout", label: "Tiempo fuera" },
+    { key: "timeout", label: "Timeout" },
     { key: "kick", label: "Expulsion" },
     { key: "ban", label: "Baneo" },
     { key: "warn", label: "Advertencia" },
@@ -372,3 +372,4 @@ export async function setRoleOverride(
     (r) => r.unwrap(),
   );
 }
+

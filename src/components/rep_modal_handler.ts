@@ -50,7 +50,7 @@ export default class RepModalHandler extends ModalCommand {
     if (!guildId) {
       await ctx.write({
         content:
-          "No se pudo determinar el servidor para procesar la solicitud.",
+          "Could not determine the guild for this request.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -59,7 +59,7 @@ export default class RepModalHandler extends ModalCommand {
     const enabled = await assertFeatureEnabled(
       ctx as any,
       Features.Reputation,
-      "El sistema de reputacion esta deshabilitado en este servidor.",
+      "The reputation system is disabled in this server.",
     );
     if (!enabled) return;
 
@@ -69,7 +69,7 @@ export default class RepModalHandler extends ModalCommand {
     if (isNaN(amount) || amount === 0 || amount < -5 || amount > 5) {
       await ctx.write({
         content:
-          "La cantidad debe ser un numero entre -5 y 5, y no puede ser 0.",
+          "Amount must be a number between -5 and 5, and cannot be 0.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -78,7 +78,7 @@ export default class RepModalHandler extends ModalCommand {
     const totalResult = await adjustUserReputation(targetId, amount);
     if (totalResult.isErr()) {
       await ctx.write({
-        content: "No se pudo actualizar la reputacion.",
+        content: "Could not update reputation.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -118,11 +118,11 @@ export default class RepModalHandler extends ModalCommand {
       ctx.client,
       guildId,
       {
-        title: "Solicitud de Reputacion Revisada (Manual)",
-        description: `Se ${amount > 0 ? "agrego" : "removio"} ${Math.abs(amount)} punto(s) a <@${targetId}> via solicitud manual.`,
+        title: "Reputation Request Reviewed (Manual)",
+        description: `${amount > 0 ? "Added" : "Removed"} ${Math.abs(amount)} point(s) ${amount > 0 ? "to" : "from"} <@${targetId}> via manual request.`,
         fields: [
           { name: "Total", value: `${total}`, inline: true },
-          { name: "Moderador", value: `<@${ctx.author.id}>`, inline: true },
+          { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
         ],
         actorId: ctx.author.id,
       },

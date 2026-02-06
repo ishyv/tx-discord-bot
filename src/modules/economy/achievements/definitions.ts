@@ -24,8 +24,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "streak_7",
-    name: "Constancia",
-    description: "Mantén una racha de 7 días reclamando tu recompensa diaria.",
+    name: "Consistency",
+    description: "Maintain a 7-day streak claiming your daily reward.",
     tier: "bronze",
     category: "progression",
     condition: { type: "streak_milestone", days: 7 },
@@ -36,16 +36,16 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_constant",
-      titleName: "Constante",
-      titlePrefix: "[Constante] ",
+      titleName: "Consistent",
+      titlePrefix: "[Consistent] ",
     },
     displayOrder: 1,
   },
 
   {
     id: "streak_14",
-    name: "Dedicación",
-    description: "Mantén una racha de 14 días reclamando tu recompensa diaria.",
+    name: "Dedication",
+    description: "Maintain a 14-day streak claiming your daily reward.",
     tier: "silver",
     category: "progression",
     condition: { type: "streak_milestone", days: 14 },
@@ -56,17 +56,17 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_dedicated",
-      titleName: "Dedicado",
-      titlePrefix: "[Dedicado] ",
+      titleName: "Dedicated",
+      titlePrefix: "[Dedicated] ",
     },
     displayOrder: 2,
   },
 
   {
     id: "streak_30",
-    name: "Leyenda de la Constancia",
+    name: "Legend de la Consistency",
     description:
-      "Mantén una racha de 30 días reclamando tu recompensa diaria. ¡Eres una leyenda!",
+      "Maintain a 30-day streak claiming your daily reward. You are a legend!",
     tier: "gold",
     category: "progression",
     condition: { type: "streak_milestone", days: 30 },
@@ -77,22 +77,22 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
         type: "badge",
         badgeId: "badge_streak",
         badgeEmoji: "🔥",
-        badgeName: "Racha Inquebrantable",
+        badgeName: "Unbreakable Streak",
       },
     ],
     title: {
       type: "title",
       titleId: "title_legend",
-      titleName: "Leyenda",
-      titlePrefix: "[🔥 Leyenda] ",
+      titleName: "Legend",
+      titlePrefix: "[🔥 Legend] ",
     },
     displayOrder: 3,
   },
 
   {
     id: "level_3",
-    name: "Primeros Pasos",
-    description: "Alcanza el nivel 3 en el sistema de progresión.",
+    name: "First Steps",
+    description: "Reach level 3 in the progression system.",
     tier: "bronze",
     category: "progression",
     condition: { type: "level_milestone", level: 3 },
@@ -105,8 +105,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "level_6",
-    name: "En Ascenso",
-    description: "Alcanza el nivel 6 en el sistema de progresión.",
+    name: "Rising",
+    description: "Reach level 6 in the progression system.",
     tier: "silver",
     category: "progression",
     condition: { type: "level_milestone", level: 6 },
@@ -117,16 +117,16 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_rising",
-      titleName: "Ascendente",
-      titleSuffix: " el Ascendente",
+      titleName: "Rising",
+      titleSuffix: " el Rising",
     },
     displayOrder: 5,
   },
 
   {
     id: "level_9",
-    name: "Veterano",
-    description: "Alcanza el nivel 9 en el sistema de progresión.",
+    name: "Veteran",
+    description: "Reach level 9 in the progression system.",
     tier: "gold",
     category: "progression",
     condition: { type: "level_milestone", level: 9 },
@@ -137,17 +137,17 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_veteran",
-      titleName: "Veterano",
-      titlePrefix: "[Veterano] ",
+      titleName: "Veteran",
+      titlePrefix: "[Veteran] ",
     },
     displayOrder: 6,
   },
 
   {
     id: "level_12",
-    name: "Maestro",
+    name: "Master",
     description:
-      "Alcanza el nivel 12 en el sistema de progresión. ¡La cima está cerca!",
+      "Reach level 12 in the progression system. The top is near!",
     tier: "platinum",
     category: "progression",
     condition: { type: "level_milestone", level: 12 },
@@ -158,14 +158,14 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
         type: "badge",
         badgeId: "badge_master",
         badgeEmoji: "👑",
-        badgeName: "Maestro",
+        badgeName: "Master",
       },
     ],
     title: {
       type: "title",
       titleId: "title_master",
-      titleName: "Maestro",
-      titlePrefix: "[👑 Maestro] ",
+      titleName: "Master",
+      titlePrefix: "[👑 Master] ",
     },
     displayOrder: 7,
   },
@@ -176,8 +176,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "craft_10",
-    name: "Artesano Principiante",
-    description: "Craftea 10 recetas exitosamente.",
+    name: "Novice Craftsman",
+    description: "Craft 10 recipes successfully.",
     tier: "bronze",
     category: "crafting",
     condition: { type: "craft_count", count: 10 },
@@ -188,17 +188,17 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_crafter",
-      titleName: "Artesano",
-      titleSuffix: " el Artesano",
+      titleName: "Craftsman",
+      titleSuffix: " el Craftsman",
     },
     displayOrder: 8,
   },
 
   {
     id: "craft_50",
-    name: "Maestro Artesano",
+    name: "Master Craftsman",
     description:
-      "Craftea 50 recetas exitosamente. ¡Tus manos crean maravillas!",
+      "Craft 50 recipes successfully. Your hands create wonders!",
     tier: "gold",
     category: "crafting",
     condition: { type: "craft_count", count: 50 },
@@ -209,14 +209,14 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
         type: "badge",
         badgeId: "badge_crafter",
         badgeEmoji: "⚒️",
-        badgeName: "Maestro Artesano",
+        badgeName: "Master Craftsman",
       },
     ],
     title: {
       type: "title",
       titleId: "title_master_crafter",
-      titleName: "Maestro Artesano",
-      titlePrefix: "[⚒️ Maestro] ",
+      titleName: "Master Craftsman",
+      titlePrefix: "[⚒️ Master] ",
     },
     displayOrder: 9,
   },
@@ -227,8 +227,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "trivia_wins_10",
-    name: "Mente Brillante",
-    description: "Gana 10 partidas de trivia correctamente.",
+    name: "Brilliant Mind",
+    description: "Win 10 trivia matches correctly.",
     tier: "silver",
     category: "minigame",
     condition: { type: "trivia_wins", count: 10 },
@@ -239,7 +239,7 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_brain",
-      titleName: "Mente Brillante",
+      titleName: "Brilliant Mind",
       titleSuffix: " el Sabio",
     },
     displayOrder: 10,
@@ -247,8 +247,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "trivia_wins_50",
-    name: "Genio Trivial",
-    description: "Gana 50 partidas de trivia. ¡Eres un pozo de conocimiento!",
+    name: "Trivia Genius",
+    description: "Win 50 trivia matches. You are a well of knowledge!",
     tier: "platinum",
     category: "minigame",
     condition: { type: "trivia_wins", count: 50 },
@@ -259,22 +259,22 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
         type: "badge",
         badgeId: "badge_genius",
         badgeEmoji: "🧠",
-        badgeName: "Genio",
+        badgeName: "Genius",
       },
     ],
     title: {
       type: "title",
       titleId: "title_genius",
-      titleName: "Genio",
-      titlePrefix: "[🧠 Genio] ",
+      titleName: "Genius",
+      titlePrefix: "[🧠 Genius] ",
     },
     displayOrder: 11,
   },
 
   {
     id: "coinflip_streak_5",
-    name: "Suerte del Principiante",
-    description: "Gana 5 veces seguidas en coinflip.",
+    name: "Beginner's Luck",
+    description: "Win coinflip 5 times in a row.",
     tier: "silver",
     category: "minigame",
     condition: { type: "coinflip_streak", consecutiveWins: 5 },
@@ -293,7 +293,7 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     id: "rob_total_5000",
     name: "Robin Hood",
     description:
-      "Acumula 5000 monedas robadas exitosamente (en cualquier cantidad de intentos).",
+      "Accumulate 5000 coins stolen successfully (across any number of attempts).",
     tier: "gold",
     category: "social",
     condition: { type: "rob_success", totalAmount: 5000 },
@@ -322,8 +322,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "store_purchases_20",
-    name: "Cliente Frecuente",
-    description: "Realiza 20 compras exitosas en la tienda.",
+    name: "Frequent Customer",
+    description: "Complete 20 successful shop purchases.",
     tier: "silver",
     category: "collection",
     condition: { type: "store_purchases", count: 20 },
@@ -334,16 +334,16 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_shopper",
-      titleName: "Comprador",
-      titleSuffix: " el Comprador",
+      titleName: "Shopper",
+      titleSuffix: " el Shopper",
     },
     displayOrder: 14,
   },
 
   {
     id: "items_collected_25",
-    name: "Coleccionista",
-    description: "Obtén 25 items únicos diferentes en tu inventario.",
+    name: "Collector",
+    description: "Obtain 25 different unique items in your inventory.",
     tier: "gold",
     category: "collection",
     condition: { type: "items_collected", uniqueItems: 25 },
@@ -354,14 +354,14 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
         type: "badge",
         badgeId: "badge_collector",
         badgeEmoji: "🎒",
-        badgeName: "Coleccionista",
+        badgeName: "Collector",
       },
     ],
     title: {
       type: "title",
       titleId: "title_collector",
-      titleName: "Coleccionista",
-      titlePrefix: "[🎒 Coleccionista] ",
+      titleName: "Collector",
+      titlePrefix: "[🎒 Collector] ",
     },
     displayOrder: 15,
   },
@@ -372,8 +372,8 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
 
   {
     id: "quest_completions_10",
-    name: "Cazador de Misiones",
-    description: "Completa 10 misiones del tablón de misiones.",
+    name: "Quest Hunter",
+    description: "Complete 10 quest-board missions.",
     tier: "silver",
     category: "special",
     condition: { type: "quest_completions", count: 10 },
@@ -384,16 +384,16 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
     title: {
       type: "title",
       titleId: "title_hunter",
-      titleName: "Cazador",
-      titleSuffix: " el Cazador",
+      titleName: "Hunter",
+      titleSuffix: " el Hunter",
     },
     displayOrder: 16,
   },
 
   {
     id: "votes_cast_50",
-    name: "Jurado Popular",
-    description: "Emite 50 votos usando el sistema de votación.",
+    name: "Popular Jury",
+    description: "Cast 50 votes using the voting system.",
     tier: "silver",
     category: "social",
     condition: { type: "votes_cast", count: 50 },
@@ -404,7 +404,7 @@ export const ACHIEVEMENT_DEFINITIONS: readonly AchievementDefinition[] = [
         type: "badge",
         badgeId: "badge_voter",
         badgeEmoji: "🗳️",
-        badgeName: "Votante",
+        badgeName: "Voter",
       },
     ],
     displayOrder: 17,
@@ -448,3 +448,6 @@ export function getAchievementsByTier(
 ): readonly AchievementDefinition[] {
   return ACHIEVEMENT_DEFINITIONS.filter((a) => a.tier === tier);
 }
+
+
+

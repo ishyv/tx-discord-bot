@@ -9,18 +9,13 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { buildSuccessEmbed, buildErrorEmbed } from "@/modules/ui/design-system";
-import { ITEM_DEFINITIONS } from "@/modules/inventory";
 import { storeService, economyAuditRepo } from "@/modules/economy";
 import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 
 const options = {
     item: createStringOption({
-        description: "Item to edit",
+        description: "Item ID to edit (e.g., iron_ore, copper_ingot)",
         required: true,
-        choices: Object.values(ITEM_DEFINITIONS).map((item) => ({
-            name: item.name,
-            value: item.id,
-        })),
     }),
     name: createStringOption({
         description: "New display name",

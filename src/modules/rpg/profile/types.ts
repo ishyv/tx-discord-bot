@@ -13,9 +13,9 @@
  * - version is a non-negative integer for optimistic concurrency.
  */
 
-import type { EquipmentSlot, Loadout } from "@/db/schemas/rpg-profile";
+import type { EquipmentSlot, Loadout, StarterKitType } from "@/db/schemas/rpg-profile";
 
-export type { EquipmentSlot, Loadout };
+export type { EquipmentSlot, Loadout, StarterKitType };
 
 /** RPG Profile entity stored per user. */
 export interface RpgProfile {
@@ -26,6 +26,10 @@ export interface RpgProfile {
   readonly losses: number;
   readonly isFighting: boolean;
   readonly activeFightId: string | null;
+  /** Starter kit path claimed (miner or lumber). */
+  readonly starterKitType: StarterKitType | null;
+  /** When starter kit was claimed. */
+  readonly starterKitClaimedAt: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly version: number;

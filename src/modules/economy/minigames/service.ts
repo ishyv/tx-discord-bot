@@ -144,7 +144,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "CONFIG_NOT_FOUND",
-          "Configuración no encontrada.",
+          "Configuration not found.",
         ),
       );
     }
@@ -154,7 +154,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "CONFIG_NOT_FOUND",
-          "Coinflip está desactivado.",
+          "Coinflip is disabled.",
         ),
       );
     }
@@ -167,7 +167,7 @@ class MinigameServiceImpl implements MinigameService {
         return ErrResult(
           new MinigameErrorClass(
             "FEATURE_DISABLED",
-            "Coinflip está deshabilitado en este servidor.",
+            "Coinflip is disabled in this server.",
           ),
         );
       }
@@ -179,7 +179,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "UPDATE_FAILED",
-          "No se pudo acceder a la cuenta.",
+          "Could not access the account.",
         ),
       );
     }
@@ -188,13 +188,13 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "TARGET_BLOCKED",
-          "Tu cuenta tiene restricciones.",
+          "Your account has restrictions.",
         ),
       );
     }
     if (account.status === "banned") {
       return ErrResult(
-        new MinigameErrorClass("TARGET_BANNED", "Tu cuenta está baneada."),
+        new MinigameErrorClass("TARGET_BANNED", "Your account is banned."),
       );
     }
 
@@ -202,7 +202,7 @@ class MinigameServiceImpl implements MinigameService {
     const stateResult = await minigameRepo.checkAndResetDailies(userId);
     if (stateResult.isErr()) {
       return ErrResult(
-        new MinigameErrorClass("UPDATE_FAILED", "Error al verificar límites."),
+        new MinigameErrorClass("UPDATE_FAILED", "Error checking limits."),
       );
     }
     const state = stateResult.unwrap();
@@ -355,14 +355,14 @@ class MinigameServiceImpl implements MinigameService {
           return ErrResult(
             new MinigameErrorClass(
               "INSUFFICIENT_FUNDS",
-              "No tienes suficiente saldo.",
+              "You do not have enough balance.",
             ),
           );
         }
         return ErrResult(
           new MinigameErrorClass(
             "UPDATE_FAILED",
-            "Error al procesar la apuesta.",
+            "Error processing the bet.",
           ),
         );
       }
@@ -447,7 +447,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "CONFIG_NOT_FOUND",
-          "Configuración no encontrada.",
+          "Configuration not found.",
         ),
       );
     }
@@ -455,7 +455,7 @@ class MinigameServiceImpl implements MinigameService {
 
     if (!config.enabled) {
       return ErrResult(
-        new MinigameErrorClass("CONFIG_NOT_FOUND", "Trivia está desactivado."),
+        new MinigameErrorClass("CONFIG_NOT_FOUND", "Trivia is disabled."),
       );
     }
 
@@ -467,7 +467,7 @@ class MinigameServiceImpl implements MinigameService {
         return ErrResult(
           new MinigameErrorClass(
             "FEATURE_DISABLED",
-            "Trivia está deshabilitado en este servidor.",
+            "Trivia is disabled in this server.",
           ),
         );
       }
@@ -477,7 +477,7 @@ class MinigameServiceImpl implements MinigameService {
     const stateResult = await minigameRepo.checkAndResetDailies(userId);
     if (stateResult.isErr()) {
       return ErrResult(
-        new MinigameErrorClass("UPDATE_FAILED", "Error al verificar límites."),
+        new MinigameErrorClass("UPDATE_FAILED", "Error checking limits."),
       );
     }
     const state = stateResult.unwrap();
@@ -556,7 +556,7 @@ class MinigameServiceImpl implements MinigameService {
     // Validate answer index
     if (answerIndex < 0 || answerIndex > 3) {
       return ErrResult(
-        new MinigameErrorClass("INVALID_CHOICE", "Respuesta inválida (A-D)."),
+        new MinigameErrorClass("INVALID_CHOICE", "Invalid answer (A-D)."),
       );
     }
 
@@ -569,7 +569,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "INVALID_CHOICE",
-          "No tienes una pregunta activa. Usa /trivia para empezar.",
+          "You do not have an active question. Use /trivia to start.",
         ),
       );
     }
@@ -581,7 +581,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "TIMEOUT_EXPIRED",
-          "¡Se acabó el tiempo! La pregunta expiró.",
+          "Time is up! The question expired.",
         ),
       );
     }
@@ -592,7 +592,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "CONFIG_NOT_FOUND",
-          "Configuración no encontrada.",
+          "Configuration not found.",
         ),
       );
     }
@@ -604,7 +604,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "INVALID_CHOICE",
-          "Pregunta no válida o expirada.",
+          "Invalid or expired question.",
         ),
       );
     }
@@ -652,7 +652,7 @@ class MinigameServiceImpl implements MinigameService {
     const userStateResult = await minigameRepo.getUserState(userId);
     if (userStateResult.isErr()) {
       return ErrResult(
-        new MinigameErrorClass("UPDATE_FAILED", "Error al obtener estado del usuario."),
+        new MinigameErrorClass("UPDATE_FAILED", "Error getting user state."),
       );
     }
     const currentState = userStateResult.unwrap();
@@ -722,7 +722,7 @@ class MinigameServiceImpl implements MinigameService {
         return ErrResult(
           new MinigameErrorClass(
             "UPDATE_FAILED",
-            "Error al procesar respuesta.",
+            "Error processing answer.",
           ),
         );
       }
@@ -829,7 +829,7 @@ class MinigameServiceImpl implements MinigameService {
     // Anti-abuse: Prevent self-targeting
     if (userId === targetId) {
       return ErrResult(
-        new MinigameErrorClass("SELF_TARGET", "No puedes robarte a ti mismo."),
+        new MinigameErrorClass("SELF_TARGET", "You cannot rob yourself."),
       );
     }
 
@@ -839,7 +839,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "CONFIG_NOT_FOUND",
-          "Configuración no encontrada.",
+          "Configuration not found.",
         ),
       );
     }
@@ -847,7 +847,7 @@ class MinigameServiceImpl implements MinigameService {
 
     if (!config.enabled) {
       return ErrResult(
-        new MinigameErrorClass("CONFIG_NOT_FOUND", "Rob está desactivado."),
+        new MinigameErrorClass("CONFIG_NOT_FOUND", "Rob is disabled."),
       );
     }
 
@@ -859,7 +859,7 @@ class MinigameServiceImpl implements MinigameService {
         return ErrResult(
           new MinigameErrorClass(
             "FEATURE_DISABLED",
-            "Rob está deshabilitado en este servidor.",
+            "Rob is disabled in this server.",
           ),
         );
       }
@@ -871,7 +871,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "UPDATE_FAILED",
-          "No se pudo acceder a tu cuenta.",
+          "Could not access your account.",
         ),
       );
     }
@@ -880,13 +880,13 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "TARGET_BLOCKED",
-          "Tu cuenta tiene restricciones.",
+          "Your account has restrictions.",
         ),
       );
     }
     if (robberAccount.status === "banned") {
       return ErrResult(
-        new MinigameErrorClass("TARGET_BANNED", "Tu cuenta está baneada."),
+        new MinigameErrorClass("TARGET_BANNED", "Your account is banned."),
       );
     }
 
@@ -894,7 +894,7 @@ class MinigameServiceImpl implements MinigameService {
     const targetResult = await economyAccountRepo.ensure(targetId);
     if (targetResult.isErr()) {
       return ErrResult(
-        new MinigameErrorClass("TARGET_NOT_FOUND", "Objetivo no encontrado."),
+        new MinigameErrorClass("TARGET_NOT_FOUND", "Target not found."),
       );
     }
     const { account: targetAccount } = targetResult.unwrap();
@@ -902,13 +902,13 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "TARGET_BLOCKED",
-          "El objetivo tiene restricciones.",
+          "The target account has restrictions.",
         ),
       );
     }
     if (targetAccount.status === "banned") {
       return ErrResult(
-        new MinigameErrorClass("TARGET_BANNED", "El objetivo está baneado."),
+        new MinigameErrorClass("TARGET_BANNED", "Target is banned."),
       );
     }
 
@@ -916,7 +916,7 @@ class MinigameServiceImpl implements MinigameService {
     const robberStateResult = await minigameRepo.checkAndResetDailies(userId);
     if (robberStateResult.isErr()) {
       return ErrResult(
-        new MinigameErrorClass("UPDATE_FAILED", "Error al verificar límites."),
+        new MinigameErrorClass("UPDATE_FAILED", "Error checking limits."),
       );
     }
     const robberState = robberStateResult.unwrap();
@@ -959,7 +959,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "PAIR_COOLDOWN",
-          `Debes esperar ${Math.ceil(remaining / 60)}m antes de robar a este usuario de nuevo.`,
+          `Debes esperar ${Math.ceil(remaining / 60)}m antes de robar a este user de nuevo.`,
         ),
       );
     }
@@ -972,7 +972,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "UPDATE_FAILED",
-          "Error al obtener datos de usuarios.",
+          "Error getting user data.",
         ),
       );
     }
@@ -982,7 +982,7 @@ class MinigameServiceImpl implements MinigameService {
 
     if (!robberUser || !targetUser) {
       return ErrResult(
-        new MinigameErrorClass("TARGET_NOT_FOUND", "Usuario no encontrado."),
+        new MinigameErrorClass("TARGET_NOT_FOUND", "User not found."),
       );
     }
 
@@ -997,7 +997,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "INSUFFICIENT_FUNDS",
-          `Necesitas al menos ${config.minRobberBalance} ${config.currencyId} para intentar robar.`,
+          `You need at least ${config.minRobberBalance} ${config.currencyId} to attempt a robbery.`,
         ),
       );
     }
@@ -1006,7 +1006,7 @@ class MinigameServiceImpl implements MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "TARGET_TOO_POOR",
-          `Tu objetivo es demasiado pobre (mínimo: ${config.minTargetBalance}).`,
+          `Your target is too poor (minimum: ${config.minTargetBalance}).`,
         ),
       );
     }
@@ -1020,7 +1020,7 @@ class MinigameServiceImpl implements MinigameService {
         return ErrResult(
           new MinigameErrorClass(
             "TARGET_INACTIVE",
-            `El objetivo debe haber estado activo en las últimas ${config.targetActivityHours}h.`,
+            `The target must have been active in the last ${config.targetActivityHours}h.`,
           ),
         );
       }
@@ -1146,12 +1146,12 @@ class MinigameServiceImpl implements MinigameService {
           return ErrResult(
             new MinigameErrorClass(
               "TARGET_TOO_POOR",
-              "El objetivo ya no tiene suficiente dinero.",
+              "The target no longer has enough money.",
             ),
           );
         }
         return ErrResult(
-          new MinigameErrorClass("UPDATE_FAILED", "Error al procesar el robo."),
+          new MinigameErrorClass("UPDATE_FAILED", "Error processing the robbery."),
         );
       }
 
@@ -1262,3 +1262,6 @@ class MinigameServiceImpl implements MinigameService {
 }
 
 export const minigameService: MinigameService = new MinigameServiceImpl();
+
+
+

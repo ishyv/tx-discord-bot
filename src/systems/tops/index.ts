@@ -140,7 +140,7 @@ const buildReportEmbed = (
     topReputation,
     ([userId, delta], index) =>
       `**${index + 1}.** <@${userId}> — +${delta} rep`,
-    "Nadie gano reputación en este periodo.",
+    "No one gained reputation in this period.",
   );
 
   const embed = new Embed()
@@ -153,9 +153,9 @@ const buildReportEmbed = (
       ].join("\n"),
     )
     .addFields(
-      { name: "😊 Emojis más usados", value: emojiLines },
-      { name: "🗨️ Canales más activos", value: channelLines },
-      { name: "⭐ Usuarios con más rep ganada", value: reputationLines },
+      { name: "😊 Most used emojis", value: emojiLines },
+      { name: "🗨️ Most active channels", value: channelLines },
+      { name: "⭐ Users with most reputation gained", value: reputationLines },
     )
     .setTimestamp(periodEnd);
 
@@ -192,14 +192,14 @@ async function sendReport(
     await client.messages.write(resolved.channelId, {
       embeds: [embed],
       content:
-        "Resumen de actividad del periodo actual. Los contadores se reinician en este momento.",
+        "Activity summary for the current period. Counters reset now.",
     });
     return true;
   } catch (error) {
     if (isUnknownChannelError(error)) {
       await updateTopConfig(window.guildId, { channelId: null });
     }
-    client.logger?.error?.("[tops] no se pudo enviar el reporte", {
+    client.logger?.error?.("[tops] failed to send report", {
       error,
       guildId: window.guildId,
       channelId: window.channelId,
@@ -248,7 +248,7 @@ async function emitIfDue(
       });
     } catch (error) {
       client.logger?.error?.(
-        "[tops] no se pudo guardar el historial de reporte",
+        "[tops] failed to save report history",
         {
           error,
           guildId,
@@ -341,3 +341,4 @@ export function stopTopsScheduler(): void {
   clearInterval(sweepTimer);
   sweepTimer = null;
 }
+

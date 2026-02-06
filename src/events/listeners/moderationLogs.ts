@@ -32,7 +32,7 @@ import { onInviteDelete } from "@/events/hooks/inviteEvents";
 import { logModerationAction } from "@/utils/moderationLogger";
 
 const asUserTag = (userId: string | null | undefined): string =>
-  userId ? `<@${userId}>` : "Usuario desconocido";
+  userId ? `<@${userId}>` : "Unknown user";
 
 const formatTimestampNow = (): string =>
   `<t:${Math.floor(Date.now() / 1000)}:f>`;
@@ -51,7 +51,7 @@ onMessageDelete(async (payload, client) => {
     {
       title: "Mensaje eliminado",
       description: [
-        `Canal: <#${channelId}>`,
+        `Channel: <#${channelId}>`,
         authorId ? `Autor: <@${authorId}>` : "Autor desconocido",
         "",
         content ? `Contenido:\n${content}` : "Sin contenido registrado.",
@@ -99,14 +99,14 @@ onMessageUpdate(async (...args: any[]) => {
       client,
       guildId,
       {
-        title: "Mensaje editado",
+        title: "Message edited",
         description: [
-          `Canal: <#${channelId}>`,
-          authorId ? `Autor: <@${authorId}>` : "Autor desconocido",
+          `Channel: <#${channelId}>`,
+          authorId ? `Author: <@${authorId}>` : "Unknown author",
           "",
-          `**Antes:**\n${before || "_vacio_"}`,
+          `**Before:**\n${before || "_empty_"}`,
           "",
-          `**Despues:**\n${after || "_vacio_"}`,
+          `**After:**\n${after || "_empty_"}`,
         ].join("\n"),
         color: EmbedColors.Yellow,
       },
@@ -118,7 +118,7 @@ onMessageUpdate(async (...args: any[]) => {
     await logModerationAction(client, guildId, {
       title: isPinned ? "Mensaje pineado" : "Mensaje despineado",
       description: [
-        `Canal: <#${channelId}>`,
+        `Channel: <#${channelId}>`,
         `Mensaje: ${newMessage?.id ?? oldMessage?.id ?? "desconocido"}`,
         authorId ? `Autor: <@${authorId}>` : "Autor desconocido",
       ].join("\n"),
@@ -133,8 +133,8 @@ onChannelCreate(async (...args: any[]) => {
   if (!guildId) return;
 
   await logModerationAction(client, guildId, {
-    title: "Canal creado",
-    description: `Se creó el canal \`${channel?.name ?? channel?.id}\` (<#${channel?.id}>)`,
+    title: "Channel created",
+    description: `Created channel \`${channel?.name ?? channel?.id}\` (<#${channel?.id}>)`,
     color: EmbedColors.Green,
   });
 });
@@ -145,8 +145,8 @@ onChannelDelete(async (...args: any[]) => {
   if (!guildId) return;
 
   await logModerationAction(client, guildId, {
-    title: "Canal eliminado",
-    description: `Se eliminó el canal \`${channel?.name ?? channel?.id}\`.`,
+    title: "Channel deleted",
+    description: `Deleted channel \`${channel?.name ?? channel?.id}\`.`,
     color: EmbedColors.Red,
   });
 });
@@ -165,7 +165,7 @@ onChannelUpdate(async (...args: any[]) => {
 
   if (beforeName !== afterName) {
     await logModerationAction(client, guildId, {
-      title: "Canal renombrado",
+      title: "Channel renamed",
       description: `\`${beforeName}\` -> \`${afterName}\``,
       color: EmbedColors.Blurple,
     });
@@ -175,8 +175,8 @@ onChannelUpdate(async (...args: any[]) => {
     await logModerationAction(client, guildId, {
       title: "Slowmode actualizado",
       description: [
-        `Canal: <#${newChannel?.id ?? oldChannel?.id}>`,
-        `Anterior: ${beforeSlowmode ?? 0}s`,
+        `Channel: <#${newChannel?.id ?? oldChannel?.id}>`,
+        `Previous: ${beforeSlowmode ?? 0}s`,
         `Nuevo: ${afterSlowmode ?? 0}s`,
       ].join("\n"),
       color: EmbedColors.Yellow,
@@ -187,7 +187,7 @@ onChannelUpdate(async (...args: any[]) => {
     await logModerationAction(client, guildId, {
       title: "NSFW actualizado",
       description: [
-        `Canal: <#${newChannel?.id ?? oldChannel?.id}>`,
+        `Channel: <#${newChannel?.id ?? oldChannel?.id}>`,
         beforeNSFW ? "Se desactivo la marca NSFW" : "Se activo la marca NSFW",
       ].join("\n"),
       color: afterNSFW ? EmbedColors.Red : EmbedColors.Green,
@@ -202,8 +202,8 @@ onChannelUpdate(async (...args: any[]) => {
   );
   if (beforePermissions !== afterPermissions) {
     await logModerationAction(client, guildId, {
-      title: "Permisos del canal actualizados",
-      description: `Canal: <#${newChannel?.id ?? oldChannel?.id}>`,
+      title: "Channel permissions updated",
+      description: `Channel: <#${newChannel?.id ?? oldChannel?.id}>`,
       color: EmbedColors.Blurple,
     });
   }
@@ -221,7 +221,7 @@ onGuildMemberAdd(async (...args: any[]) => {
 
   await logModerationAction(client, guildId, {
     title: "Miembro se unio",
-    description: [`Usuario: ${asUserTag(userId)}`, `Ingreso: ${joinedAt}`].join(
+    description: [`User: ${asUserTag(userId)}`, `Joined: ${joinedAt}`].join(
       "\n",
     ),
     color: EmbedColors.Green,
@@ -238,7 +238,7 @@ onGuildMemberRemove(async (...args: any[]) => {
   await logModerationAction(client, guildId, {
     title: "Miembro salio o fue expulsado",
     description: [
-      `Usuario: ${asUserTag(userId)}`,
+      `User: ${asUserTag(userId)}`,
       `Momento: ${formatTimestampNow()}`,
     ].join("\n"),
     color: EmbedColors.Red,
@@ -253,9 +253,9 @@ onGuildBanAdd(async (...args: any[]) => {
   const userId = (ban as any)?.user?.id ?? null;
 
   await logModerationAction(client, guildId, {
-    title: "Usuario baneado",
+    title: "User banned",
     description: [
-      `Usuario: ${asUserTag(userId)}`,
+      `User: ${asUserTag(userId)}`,
       `Motivo: ${(ban as any)?.reason ?? "No especificado"}`,
     ].join("\n"),
     color: EmbedColors.Red,
@@ -270,9 +270,9 @@ onGuildBanRemove(async (...args: any[]) => {
   const userId = (ban as any)?.user?.id ?? null;
 
   await logModerationAction(client, guildId, {
-    title: "Usuario desbaneado",
+    title: "User unbanned",
     description: [
-      `Usuario: ${asUserTag(userId)}`,
+      `User: ${asUserTag(userId)}`,
       `Momento: ${formatTimestampNow()}`,
     ].join("\n"),
     color: EmbedColors.Green,
@@ -313,7 +313,7 @@ onGuildMemberUpdate(async (...args: any[]) => {
     await logModerationAction(client, guildId, {
       title: "Roles actualizados",
       description: [
-        `Usuario: ${asUserTag(userId)}`,
+        `User: ${asUserTag(userId)}`,
         addedRoles.length ? `Agregados: ${renderRoleList(addedRoles)}` : null,
         removedRoles.length
           ? `Removidos: ${renderRoleList(removedRoles)}`
@@ -331,7 +331,7 @@ onGuildMemberUpdate(async (...args: any[]) => {
     await logModerationAction(client, guildId, {
       title: "Apodo actualizado",
       description: [
-        `Usuario: ${asUserTag(userId)}`,
+        `User: ${asUserTag(userId)}`,
         `Antes: ${oldNick ?? "Sin apodo"}`,
         `Despues: ${newNick ?? "Sin apodo"}`,
       ].join("\n"),
@@ -355,10 +355,10 @@ onGuildMemberUpdate(async (...args: any[]) => {
     };
     const until = toUnix(newTimeout);
     await logModerationAction(client, guildId, {
-      title: until ? "Usuario en timeout" : "Timeout removido",
+      title: until ? "User timed out" : "Timeout removed",
       description: [
-        `Usuario: ${asUserTag(userId)}`,
-        until ? `Expira: <t:${until}:R>` : "Se eliminó la restriccion",
+        `User: ${asUserTag(userId)}`,
+        until ? `Expires: <t:${until}:R>` : "Restriction removed",
       ].join("\n"),
       color: until ? EmbedColors.Red : EmbedColors.Green,
     });
@@ -448,8 +448,10 @@ onInviteDelete(async (...args: any[]) => {
     title: "Invitacion eliminada o expirada",
     description: [
       `Invitacion: ${code}`,
-      channelId ? `Canal: <#${channelId}>` : "Canal desconocido",
+      channelId ? `Channel: <#${channelId}>` : "Unknown channel",
     ].join("\n"),
     color: EmbedColors.Red,
   });
 });
+
+

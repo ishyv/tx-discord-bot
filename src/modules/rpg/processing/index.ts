@@ -9,6 +9,8 @@ export { rpgProcessingService } from "./service";
 export type { RpgProcessingService } from "./service";
 export type { ProcessingResult, ProcessingInput, ProcessingBatchResult } from "./types";
 export {
+  getProcessingRecipe,
+  listProcessableMaterials,
   getProcessedMaterial,
   canProcessMaterial,
   calculateFee,

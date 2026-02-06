@@ -12,7 +12,7 @@
  */
 
 import type { CurrencyInventory } from "../currency";
-import type { ItemInventory } from "@/modules/inventory/inventory";
+import type { ModernInventory } from "@/modules/inventory/inventory";
 import {
   type EconomyAccount,
   type EconomyAccountView,
@@ -66,7 +66,7 @@ export function buildProfileView(
   userId: string,
   account: EconomyAccount,
   currencyInventory: CurrencyInventory,
-  itemInventory: ItemInventory,
+  itemInventory: ModernInventory,
   progression: ProgressionView | null,
   options: ProfileViewBuilderOptions = {},
 ): ProfileSummaryView {
@@ -98,7 +98,7 @@ export function buildCompactProfileView(
   userId: string,
   account: EconomyAccount,
   currencyInventory: CurrencyInventory,
-  itemInventory: ItemInventory,
+  itemInventory: ModernInventory,
 ): Omit<ProfileSummaryView, "balances"> & {
   balances: {
     primaryCurrency: { display: string } | null;

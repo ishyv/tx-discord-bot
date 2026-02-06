@@ -35,7 +35,7 @@ export default class OfferModerationModals extends ModalCommand {
       ctx.member?.permissions?.has?.(["ManageMessages"]) === true;
     if (!canModerate) {
       await ctx.write({
-        content: "Necesitas permisos de ManageMessages para moderar ofertas.",
+        content: "You need ManageMessages permission to moderate offers.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -52,8 +52,8 @@ export default class OfferModerationModals extends ModalCommand {
 
       await ctx.editOrReply({
         content: result
-          ? `Oferta \`${offerId}\` rechazada.`
-          : "Esta oferta ya no está en un estado válido para rechazar.",
+          ? `Offer \`${offerId}\` rejected.`
+          : "This offer is no longer in a valid state to reject.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -63,7 +63,7 @@ export default class OfferModerationModals extends ModalCommand {
       const note = getTextInput(ctx, "note")?.trim() ?? "";
       if (!note) {
         await ctx.write({
-          content: "Debes indicar qué cambios se requieren.",
+          content: "You must specify which changes are required.",
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -78,11 +78,12 @@ export default class OfferModerationModals extends ModalCommand {
 
       await ctx.editOrReply({
         content: result
-          ? `Se solicitaron cambios en la oferta \`${offerId}\`.`
-          : "La oferta ya no está en estado válido para pedir cambios.",
+          ? `Changes requested for offer \`${offerId}\`.`
+          : "This offer is no longer in a valid state to request changes.",
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
   }
 }
+

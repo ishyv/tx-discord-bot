@@ -28,6 +28,8 @@ import {
   getLocationMaterial,
 } from "./definitions";
 import { getToolKind } from "@/modules/inventory/items";
+import { getContentRegistry, type ContentDropEntry } from "@/modules/content";
+import type { Profession } from "@/modules/content";
 
 /** Tool info from equipped instance. */
 interface EquippedToolInfo {
@@ -36,6 +38,30 @@ interface EquippedToolInfo {
   tier: number;
   toolKind: "pickaxe" | "axe";
   durability: number;
+}
+
+function randomIntInclusive(min: number, max: number): number {
+  const lower = Math.min(min, max);
+  const upper = Math.max(min, max);
+  return Math.floor(Math.random() * (upper - lower + 1)) + lower;
+}
+
+function pickWeightedDrop(entries: readonly ContentDropEntry[]): ContentDropEntry {
+  if (entries.length === 1) {
+    return entries[0]!;
+  }
+
+  const totalWeight = entries.reduce((acc, entry) => acc + entry.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const entry of entries) {
+    roll -= entry.weight;
+    if (roll <= 0) {
+      return entry;
+    }
+  }
+
+  return entries[entries.length - 1]!;
 }
 
 export interface RpgGatheringService {
@@ -195,9 +221,31 @@ class RpgGatheringServiceImpl implements RpgGatheringService {
 
     const remainingDurability = toolBroken ? 0 : newDurability;
 
-    // Step 9: Calculate and grant yield
-    const yieldAmount = calculateYield(toolTier);
-    const materialId = getLocationMaterial(location);
+    // Step 9: Calculate and grant yield (content-first drop tables, fallback to legacy)
+    const registry = getContentRegistry();
+    const profession = (profile.starterKitType ??
+      (expectedType === "mine" ? "miner" : "lumber")) as Profession;
+
+    const contentDrops = registry?.getDrops(expectedType, location.requiredTier, {
+      profession,
+      locationId: location.id,
+      toolTier,
+    }) ?? [];
+
+    let materialId: string;
+    let yieldAmount: number;
+    let selectedDrop: ContentDropEntry | null = null;
+
+    if (contentDrops.length > 0) {
+      const rolledDrops = contentDrops.filter((drop) => Math.random() < drop.chance);
+      const dropPool = rolledDrops.length > 0 ? rolledDrops : contentDrops;
+      selectedDrop = pickWeightedDrop(dropPool);
+      materialId = selectedDrop.itemId;
+      yieldAmount = randomIntInclusive(selectedDrop.minQty, selectedDrop.maxQty);
+    } else {
+      yieldAmount = calculateYield(toolTier);
+      materialId = getLocationMaterial(location);
+    }
 
     const addResult = await itemMutationService.adjustItemQuantity(
       {
@@ -234,8 +282,14 @@ class RpgGatheringServiceImpl implements RpgGatheringService {
         locationId: location.id,
         toolId: equippedItemId,
         toolInstanceId: instanceId,
+        profession,
         toolBroken,
         remainingDurability,
+        contentDropTableId: selectedDrop?.tableId,
+        contentDropChance: selectedDrop?.chance,
+        contentDropSource: selectedDrop
+          ? `${selectedDrop.__source.file} ${selectedDrop.__source.jsonPath}`
+          : undefined,
       },
     });
 

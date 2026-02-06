@@ -269,7 +269,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "ITEM_NOT_EQUIPABLE",
-          "Este item no se puede equipar.",
+          "This item cannot be equipped.",
         ),
       );
     }
@@ -280,7 +280,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "UPDATE_FAILED",
-          "No se pudo acceder a la cuenta.",
+          "Could not access the account.",
         ),
       );
     }
@@ -289,7 +289,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "ACCOUNT_BLOCKED",
-          "Tu cuenta tiene restricciones temporales.",
+          "Your account has temporary restrictions.",
         ),
       );
     }
@@ -297,7 +297,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "ACCOUNT_BANNED",
-          "Tu cuenta tiene restricciones permanentes.",
+          "Your account has permanent restrictions.",
         ),
       );
     }
@@ -315,7 +315,7 @@ class EquipmentServiceImpl implements EquipmentService {
         return ErrResult(
           new EquipmentErrorClass(
             "LEVEL_REQUIRED",
-            `Necesitas nivel ${itemDef.requiredLevel} para equipar este item.`,
+            `You need level ${itemDef.requiredLevel} to equip this item.`,
           ),
         );
       }
@@ -434,14 +434,14 @@ class EquipmentServiceImpl implements EquipmentService {
           return ErrResult(
             new EquipmentErrorClass(
               "ITEM_NOT_IN_INVENTORY",
-              "No tienes este item en tu inventario.",
+              "You do not have this item in your inventory.",
             ),
           );
         }
         return ErrResult(
           new EquipmentErrorClass(
             "UPDATE_FAILED",
-            "Error al equipar el item. Intenta de nuevo.",
+            "Error equipping the item. Try again.",
           ),
         );
       }
@@ -499,7 +499,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "UPDATE_FAILED",
-          "No se pudo acceder a la cuenta.",
+          "Could not access the account.",
         ),
       );
     }
@@ -508,7 +508,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "ACCOUNT_BLOCKED",
-          "Tu cuenta tiene restricciones temporales.",
+          "Your account has temporary restrictions.",
         ),
       );
     }
@@ -516,7 +516,7 @@ class EquipmentServiceImpl implements EquipmentService {
       return ErrResult(
         new EquipmentErrorClass(
           "ACCOUNT_BANNED",
-          "Tu cuenta tiene restricciones permanentes.",
+          "Your account has permanent restrictions.",
         ),
       );
     }
@@ -610,14 +610,14 @@ class EquipmentServiceImpl implements EquipmentService {
           return ErrResult(
             new EquipmentErrorClass(
               "SLOT_EMPTY",
-              "No hay ningún item equipado en este slot.",
+              "There is no item equipped in this slot.",
             ),
           );
         }
         return ErrResult(
           new EquipmentErrorClass(
             "UPDATE_FAILED",
-            "Error al desequipar el item. Intenta de nuevo.",
+            "Error unequipping the item. Try again.",
           ),
         );
       }
@@ -653,3 +653,5 @@ class EquipmentServiceImpl implements EquipmentService {
 }
 
 export const equipmentService: EquipmentService = new EquipmentServiceImpl();
+
+

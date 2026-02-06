@@ -23,7 +23,7 @@ import { RpgError } from "../profile/types";
 
 import { StatsCalculator } from "../stats/calculator";
 import { CombatEngine } from "./engine";
-import type { FightPlayerSnapshot, RpgFightData, CombatMove } from "./fight-schema";
+import type { FightPlayerSnapshot, RpgFightData, CombatMove, FightRound } from "./fight-schema";
 import { createFightData } from "./fight-schema";
 import { rpgFightRepo } from "./fight-repository";
 
@@ -79,6 +79,8 @@ export interface FightStateView {
   p1PendingMove: boolean;
   p2PendingMove: boolean;
   rounds: number;
+  lastActionAt: string;
+  lastRound: FightRound | null;
 }
 
 export interface RpgFightService {
@@ -108,6 +110,9 @@ export interface RpgFightService {
 
   /** Check if user is in active fight. */
   isInFight(userId: UserId): Promise<boolean>;
+
+  /** Resolve a round if overdue. */
+  resolveOverdueRound(fightId: string): Promise<Result<FightStateView, RpgError>>;
 
   /** Expire a fight manually (for testing/cleanup). */
   expireFight(fightId: string): Promise<Result<FightStateView, RpgError>>;
@@ -162,6 +167,17 @@ class RpgFightServiceImpl implements RpgFightService {
       return ErrResult(new RpgError("UPDATE_FAILED", "Failed to create fight"));
     }
 
+    // Audit challenge
+    await economyAuditRepo.create({
+      operationType: "combat_challenge",
+      actorId: input.inviterId,
+      targetId: input.targetId,
+      guildId: input.guildId,
+      source: "rpg-combat",
+      reason: "Duel challenge issued",
+      metadata: { correlationId, fightId },
+    });
+
     return OkResult({ fightId, expiresAt });
   }
 
@@ -171,7 +187,10 @@ class RpgFightServiceImpl implements RpgFightService {
   ): Promise<Result<FightStateView, RpgError>> {
     // Get fight
     const fightResult = await rpgFightRepo.findById(input.fightId);
-    if (fightResult.isErr() || !fightResult.unwrap()) {
+    if (fightResult.isErr()) {
+      return ErrResult(new RpgError("UPDATE_FAILED", "Internal error finding fight"));
+    }
+    if (!fightResult.unwrap()) {
       return ErrResult(new RpgError("COMBAT_SESSION_EXPIRED", "Fight not found"));
     }
 
@@ -258,7 +277,10 @@ class RpgFightServiceImpl implements RpgFightService {
   async submitMove(input: SubmitMoveInput): Promise<Result<FightStateView, RpgError>> {
     // Get fight
     const fightResult = await rpgFightRepo.findById(input.fightId);
-    if (fightResult.isErr() || !fightResult.unwrap()) {
+    if (fightResult.isErr()) {
+      return ErrResult(new RpgError("UPDATE_FAILED", "Internal error finding fight"));
+    }
+    if (!fightResult.unwrap()) {
       return ErrResult(new RpgError("COMBAT_SESSION_EXPIRED", "Fight not found"));
     }
 
@@ -288,11 +310,25 @@ class RpgFightServiceImpl implements RpgFightService {
       return ErrResult(new RpgError("UPDATE_FAILED", "Failed to submit move"));
     }
 
+    // Audit move submission
+    await economyAuditRepo.create({
+      operationType: "combat_move_submit",
+      actorId: input.playerId,
+      targetId: isP1 ? fight.p2Id : fight.p1Id,
+      source: "rpg-combat",
+      metadata: { fightId: input.fightId, move: input.move, round: fight.currentRound }
+    });
+
     let updatedFight = submitResult.unwrap()!;
 
     // Check if both moves are in and resolve round
     if (updatedFight.p1PendingMove && updatedFight.p2PendingMove) {
-      const resolveResult = await this.resolveRound(updatedFight);
+      const resolveResult = await this.resolveRound(updatedFight, {
+        p1Move: updatedFight.p1PendingMove,
+        p2Move: updatedFight.p2PendingMove,
+        p1Defaulted: false,
+        p2Defaulted: false
+      });
       if (resolveResult.isErr()) {
         return ErrResult(resolveResult.error);
       }
@@ -304,7 +340,10 @@ class RpgFightServiceImpl implements RpgFightService {
 
   async forfeit(fightId: string, playerId: UserId): Promise<Result<FightStateView, RpgError>> {
     const fightResult = await rpgFightRepo.findById(fightId);
-    if (fightResult.isErr() || !fightResult.unwrap()) {
+    if (fightResult.isErr()) {
+      return ErrResult(new RpgError("UPDATE_FAILED", "Internal error finding fight"));
+    }
+    if (!fightResult.unwrap()) {
       return ErrResult(new RpgError("COMBAT_SESSION_EXPIRED", "Fight not found"));
     }
 
@@ -335,8 +374,23 @@ class RpgFightServiceImpl implements RpgFightService {
   async getFight(fightId: string): Promise<Result<FightStateView | null, Error>> {
     const result = await rpgFightRepo.findById(fightId);
     if (result.isErr()) return ErrResult(result.error);
-    const fight = result.unwrap();
+    let fight = result.unwrap();
     if (!fight) return OkResult(null);
+
+    // Opportunistically resolve overdue round
+    if (fight.status === "active") {
+      const now = Date.now();
+      const lastAction = new Date(fight.lastActionAt).getTime();
+      const timeoutMs = COMBAT_CONFIG.roundTimeoutSeconds * 1000;
+
+      if (now - lastAction > timeoutMs) {
+        const resolveResult = await this.resolveOverdueRound(fightId);
+        if (resolveResult.isOk()) {
+          return OkResult(resolveResult.unwrap());
+        }
+      }
+    }
+
     return OkResult(this.toFightView(fight));
   }
 
@@ -375,6 +429,50 @@ class RpgFightServiceImpl implements RpgFightService {
     return OkResult(this.toFightView(updatedFight));
   }
 
+  async resolveOverdueRound(fightId: string): Promise<Result<FightStateView, RpgError>> {
+    const fightResult = await rpgFightRepo.findById(fightId);
+    if (fightResult.isErr()) {
+      return ErrResult(new RpgError("UPDATE_FAILED", "Internal error finding fight"));
+    }
+    if (!fightResult.unwrap()) {
+      return ErrResult(new RpgError("COMBAT_SESSION_EXPIRED", "Fight not found"));
+    }
+
+    const fight = fightResult.unwrap()!;
+    if (fight.status !== "active") {
+      return OkResult(this.toFightView(fight));
+    }
+
+    // Double check timeout
+    const now = Date.now();
+    const lastAction = new Date(fight.lastActionAt).getTime();
+    const timeoutMs = COMBAT_CONFIG.roundTimeoutSeconds * 1000;
+
+    if (now - lastAction <= timeoutMs) {
+      // Not actually overdue? Maybe concurrent resolution.
+      return OkResult(this.toFightView(fight));
+    }
+
+    // Default moves for missing players
+    const p1Move = fight.p1PendingMove ?? "attack";
+    const p2Move = fight.p2PendingMove ?? "attack";
+    const p1Defaulted = !fight.p1PendingMove;
+    const p2Defaulted = !fight.p2PendingMove;
+
+    const resolveResult = await this.resolveRound(fight, {
+      p1Move,
+      p2Move,
+      p1Defaulted,
+      p2Defaulted
+    });
+
+    if (resolveResult.isErr()) {
+      return ErrResult(resolveResult.error);
+    }
+
+    return OkResult(this.toFightView(resolveResult.unwrap()!));
+  }
+
   /** Process an expired fight (called by TTL or cleanup job). */
   async processExpiredFight(fight: RpgFightData): Promise<void> {
     if (fight.status !== "expired") return;
@@ -389,13 +487,19 @@ class RpgFightServiceImpl implements RpgFightService {
   /** Resolve a round when both moves are submitted. */
   private async resolveRound(
     fight: RpgFightData,
+    moves: {
+      p1Move: CombatMove;
+      p2Move: CombatMove;
+      p1Defaulted: boolean;
+      p2Defaulted: boolean;
+    }
   ): Promise<Result<RpgFightData | null, RpgError>> {
     if (!fight.p1Snapshot || !fight.p2Snapshot) {
       return ErrResult(new RpgError("UPDATE_FAILED", "Missing player snapshots"));
     }
 
-    const p1Move = fight.p1PendingMove!;
-    const p2Move = fight.p2PendingMove!;
+    const p1Move = moves.p1Move;
+    const p2Move = moves.p2Move;
 
     // Create mock session for engine
     const mockSession = {
@@ -422,6 +526,8 @@ class RpgFightServiceImpl implements RpgFightService {
       p2Damage: round.p2Damage,
       p1Hp: round.p1Hp,
       p2Hp: round.p2Hp,
+      p1TimeoutDefaulted: moves.p1Defaulted,
+      p2TimeoutDefaulted: moves.p2Defaulted,
       resolvedAt: new Date().toISOString(),
     };
 
@@ -436,6 +542,23 @@ class RpgFightServiceImpl implements RpgFightService {
     if (resolveResult.isErr() || !resolveResult.unwrap()) {
       return ErrResult(new RpgError("UPDATE_FAILED", "Failed to resolve round"));
     }
+
+    // Audit round resolution
+    const opType = moves.p1Defaulted || moves.p2Defaulted ? "combat_timeout_default" : "combat_round_resolve";
+    await economyAuditRepo.create({
+      operationType: opType,
+      actorId: fight.p1Id,
+      targetId: fight.p2Id,
+      source: "rpg-combat",
+      metadata: {
+        fightId: fight._id,
+        round: fight.currentRound,
+        p1Move: moves.p1Move,
+        p2Move: moves.p2Move,
+        p1Defaulted: moves.p1Defaulted,
+        p2Defaulted: moves.p2Defaulted
+      }
+    });
 
     let updatedFight = resolveResult.unwrap()!;
 
@@ -527,11 +650,17 @@ class RpgFightServiceImpl implements RpgFightService {
 
     const loserId = winnerId === fight.p1Id ? fight.p2Id : fight.p1Id;
 
+    const operationTypes: Record<string, any> = {
+      completed: "combat_complete",
+      expired: "combat_expire",
+      forfeited: "combat_forfeit"
+    };
+
     await economyAuditRepo.create({
-      operationType: "config_update", // Using closest available
+      operationType: operationTypes[endType] ?? "combat_complete",
       actorId: winnerId,
       targetId: loserId,
-      guildId: fight.guildId,
+      guildId: fight.guildId ?? undefined,
       source: `rpg-fight-${endType}`,
       reason: `Fight ${endType}`,
       metadata: {
@@ -598,6 +727,8 @@ class RpgFightServiceImpl implements RpgFightService {
       p1PendingMove: !!fight.p1PendingMove,
       p2PendingMove: !!fight.p2PendingMove,
       rounds: fight.rounds.length,
+      lastActionAt: fight.lastActionAt,
+      lastRound: fight.rounds.length > 0 ? fight.rounds[fight.rounds.length - 1] : null,
     };
   }
 

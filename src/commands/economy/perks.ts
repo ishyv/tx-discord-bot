@@ -207,7 +207,7 @@ export class PerksBuyCommand extends SubCommand {
     const perk = getPerkDefinition(perkId);
     if (!perk) {
       await replyEphemeral(ctx, {
-        content: `❌ Perk "${perkId}" no encontrado. Usa \`/perks list\` para ver los disponibles.`,
+        content: `❌ Perk "${perkId}" not found. Use \`/perks list\` to see the available ones.`,
       });
       return;
     }
@@ -351,7 +351,7 @@ export class PerkConfirmHandler extends SubCommand {
     if (!pending || pending.guildId !== guildId) {
       await ctx.write({
         embeds: [
-          buildErrorEmbed("No tienes una compra pendiente o ha expirado."),
+          buildErrorEmbed("You have no pending purchase or it has expired."),
         ],
         flags: MessageFlags.Ephemeral,
       });
@@ -369,22 +369,22 @@ export class PerkConfirmHandler extends SubCommand {
     if (result.isErr()) {
       const error = result.error;
       const messages: Record<string, string> = {
-        PERK_NOT_FOUND: "Perk no encontrado.",
-        PERK_MAXED: "El perk ya está en nivel máximo.",
-        INSUFFICIENT_FUNDS: "No tienes suficientes fondos.",
-        LEVEL_REQUIRED: "No tienes el nivel requerido.",
-        ACCOUNT_BLOCKED: "Tu cuenta tiene restricciones.",
-        ACCOUNT_BANNED: "Tu cuenta está suspendida.",
-        CONFLICT: "Conflicto de concurrencia. Intenta de nuevo.",
+        PERK_NOT_FOUND: "Perk not found.",
+        PERK_MAXED: "That perk is already at max level.",
+        INSUFFICIENT_FUNDS: "You do not have enough funds.",
+        LEVEL_REQUIRED: "You do not meet the required level.",
+        ACCOUNT_BLOCKED: "Your account has restrictions.",
+        ACCOUNT_BANNED: "Your account is suspended.",
+        CONFLICT: "Concurrency conflict. Try again.",
       };
 
       await ctx.write({
         embeds: [
-          buildErrorEmbed(messages[error.code] ?? "Error al comprar el perk."),
-        ],
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
+          buildErrorEmbed(messages[error.code] ?? "Error purchasing the perk."),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
     }
 
     const purchase = result.unwrap();
@@ -417,7 +417,7 @@ export class PerkCancelHandler extends SubCommand {
     pendingPurchases.delete(userId);
 
     await ctx.write({
-      embeds: [buildErrorEmbed("Compra cancelada.")],
+      embeds: [buildErrorEmbed("Purchase canceled.")],
       flags: MessageFlags.Ephemeral,
     });
   }

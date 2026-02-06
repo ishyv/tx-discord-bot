@@ -33,7 +33,7 @@ export const featureToggleMiddleware = createMiddleware<void>(
     if (enabled) return next();
 
     await context.write({
-      content: `Esta caracteristica (\`${boundFeature}\`) esta deshabilitada en este servidor. Un administrador puede habilitarla desde el dashboard.`,
+      content: `This feature (\`${boundFeature}\`) is disabled in this server. An administrator can enable it from the dashboard.`,
       flags: MessageFlags.Ephemeral,
     });
 

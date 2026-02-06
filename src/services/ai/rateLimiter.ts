@@ -1,5 +1,5 @@
 /**
- * Motivacion: gestionar rate limit por usuario para peticiones de IA por guild.
+ * Motivacion: gestionar rate limit por user para peticiones de IA por guild.
  *
  * Idea/concepto: similar a RoleRateLimiter, mantiene buckets en memoria con TTL (ventana deslizante).
  *
@@ -102,3 +102,4 @@ export class AiRateLimiter {
 }
 
 export const aiRateLimiter = new AiRateLimiter();
+

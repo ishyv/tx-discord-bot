@@ -219,7 +219,7 @@ class StoreServiceImpl implements StoreService {
         return ErrResult(
           new StoreError(
             "FEATURE_DISABLED",
-            "Store está deshabilitado en este servidor.",
+            "Store is disabled in this server.",
           ),
         );
       }
@@ -501,7 +501,7 @@ class StoreServiceImpl implements StoreService {
         return ErrResult(
           new StoreError(
             "FEATURE_DISABLED",
-            "Store está deshabilitado en este servidor.",
+            "Store is disabled in this server.",
           ),
         );
       }
@@ -837,3 +837,4 @@ class StoreServiceImpl implements StoreService {
 
 /** Singleton instance. */
 export const storeService: StoreService = new StoreServiceImpl();
+

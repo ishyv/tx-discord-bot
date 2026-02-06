@@ -7,18 +7,13 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { buildSuccessEmbed, buildErrorEmbed } from "@/modules/ui/design-system";
-import { ITEM_DEFINITIONS } from "@/modules/inventory";
 import { storeService, economyAuditRepo } from "@/modules/economy";
 import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 
 const options = {
     item: createStringOption({
-        description: "Item to remove from store",
+        description: "Item ID to remove (e.g., iron_ore, copper_ingot)",
         required: true,
-        choices: Object.values(ITEM_DEFINITIONS).map((item) => ({
-            name: item.name,
-            value: item.id,
-        })),
     }),
 };
 

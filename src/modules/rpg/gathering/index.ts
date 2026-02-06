@@ -17,5 +17,6 @@ export {
   calculateYield,
   getLocationMaterial,
   getMaterialForTier,
+  listLocations,
   DEFAULT_LOCATIONS,
 } from "./definitions";

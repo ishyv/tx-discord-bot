@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "locations": [
+    {
+      "id": "stone_mine",
+      "name": "Stone Mine",
+      "action": "mine",
+      "profession": "miner",
+      "requiredTier": 1,
+      "dropTableId": "mine_t1",
+      "materials": ["stone"]
+    },
+    {
+      "id": "copper_mine",
+      "name": "Pyrite Cavern",
+      "action": "mine",
+      "profession": "miner",
+      "requiredTier": 2,
+      "dropTableId": "mine_t2",
+      "materials": ["pyrite_ore"]
+    },
+    {
+      "id": "iron_mine",
+      "name": "Moon Silver Rift",
+      "action": "mine",
+      "profession": "miner",
+      "requiredTier": 3,
+      "dropTableId": "mine_t3",
+      "materials": ["moon_silver_ore"]
+    },
+    {
+      "id": "silver_mine",
+      "name": "Sunstone Depths",
+      "action": "mine",
+      "profession": "miner",
+      "requiredTier": 4,
+      "dropTableId": "mine_t4",
+      "materials": ["sunstone_shard", "moon_silver_ore"]
+    },
+    {
+      "id": "oak_forest",
+      "name": "Oak Forest",
+      "action": "forest",
+      "profession": "lumber",
+      "requiredTier": 1,
+      "dropTableId": "forest_t1",
+      "materials": ["oak_wood"]
+    },
+    {
+      "id": "spruce_forest",
+      "name": "Resin Grove",
+      "action": "forest",
+      "profession": "lumber",
+      "requiredTier": 2,
+      "dropTableId": "forest_t2",
+      "materials": ["resin_pine_wood"]
+    },
+    {
+      "id": "palm_forest",
+      "name": "Dark Oak Wilds",
+      "action": "forest",
+      "profession": "lumber",
+      "requiredTier": 3,
+      "dropTableId": "forest_t3",
+      "materials": ["dark_oak_wood"]
+    },
+    {
+      "id": "pine_forest",
+      "name": "Amberheart Canopy",
+      "action": "forest",
+      "profession": "lumber",
+      "requiredTier": 4,
+      "dropTableId": "forest_t4",
+      "materials": ["amberheart_wood", "dark_oak_wood"]
+    }
+  ]
+}
