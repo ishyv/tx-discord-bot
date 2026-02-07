@@ -32,6 +32,7 @@ import {
 } from "@/dev/commandPreflight";
 import { prettyPrintDiscord50035 } from "@/dev/prettyCommandRegistrationError";
 import { loadContentRegistryOrThrow } from "@/modules/content";
+import { rpgQuestService } from "@/modules/rpg/quests";
 
 /**
  * Extend the interaction context with helpers that are used across commands.
@@ -73,6 +74,11 @@ async function bootstrap(): Promise<void> {
   console.log("[bootstrap] Starting bot...");
   await loadContentRegistryOrThrow();
   console.log("[bootstrap] Content packs loaded successfully.");
+  const questInit = await rpgQuestService.ensureReady();
+  if (questInit.isErr()) {
+    throw questInit.error;
+  }
+  console.log("[bootstrap] Quest packs loaded successfully.");
   await getDb(); // initialize Mongo connection once at startup
   await client.start();
 

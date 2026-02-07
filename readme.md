@@ -83,6 +83,27 @@ bun run build
 bun start
 ```
 
+### Content Authoring CLI (Quests + Items)
+
+A Python CLI is available for editing RPG packs without the web UI:
+
+```bash
+bun run content:cli --help
+# or
+python tools/rpg_content_cli.py --help
+```
+
+Quick examples:
+
+```bash
+python tools/rpg_content_cli.py validate
+python tools/rpg_content_cli.py quests list
+python tools/rpg_content_cli.py quests set starter_miner_gather_pyrite --path steps[0].itemId --value moon_silver_ore
+python tools/rpg_content_cli.py items list
+```
+
+Detailed guide: [`docs/CONTENT_CLI.md`](./docs/CONTENT_CLI.md)
+
 ### Environment Variables
 
 ```env

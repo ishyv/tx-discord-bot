@@ -49,3 +49,6 @@ export type {
   FightStatus,
 } from "./combat/fight-schema";
 export { createFightData } from "./combat/fight-schema";
+
+// Quests
+export * from "./quests";

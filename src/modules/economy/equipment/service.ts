@@ -12,7 +12,7 @@ import type { ItemInventory } from "@/modules/inventory/inventory";
 import { economyAccountRepo } from "../account/repository";
 import { economyAuditRepo } from "../audit/repository";
 import { progressionService } from "../progression/service";
-import { getEquipableItemDefinition, getSlotDisplayName } from "./definitions";
+import { getEquipableItemDefinition, getSlotDisplayName, canEquipInBonusSlot } from "./definitions";
 import { equipmentRepo } from "./repository";
 import type {
   EquipmentLoadout,
@@ -232,13 +232,13 @@ class EquipmentServiceImpl implements EquipmentService {
     const allItemsResult = await this.listEquipableItems(guildId, userId);
     if (allItemsResult.isErr()) return ErrResult(allItemsResult.error);
 
-    // For accessory slots, show items that can go in either slot
-    if (slot === "accessory1" || slot === "accessory2") {
+    // For ring slots, show items that can go in either slot
+    if (slot === "ring1" || slot === "ring2") {
       return OkResult(
         allItemsResult
           .unwrap()
           .filter(
-            (item) => item.slot === "accessory1" || item.slot === "accessory2",
+            (item) => item.slot === "ring1" || item.slot === "ring2",
           ),
       );
     }
@@ -316,6 +316,25 @@ class EquipmentServiceImpl implements EquipmentService {
           new EquipmentErrorClass(
             "LEVEL_REQUIRED",
             `You need level ${itemDef.requiredLevel} to equip this item.`,
+          ),
+        );
+      }
+    }
+
+    // Validate slot expansion rules
+    // Check if trying to equip a slot-expanding item in a bonus slot
+    const loadoutResult = await equipmentService.getLoadout(guildId, userId);
+    if (loadoutResult.isOk()) {
+      const loadout = loadoutResult.unwrap();
+      const baseSlotCount = EQUIPMENT_SLOTS.length;
+      const currentSlotCount = Object.keys(loadout.slots).length;
+      const isBonusSlot = currentSlotCount >= baseSlotCount;
+      
+      if (isBonusSlot && !canEquipInBonusSlot(itemId)) {
+        return ErrResult(
+          new EquipmentErrorClass(
+            "INVALID_SLOT",
+            "This item cannot be equipped in bonus slots.",
           ),
         );
       }

@@ -1,6 +1,6 @@
-# DarkH Bot - Economy System Design Document
+# PyEBot - Economy System Design Document
 
-> **Purpose**: This document describes the conceptual architecture and logic of the DarkH Discord bot's economy system. It is intended for re-implementing these features in other codebases, focusing on ideas and concepts rather than specific implementation details.
+> **Purpose**: This document describes the conceptual architecture and logic of the PyEBot Discord bot's economy system. Updated to reflect the current implementation including the Trinkets system, rarity tiers, and exponential leveling curve.
 
 ---
 
@@ -11,13 +11,13 @@
 3. [Currency System](#currency-system)
 4. [Inventory System](#inventory-system)
 5. [Item/Object System](#itemobject-system)
-6. [Experience & Leveling](#experience--leveling)
-7. [Work System](#work-system)
-8. [Daily Rewards](#daily-rewards)
-9. [Trading & Transactions](#trading--transactions)
-10. [Gambling Features](#gambling-features)
-11. [Guild Economy](#guild-economy)
-12. [Perks System](#perks-system)
+6. [Trinkets System](#trinkets-system)
+7. [Experience & Leveling](#experience--leveling)
+8. [Work System](#work-system)
+9. [Daily Rewards](#daily-rewards)
+10. [Trading & Transactions](#trading--transactions)
+11. [Gambling Features](#gambling-features)
+12. [Guild Economy](#guild-economy)
 13. [Social Features](#social-features)
 14. [Moderation & Safety](#moderation--safety)
 15. [RPG Equipment System](#rpg-equipment-system)
@@ -32,7 +32,7 @@
 - **Account status tracking**: Accounts can be in states: `ok`, `blocked`, or `banned`
 
 ### Data Persistence
-- User data stored in structured JSON format
+- User data stored in MongoDB with atomic transaction support
 - Guild-specific settings and economy tracked separately
 - Periodic data integrity checks and migrations
 
@@ -48,13 +48,12 @@ Each user account contains:
 | `money` | Cash on hand (liquid currency) |
 | `bank_money` | Stored/safe currency |
 | `inventory` | Dictionary of owned items with quantities |
-| `perks` | Passive bonuses and capacity upgrades |
+| `equipment` | Equipped trinkets by guild |
 | `profile` | Social stats, XP, level, voting records |
 | `status` | Account standing (ok/blocked/banned) |
-| `warnings` | Report history from other users |
 
 ### Profile Attributes
-- **XP & Level**: Progression system with tiered rewards
+- **XP & Level**: Progression system with exponential difficulty curve (Levels 1-10)
 - **Social Voting**: "Loved" (upvotes) and "Hated" (downvotes) counters
 - **Daily Streak**: Consecutive daily reward claims
 - **Pact System**: Moral alignment choice (Blessing vs Curse)
@@ -121,7 +120,7 @@ When limits exceeded:
 
 ### Item Stacking
 - **Stackable items**: Multiple units occupy single slot (food, materials)
-- **Non-stackable items**: Each unit occupies separate slot (tools, weapons)
+- **Non-stackable items**: Each unit occupies separate slot (tools, weapons, trinkets)
 - **Durability system**: Non-stackable items have usage counters instead of quantities
 
 ---
@@ -134,16 +133,13 @@ When limits exceeded:
 |-----------|---------|
 | `name` | Display name |
 | `description` | Flavor text |
-| `img` | Emoji/icon representation |
+| `emoji` | Emoji/icon representation |
 | `value` | Base monetary value |
 | `weight` | Inventory weight contribution |
-| `type` | Category (food, tool, weapon, armor, material) |
+| `type` | Category (food, tool, weapon, armor, material, trinket) |
 | `can_stack` | Whether multiples occupy one slot |
-| `can_sell` | Whether sellable to system |
-| `can_drop` | Whether discardable |
-| `can_equip` | Whether usable in RPG system |
-| `can_upgrade` | Whether tier progression possible |
-| `amount` | Quantity or durability |
+| `rarity` | Item tier (Common, Uncommon, Rare, Holy, Unique) |
+| `required_level` | Minimum level to equip/use |
 
 ### Item Categories
 
@@ -163,10 +159,17 @@ When limits exceeded:
 - Stackable
 - Used for crafting/upgrading
 
-#### 4. Equipment (RPG)
+#### 4. Trinkets (Economy Equipment)
+- Provide economic bonuses (not combat stats)
+- 6 base slots: Primary Trinket, Secondary Trinket, Left Ring, Right Ring, Necklace, Belt
+- Bonus slots available through special items
+- Non-stackable
+
+#### 5. RPG Equipment
+- Separate from trinkets
 - Weapons: Increase attack stat
 - Armor (helmet/chest/pants/boots): Increase defense
-- Accessories: Various bonuses
+- Accessories: Various combat bonuses
 
 ### Crafting System
 - **Input**: 2 units of raw material → 1 unit of processed material
@@ -181,6 +184,86 @@ When limits exceeded:
 
 ---
 
+## Trinkets System
+
+### Overview
+The Trinkets system replaces the old economy equipment to avoid confusion with RPG combat gear. Trinkets are magical items (charms, rings, necklaces, belts) that provide economic bonuses called "boons."
+
+### Rarity Tiers
+
+| Rarity | Emoji | Color | Level Range | Description |
+|--------|-------|-------|-------------|-------------|
+| Common | 🟢 | Green | 1-3 | Basic items for beginners |
+| Uncommon | 🔵 | Blue | 4-5 | Improved items with better stats |
+| Rare | 🟣 | Purple | 6-7 | Powerful items for dedicated players |
+| Holy | 🟡 | Gold | 8-10 | Legendary items for masters |
+| Unique | 🔴 | Red | Special | One-of-a-kind quest-gated items |
+
+### Base Slots (6 slots)
+
+| Slot | Type | Example Items |
+|------|------|---------------|
+| 🔮 Trinket (Primary) | Main magical item | Lucky Charm, Merchant's Seal, Golden Compass |
+| ✨ Trinket (Secondary) | Supporting item | Crystal Orb, Chronos Timepiece |
+| 💍 Ring (Left) | First magical ring | Novice's Band, Silver Ring of Commerce, Golden Ring of Wealth |
+| 💍 Ring (Right) | Second magical ring | Band of the Steady Hand, Whispering Band, Platinum Band of Mastery |
+| 📿 Necklace | Amulet/Pendant | Cord of Burden, Lucky Amulet, Merchant's Pendant, Crown Jewel |
+| 🎗️ Belt | Storage/Utility | Sash of the Wanderer, Bottomless Pouch, Artisan's Sash, Dimemorphin Belt |
+
+### Bonus Slots
+- Additional slots beyond the base 6
+- Granted by specific trinkets with `slotCap` stat
+- Slot-expanding items cannot be equipped in bonus slots (except Dimemorphin Belt)
+
+### Slot Expansion Items
+
+| Item | Rarity | Slot Expansion | Notes |
+|------|--------|----------------|-------|
+| Bottomless Pouch | Common | +1 slot | Moved to Belt slot |
+| Crystal Orb | Uncommon | +1 slot | Cannot equip in bonus slots |
+| Chronos Timepiece | Rare | +2 slots | Cannot equip in bonus slots |
+| Dimemorphin Belt | Holy | Infinite | Can equip in bonus slots; extremely rare |
+
+### Boon Types (Stats)
+
+| Boon | Effect |
+|------|--------|
+| 🍀 Luck | Better chances in gambling |
+| 🛠️ Work Bonus | More earnings from /work |
+| 🏷️ Shop Discount | Lower prices in store |
+| 📅 Streak Bonus | Higher daily reward caps |
+| ⚖️ Weight Capacity | Carry more items |
+| 📦 Slot Capacity | More trinket slots |
+
+### Example Trinkets by Rarity
+
+**Common (🟢 Level 1-3):**
+- Lucky Charm: +2 Luck, +2% Work bonus
+- Novice's Band: +1 Luck
+- Band of the Steady Hand: +3% Work bonus
+- Cord of Burden: +5 Weight capacity
+- Sash of the Wanderer: +15 Weight capacity
+
+**Uncommon (🔵 Level 4-5):**
+- Crystal Orb: +4% Work, +1 Luck, +1 Slot
+- Lucky Amulet: +3 Luck, +1 Streak
+- Silver Ring of Commerce: +4% Discount, +1 Luck
+- Whispering Band: +2 Luck, +10 Weight
+- Artisan's Sash: +20 Weight, +4% Work
+
+**Rare (🟣 Level 6-7):**
+- Golden Compass: +3 Luck, +1 Streak, +4% Work
+- Chronos Timepiece: +6% Work, +2 Streak, +2 Slots
+- Golden Ring of Wealth: +6% Discount, +3% Work, +2 Luck
+- Platinum Band of Mastery: +5% Work, +4% Discount, +1 Streak
+- Merchant's Pendant: +5% Discount, +2% Work, +1 Luck
+
+**Holy (🟡 Level 8-10):**
+- Crown Jewel: +4 Luck, +8% Discount, +5% Work, +2 Streak
+- Dimemorphin Belt: Infinite slot expansion
+
+---
+
 ## Experience & Leveling
 
 ### XP Gain Mechanics
@@ -188,28 +271,31 @@ When limits exceeded:
 - **Luck bonus**: Perk increases success chance
 - **Range**: Random XP amount within range (e.g., 1-5)
 
-### Level Tiers (0-12+)
-| Level | XP Required | Badge |
-|-------|-------------|-------|
-| 0 | 0 | 🔹 |
-| 1 | 100 | ♙ |
-| 2 | 220 | ♞ |
-| 3 | 360 | ♗ |
-| 4 | 520 | ♜ |
-| 5 | 700 | ♔ |
-| 6 | 900 | ♛ |
-| 7 | 1140 | 🂠 |
-| 8 | 1400 | 🃏 |
-| 9 | 1720 | 🀄️ |
-| 10 | 2060 | 🎴 |
-| 11 | 2420 | 🌀 |
-| 12 | 2800 | 🌌 |
+### Level Tiers (1-10) - Exponential Curve
+
+| Level | Total XP Required | XP to Next | Difficulty | Rarity Tier |
+|-------|-------------------|------------|------------|-------------|
+| 1 | 0 | 100 | Easy | Common |
+| 2 | 100 | 200 | Easy | Common |
+| 3 | 300 | 400 | Easy | Common |
+| 4 | 700 | 800 | Moderate | Uncommon |
+| 5 | 1,500 | 2,000 | Moderate | Uncommon |
+| 6 | 3,500 | 3,500 | Hard | Rare |
+| 7 | 7,000 | 6,000 | Hard | Rare |
+| 8 | 13,000 | 10,000 | Very Hard | Holy |
+| 9 | 23,000 | 15,000 | Very Hard | Holy |
+| 10 | 38,000 | Max | Extreme | Holy |
+
+### Key Difficulty Walls
+- **Level 5→6**: First major wall (2,000 XP)
+- **Level 7→8**: Second major wall (6,000 XP)
+- **Level 9→10**: Final push (15,000 XP)
 
 ### Level-Up Rewards
 Each level grants:
-- **Money bonus**: Scaling lump sum (10,500 × level at Lv1, increasing)
+- **Money bonus**: Scaling lump sum
 - **Perk increases**: Weight capacity, inventory slots, luck
-- **Escalating bonuses**: Higher levels give larger perk boosts
+- **Equipment unlocks**: Access to higher rarity trinkets
 
 ---
 
@@ -220,6 +306,7 @@ Each level grants:
 - **Reward range**: Random amount within band (e.g., 500-1250)
 - **Cooldown**: Time-based (randomized between 5-10 minutes)
 - **Guild dependency**: Rewards limited by guild work treasury
+- **Trinket bonuses**: Work bonus percentage from equipped trinkets
 
 ### Work Activity Types
 Activities present users with scenarios requiring emoji responses:
@@ -229,7 +316,7 @@ Activities present users with scenarios requiring emoji responses:
 - Discovery (finding money, minerals)
 
 ### Success/Failure
-- Correct response: Full reward
+- Correct response: Full reward + trinket bonuses
 - Wrong/timeout: No reward
 
 ---
@@ -241,6 +328,7 @@ Activities present users with scenarios requiring emoji responses:
 - **Progressive scaling**: Day 1 = 500, Day 30 = 15,000
 - **Post-30 cap**: Fixed maximum (e.g., 17,777)
 - **Reset mechanism**: 24-hour+ gap resets streak to 0
+- **Trinket bonuses**: Streak bonus cap from equipped trinkets
 
 ### Reward Tiers
 ```
@@ -273,6 +361,7 @@ Day 31+: Fixed bonus
 - **Stock check**: Verify item exists and is purchasable
 - **Capacity pre-check**: Simulate add before purchase
 - **Guild economy**: Purchase fees contribute to guild trade pool
+- **Trinket discounts**: Shop discount percentage from equipped trinkets
 
 ### Sell System
 - **Depreciated value**: Items sell for ~85% of value
@@ -288,6 +377,7 @@ Day 31+: Fixed bonus
 - **Win**: 95% return (5% tax)
 - **Loss**: Full bet lost to guild economy
 - **Guild solvency check**: Cannot bet more than guild can pay
+- **Luck bonus**: Trinket luck stat improves success chance
 
 ### Steal/Rob System
 - **Target requirements**: Victim must have minimum cash threshold
@@ -330,27 +420,6 @@ Guild economy tracks four revenue streams:
   - 🟡 Gold: 500K+ (Stable)
   - 🟠 Orange: 100K+ (Struggling)
   - 🔴 Red: <100K (Critical)
-
----
-
-## Perks System
-
-### Core Perks
-
-| Perk | Effect | Default |
-|------|--------|---------|
-| `peso` (weight) | Max inventory weight | 200 |
-| `capacidad` (capacity) | Max item slots | 20 |
-| `suerte` (luck) | Success chance bonus | 0 |
-
-### Perk Upgrade System
-- **Random selection**: One perk offered randomly
-- **Cost scaling**: Higher values = higher costs
-  - Low: 10,000 + wood
-  - Mid: 20,000 + iron
-  - High: 30,000 + palm wood
-  - Very High: 40,000 + gold ore
-- **Value ranges**: Random increase within tiered bands
 
 ---
 
@@ -400,15 +469,16 @@ Guild economy tracks four revenue streams:
 
 ## RPG Equipment System
 
-### Equipment Slots
+### Equipment Slots (Combat Gear)
 - Weapon (attack bonus)
 - Shield (defense bonus)
 - Helmet (defense bonus)
 - Chest armor (defense bonus)
 - Pants (defense bonus)
 - Boots (defense bonus)
-- Ring (various properties)
-- Necklace (various properties)
+- Ring (various combat properties)
+- Necklace (various combat properties)
+- Tool (gathering equipment)
 
 ### Equipment Flow
 1. **Acquire**: Obtain items through purchase/crafting
@@ -423,6 +493,10 @@ Objects define RPG stats:
 - `hp`: Health points
 - Custom properties for accessories
 
+### Key Distinction
+- **Trinkets** (`/trinkets`): Economy bonuses (work, luck, discounts)
+- **RPG Equipment** (`/rpg equip`): Combat stats (attack, defense, HP)
+
 ---
 
 ## Design Principles Summary
@@ -434,6 +508,9 @@ Objects define RPG stats:
 5. **Choice Permanence**: Meaningful decisions with lasting impact
 6. **Anti-Cheat**: Transaction monitoring and penalty systems
 7. **Engagement Loops**: Daily rewards, streaks, random events
+8. **Clear Separation**: Distinct systems for economy (trinkets) and combat (RPG gear)
+9. **Visual Clarity**: Rarity system with color-coded tiers
+10. **Long-term Goals**: Exponential leveling for extended engagement
 
 ---
 
@@ -441,7 +518,38 @@ Objects define RPG stats:
 
 - Use **decimal/float** for currency to support fractional values
 - Implement **transaction atomicity** to prevent duplication exploits
-- **Validate all constraints** (weight, capacity, solvency) before committing
-- **Async safety**: Economy operations must be thread-safe
+- **Validate all constraints** (weight, capacity, solvency, level requirements) before committing
+- **Async safety**: Economy operations must be thread-safe with proper locking
 - **Audit logging**: Track significant transactions for moderation
 - **Graceful degradation**: Handle missing accounts/data corruption
+- **Rarity visualization**: Use color-coded embeds and emojis for clear tier communication
+- **Slot expansion validation**: Prevent infinite recursion with proper bonus slot checks
+- **Exponential curve**: Ensure XP requirements scale dramatically for endgame content
+
+---
+
+## Recent Changes (2026-02-06)
+
+### Trinkets System Overhaul
+- Rebranded economy equipment as magical trinkets
+- Separated from RPG combat gear to avoid confusion
+- Added 5-tier rarity system (Common → Unique)
+- Implemented slot expansion mechanics
+- Renamed items with better thematic names
+
+### Leveling System Rework
+- Reduced max level from 12 to 10
+- Implemented exponential XP curve
+- Increased total XP for max level from 3,850 to 38,000
+- Added difficulty walls at levels 5→6 and 7→8
+
+### New Features
+- Dimemorphin Belt: Legendary item with infinite slot expansion
+- Rarity-based UI: Color-coded embeds and emojis
+- Bonus slot validation: Prevents slot-expanding item recursion
+- Unique item framework: Foundation for quest-gated legendary items
+
+---
+
+*Document Version: 2.0*
+*Last Updated: 2026-02-06*

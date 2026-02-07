@@ -7,24 +7,22 @@
 import type { ItemId } from "@/modules/inventory/definitions";
 import type { GuildId, UserId } from "@/db/types";
 
-/** Equipment slot types. */
+/** Equipment slot types for boons/trinkets. */
 export type EquipmentSlot =
-  | "head"
-  | "chest"
-  | "legs"
-  | "weapon"
-  | "offhand"
-  | "accessory1"
-  | "accessory2";
+  | "trinket1"
+  | "trinket2"
+  | "ring1"
+  | "ring2"
+  | "necklace"
+  | "belt";
 
 export const EQUIPMENT_SLOTS: EquipmentSlot[] = [
-  "head",
-  "chest",
-  "legs",
-  "weapon",
-  "offhand",
-  "accessory1",
-  "accessory2",
+  "trinket1",
+  "trinket2",
+  "ring1",
+  "ring2",
+  "necklace",
+  "belt",
 ];
 
 /** Equipment stats that can be provided by items. */
@@ -43,6 +41,46 @@ export interface EquipmentStats {
   readonly slotCap?: number;
 }
 
+/** Item rarity tiers. */
+export type ItemRarity = "common" | "uncommon" | "rare" | "holy" | "unique";
+
+/** Rarity configuration with visual indicators. */
+export const RARITY_CONFIG: Record<ItemRarity, {
+  emoji: string;
+  color: number;
+  name: string;
+}> = {
+  common: { emoji: "🟢", color: 0x00FF00, name: "Common" },
+  uncommon: { emoji: "🔵", color: 0x0000FF, name: "Uncommon" },
+  rare: { emoji: "🟣", color: 0x800080, name: "Rare" },
+  holy: { emoji: "🟡", color: 0xFFD700, name: "Holy" },
+  unique: { emoji: "🔴", color: 0xFF0000, name: "Unique" },
+};
+
+/**
+ * Determine rarity based on item level.
+ * Level 1-3: Common
+ * Level 4-5: Uncommon
+ * Level 6-7: Rare
+ * Level 8-9: Holy
+ * Level 10: Holy (with possibility of Unique via special conditions)
+ */
+export function getRarityFromLevel(level: number): ItemRarity {
+  if (level >= 8) return "holy";
+  if (level >= 6) return "rare";
+  if (level >= 4) return "uncommon";
+  return "common";
+}
+
+/**
+ * Get the next rarity tier for progression display.
+ */
+export function getNextRarity(current: ItemRarity): ItemRarity | null {
+  const order: ItemRarity[] = ["common", "uncommon", "rare", "holy", "unique"];
+  const index = order.indexOf(current);
+  return order[index + 1] ?? null;
+}
+
 /** Extended item definition for equipable items. */
 export interface EquipableItemDefinition {
   readonly id: ItemId;
@@ -53,6 +91,13 @@ export interface EquipableItemDefinition {
   readonly stats: EquipmentStats;
   /** Minimum progression level required to equip. */
   readonly requiredLevel?: number;
+  /** Item rarity tier. Auto-derived from level if not specified. */
+  readonly rarity?: ItemRarity;
+  /**
+   * Whether this item can be equipped in bonus slots.
+   * Default: true for most items, false for slot-expanding items (except Dimemorphin Belt).
+   */
+  readonly canEquipInBonusSlot?: boolean;
 }
 
 /** An equipped item instance. */
@@ -141,7 +186,8 @@ export type EquipmentErrorCode =
   | "ACCOUNT_BANNED"
   | "RATE_LIMITED"
   | "UPDATE_FAILED"
-  | "CONFLICT";
+  | "CONFLICT"
+  | "INVALID_SLOT";
 
 export class EquipmentError extends Error {
   constructor(

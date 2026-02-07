@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "quests": [
+    {
+      "id": "untitled_quest_4948",
+      "title": "Untitled Quest",
+      "icon": "📜",
+      "description": "Describe the objective and reward clearly.",
+      "repeat": {
+        "kind": "none"
+      },
+      "difficulty": "easy",
+      "enabled": true,
+      "prerequisites": {
+        "minLevel": 1,
+        "requiresQuestsCompleted": []
+      },
+      "steps": [
+        {
+          "kind": "gather_item",
+          "qty": 1,
+          "action": "mine",
+          "itemId": "pyrite_ore",
+          "locationTierMin": 1
+        }
+      ],
+      "rewards": {
+        "currency": [
+          {
+            "id": "coins",
+            "amount": 100
+          }
+        ],
+        "xp": 50
+      }
+    }
+  ]
+}

@@ -496,6 +496,46 @@ async function runWithOptionalTransaction<T>(
   }
 }
 
+async function emitQuestEventFromMarketList(
+  input: ListMarketItemInput,
+  result: ListMarketItemResult,
+): Promise<void> {
+  try {
+    const { rpgQuestService } = await import("@/modules/rpg/quests");
+    await rpgQuestService.onEvent({
+      type: "market_list",
+      guildId: input.guildId,
+      userId: input.sellerId,
+      itemId: result.itemId,
+      qty: result.quantity,
+      correlationId: result.correlationId,
+      timestamp: result.createdAt,
+    });
+  } catch (error) {
+    console.error("[MarketService] Failed to emit quest market_list event:", error);
+  }
+}
+
+async function emitQuestEventFromMarketBuy(
+  input: BuyListingInput,
+  result: BuyListingResult,
+): Promise<void> {
+  try {
+    const { rpgQuestService } = await import("@/modules/rpg/quests");
+    await rpgQuestService.onEvent({
+      type: "market_buy",
+      guildId: input.guildId,
+      userId: input.buyerId,
+      itemId: result.itemId,
+      qty: result.quantity,
+      correlationId: result.correlationId,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    console.error("[MarketService] Failed to emit quest market_buy event:", error);
+  }
+}
+
 class MarketServiceImpl implements MarketService {
   async listItem(input: ListMarketItemInput): Promise<Result<ListMarketItemResult, MarketError>> {
     const gate = await ensureMarketEnabled(input.guildId);
@@ -550,6 +590,7 @@ class MarketServiceImpl implements MarketService {
     const txOutcome = txResult.unwrap();
     if (txOutcome.mode === "transaction") {
       markCooldown(listingCooldown, input.sellerId);
+      await emitQuestEventFromMarketList(input, txOutcome.value);
       return OkResult(txOutcome.value);
     }
 
@@ -655,6 +696,7 @@ class MarketServiceImpl implements MarketService {
     const txOutcome = txResult.unwrap();
     if (txOutcome.mode === "transaction") {
       markCooldown(buyCooldown, input.buyerId);
+      await emitQuestEventFromMarketBuy(input, txOutcome.value);
       return OkResult(txOutcome.value);
     }
 

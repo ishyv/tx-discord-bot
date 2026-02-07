@@ -37,7 +37,7 @@ const economyService = createEconomyAccountService(economyAccountRepo);
 
 @Declare({
   name: "profile",
-  description: "📊 Show your economy profile (balance, inventory, achievements). For RPG profile use /rpg profile",
+  description: "📊 Show your economy profile",
 })
 @BindDisabled(Features.Economy)
 @Cooldown({

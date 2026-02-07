@@ -38,6 +38,10 @@ const EconomyAuditEntrySchema = z.object({
     "perk_purchase",
     "xp_grant",
     "rollback",
+    "craft",
+    "quest_accept",
+    "quest_complete",
+    "quest_claim",
     "combat_challenge",
     "combat_move_submit",
     "combat_round_resolve",
@@ -81,6 +85,15 @@ const AuditStore = new MongoStore<EconomyAuditEntry>(
   "economy_audit",
   EconomyAuditEntrySchema,
 );
+
+async function dispatchAuditSideEffects(entry: EconomyAuditEntry): Promise<void> {
+  try {
+    const { rpgQuestService } = await import("@/modules/rpg/quests");
+    await rpgQuestService.processAuditEntry(entry);
+  } catch (error) {
+    console.error("[EconomyAuditRepo] Failed to dispatch audit side effects:", error);
+  }
+}
 
 /**
  * Ensure indexes exist on the audit collection.
@@ -220,6 +233,9 @@ class EconomyAuditRepoImpl implements EconomyAuditRepo {
     try {
       const col = await AuditStore.collection();
       await col.insertOne(auditEntry as any, { session: options?.session });
+      if (!options?.session) {
+        await dispatchAuditSideEffects(auditEntry);
+      }
       return OkResult(auditEntry);
     } catch (error) {
       console.error("[EconomyAuditRepo] Failed to create audit entry:", error);

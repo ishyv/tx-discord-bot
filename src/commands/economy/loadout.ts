@@ -1,7 +1,7 @@
 /**
- * Loadout Command.
+ * Trinkets Loadout Command.
  *
- * Purpose: Show user's equipped items with stats summary.
+ * Purpose: Show your equipped trinkets, rings, and necklaces with boon stats.
  */
 import { Command, Declare, type GuildCommandContext, Embed } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
@@ -18,8 +18,8 @@ import {
 import { getContextInfo } from "@/adapters/seyfert";
 
 @Declare({
-  name: "loadout",
-  description: "Muestra tu equipo actual y stats",
+  name: "trinkets-loadout",
+  description: "🔮 View your equipped trinkets and their boons",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -29,7 +29,7 @@ import { getContextInfo } from "@/adapters/seyfert";
   interval: 3000,
   uses: { default: 1 },
 })
-export default class LoadoutCommand extends Command {
+export default class TrinketsLoadoutCommand extends Command {
   async run(ctx: GuildCommandContext) {
     const { guildId, userId, username, avatarURL } = getContextInfo(ctx);
 
@@ -78,7 +78,7 @@ export default class LoadoutCommand extends Command {
 
     const embed = new Embed()
       .setColor(EmbedColors.Gold)
-      .setTitle("⚔️ Tu Equipamiento")
+      .setTitle("🔮 Your Trinkets & Boons")
       .setAuthor({
         name: username,
         iconUrl: avatarURL,
@@ -156,7 +156,7 @@ export default class LoadoutCommand extends Command {
     }
 
     const equippedCount = equipped.length;
-    embed.setFooter({ text: `${equippedCount}/7 slots occupied` });
+    embed.setFooter({ text: `${equippedCount}/6 trinket slots occupied` });
 
     await ctx.write({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }

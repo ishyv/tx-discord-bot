@@ -1,0 +1,37 @@
+{
+  schemaVersion: 1,
+  questlines: [
+    {
+      id: "miner_profession_path",
+      title: "Miner Profession Path",
+      description: "Structured progression from pyrite to sunstone operations.",
+      questIds: [
+        "starter_miner_gather_pyrite",
+        "starter_miner_refine_pyrite",
+        "starter_miner_market_ingots",
+        "miner_craft_pickaxe_t2",
+        "miner_weekly_silver_drive",
+        "miner_master_sunstone",
+      ],
+    },
+    {
+      id: "lumber_profession_path",
+      title: "Lumber Profession Path",
+      description: "Structured progression from resin pine to amberheart operations.",
+      questIds: [
+        "starter_lumber_gather_resin",
+        "starter_lumber_saw_resin",
+        "starter_lumber_market_planks",
+        "lumber_craft_axe_t2",
+        "lumber_weekly_oak_drive",
+        "lumber_master_amberheart",
+      ],
+    },
+    {
+      id: "arena_path",
+      title: "Arena Path",
+      description: "Combat-focused chain for duel specialists.",
+      questIds: ["arena_victor", "arena_champion"],
+    },
+  ],
+}

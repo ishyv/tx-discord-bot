@@ -34,7 +34,7 @@ const SLOT_EMOJIS: Record<EquipmentSlot, string> = {
 
 @Declare({
   name: "profile",
-  description: "🎮 Show your RPG profile (stats, equipment, combat record). For economy profile use /profile",
+  description: "🎮 Show your RPG profile",
 })
 export default class RpgProfileSubcommand extends SubCommand {
   async run(ctx: GuildCommandContext) {

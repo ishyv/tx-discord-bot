@@ -1,7 +1,7 @@
 /**
- * Unequip Command.
+ * Trinkets Unequip Command.
  *
- * Purpose: Show equipped slots with buttons to unequip.
+ * Purpose: Remove equipped trinkets, rings, and necklaces.
  */
 import {
   Command,
@@ -26,11 +26,20 @@ import {
   getEquipableItemDefinition,
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
+import { RARITY_CONFIG } from "@/modules/economy/equipment/types";
 import {
   createButton,
   replyEphemeral,
   getContextInfo,
 } from "@/adapters/seyfert";
+
+/** Helper to get rarity emoji for an item based on its level. */
+function getRarityEmoji(level: number | undefined): string {
+  if (!level || level <= 3) return RARITY_CONFIG.common.emoji;
+  if (level <= 5) return RARITY_CONFIG.uncommon.emoji;
+  if (level <= 7) return RARITY_CONFIG.rare.emoji;
+  return RARITY_CONFIG.holy.emoji;
+}
 
 // Pending confirmations
 const pendingUnequips = new Map<
@@ -50,8 +59,8 @@ const slotOption = {
 };
 
 @Declare({
-  name: "unequip",
-  description: "🎒 Unequip an economy item. For RPG equipment use /rpg unequip",
+  name: "trinkets-unequip",
+  description: "🔮 Remove an equipped trinket, ring, or necklace",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -61,7 +70,7 @@ const slotOption = {
   interval: 3000,
   uses: { default: 1 },
 })
-export default class UnequipCommand extends Command {
+export default class TrinketsUnequipCommand extends Command {
   async run(ctx: GuildCommandContext<typeof slotOption>) {
     const { guildId, userId } = getContextInfo(ctx);
 
@@ -124,13 +133,14 @@ async function showEquippedSlots(
     .setTitle("🔧 Select a slot to unequip")
     .setDescription("Click the button for the slot you'd like to clear.");
 
-  // Show current equipment
+  // Show current equipment with rarity
   for (const slot of equippedSlots) {
     const equipped = loadout.slots[slot]!;
     const def = getEquipableItemDefinition(equipped.itemId);
+    const rarityEmoji = getRarityEmoji(def?.requiredLevel);
     embed.addFields({
       name: getSlotDisplayName(slot),
-      value: `${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}`,
+      value: `${rarityEmoji} ${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}`,
       inline: true,
     });
   }
@@ -142,7 +152,7 @@ async function showEquippedSlots(
   for (let i = 0; i < equippedSlots.length; i++) {
     const slot = equippedSlots[i];
     const btn = createButton({
-      customId: `unequip_slot_${userId}_${slot}`,
+      customId: `trinket_unequip_slot_${userId}_${slot}`,
       label: getSlotDisplayName(slot),
       style: ButtonStyle.Primary,
     });
@@ -186,6 +196,7 @@ async function promptUnequip(
   }
 
   const def = getEquipableItemDefinition(equipped.itemId);
+  const rarityEmoji = getRarityEmoji(def?.requiredLevel);
 
   // Store pending
   pendingUnequips.set(userId, { guildId, slot });
@@ -194,18 +205,18 @@ async function promptUnequip(
     .setColor(EmbedColors.Yellow)
     .setTitle("🔧 Confirm Unequip")
     .setDescription(
-      `Do you want to unequip **${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}** from **${getSlotDisplayName(slot)}**?\n\n` +
+      `Do you want to unequip **${rarityEmoji} ${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}** from **${getSlotDisplayName(slot)}**?\n\n` +
         "The item will return to your inventory.",
     );
 
   const confirmBtn = createButton({
-    customId: `unequip_confirm_${userId}`,
+    customId: `trinket_unequip_confirm_${userId}`,
     label: "✅ Unequip",
     style: ButtonStyle.Success,
   });
 
   const cancelBtn = createButton({
-    customId: `unequip_cancel_${userId}`,
+    customId: `trinket_unequip_cancel_${userId}`,
     label: "❌ Cancel",
     style: ButtonStyle.Secondary,
   });
@@ -224,7 +235,7 @@ async function promptUnequip(
 
 // Component handlers
 @Declare({
-  name: "unequip_slot",
+  name: "trinket_unequip_slot",
   description: "Handle slot button for unequip",
 })
 export class UnequipSlotHandler extends SubCommand {
@@ -246,7 +257,7 @@ export class UnequipSlotHandler extends SubCommand {
 }
 
 @Declare({
-  name: "unequip_confirm",
+  name: "trinket_unequip_confirm",
   description: "Confirm unequip button",
 })
 export class UnequipConfirmHandler extends SubCommand {
@@ -296,7 +307,7 @@ export class UnequipConfirmHandler extends SubCommand {
 }
 
 @Declare({
-  name: "unequip_cancel",
+  name: "trinket_unequip_cancel",
   description: "Cancel unequip button",
 })
 export class UnequipCancelHandler extends SubCommand {

@@ -1,0 +1,492 @@
+{
+  schemaVersion: 1,
+  quests: [
+    {
+      id: "starter_miner_gather_pyrite",
+      title: "First Shift: Pyrite",
+      icon: "⛏️",
+      description: "Mine pyrite ore and prove you can handle cavern work.",
+      repeat: { kind: "none" },
+      difficulty: "easy",
+      prerequisites: {
+        profession: "miner",
+        minLevel: 1,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "mine",
+          itemId: "pyrite_ore",
+          qty: 12,
+          locationTierMin: 2,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 80 }],
+        xp: 40,
+        items: [{ itemId: "resin_pine_plank", qty: 2 }],
+      },
+    },
+    {
+      id: "starter_miner_refine_pyrite",
+      title: "Smelter Trial",
+      icon: "🔥",
+      description: "Refine pyrite ore into ingots for toolsmith orders.",
+      repeat: { kind: "none" },
+      difficulty: "easy",
+      prerequisites: {
+        profession: "miner",
+        requiresQuestsCompleted: ["starter_miner_gather_pyrite"],
+      },
+      steps: [
+        {
+          kind: "process_item",
+          inputItemId: "pyrite_ore",
+          outputItemId: "pyrite_ingot",
+          qty: 6,
+          successOnly: true,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 100 }],
+        xp: 55,
+      },
+    },
+    {
+      id: "starter_miner_market_ingots",
+      title: "Trade Desk Delivery",
+      icon: "📦",
+      description: "List refined pyrite ingots on the market.",
+      repeat: { kind: "none" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "miner",
+        requiresQuestsCompleted: ["starter_miner_refine_pyrite"],
+      },
+      steps: [
+        {
+          kind: "market_list_item",
+          itemId: "pyrite_ingot",
+          qty: 4,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 120 }],
+        xp: 65,
+      },
+    },
+    {
+      id: "miner_craft_pickaxe_t2",
+      title: "Forge Upgrade: Tier 2 Pickaxe",
+      icon: "🛠️",
+      description: "Craft your first profession upgrade tool.",
+      repeat: { kind: "none" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "miner",
+        requiresQuestsCompleted: ["starter_miner_market_ingots"],
+      },
+      steps: [
+        {
+          kind: "craft_recipe",
+          recipeId: "craft_miner_pickaxe_t2",
+          qty: 1,
+        },
+      ],
+      rewards: {
+        xp: 90,
+        items: [{ itemId: "pyrite_ingot", qty: 3 }],
+      },
+    },
+    {
+      id: "miner_daily_cavern_shift",
+      title: "Daily Cavern Shift",
+      icon: "🗓️",
+      description: "Run a full pyrite production cycle.",
+      repeat: { kind: "daily" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "miner",
+        minLevel: 1,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "mine",
+          itemId: "pyrite_ore",
+          qty: 20,
+          locationTierMin: 2,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "pyrite_ore",
+          outputItemId: "pyrite_ingot",
+          qty: 8,
+          successOnly: true,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 180 }],
+        xp: 100,
+        tokens: 1,
+      },
+    },
+    {
+      id: "miner_weekly_silver_drive",
+      title: "Moon Silver Supply Drive",
+      icon: "🌙",
+      description: "Support weekly moon-silver demand from miners' guilds.",
+      repeat: { kind: "weekly" },
+      difficulty: "hard",
+      prerequisites: {
+        profession: "miner",
+        minLevel: 4,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "mine",
+          itemId: "moon_silver_ore",
+          qty: 25,
+          locationTierMin: 3,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "moon_silver_ore",
+          outputItemId: "moon_silver_ingot",
+          qty: 10,
+          successOnly: true,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "moon_silver_ingot",
+          qty: 6,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 480 }],
+        xp: 260,
+        items: [{ itemId: "dark_oak_plank", qty: 6 }],
+        tokens: 3,
+      },
+    },
+    {
+      id: "miner_master_sunstone",
+      title: "Sunstone Master Contract",
+      icon: "☀️",
+      description: "Complete a full tier-4 miner loop and forge the top pickaxe.",
+      repeat: { kind: "cooldown", hours: 72 },
+      difficulty: "legendary",
+      prerequisites: {
+        profession: "miner",
+        minLevel: 6,
+        requiresQuestsCompleted: ["miner_craft_pickaxe_t2"],
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "mine",
+          itemId: "sunstone_shard",
+          qty: 18,
+          locationTierMin: 4,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "sunstone_shard",
+          outputItemId: "sunstone_core",
+          qty: 8,
+          successOnly: true,
+        },
+        {
+          kind: "craft_recipe",
+          recipeId: "craft_miner_pickaxe_t4",
+          qty: 1,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 950 }],
+        xp: 520,
+        items: [{ itemId: "sunstone_core", qty: 2 }],
+        tokens: 6,
+      },
+    },
+
+    {
+      id: "starter_lumber_gather_resin",
+      title: "First Route: Resin Grove",
+      icon: "🪓",
+      description: "Gather resin pine wood for local carpenters.",
+      repeat: { kind: "none" },
+      difficulty: "easy",
+      prerequisites: {
+        profession: "lumber",
+        minLevel: 1,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "resin_pine_wood",
+          qty: 12,
+          locationTierMin: 2,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 80 }],
+        xp: 40,
+        items: [{ itemId: "pyrite_ingot", qty: 2 }],
+      },
+    },
+    {
+      id: "starter_lumber_saw_resin",
+      title: "Sawing Bench",
+      icon: "🪚",
+      description: "Process resin pine wood into planks.",
+      repeat: { kind: "none" },
+      difficulty: "easy",
+      prerequisites: {
+        profession: "lumber",
+        requiresQuestsCompleted: ["starter_lumber_gather_resin"],
+      },
+      steps: [
+        {
+          kind: "process_item",
+          inputItemId: "resin_pine_wood",
+          outputItemId: "resin_pine_plank",
+          qty: 6,
+          successOnly: true,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 100 }],
+        xp: 55,
+      },
+    },
+    {
+      id: "starter_lumber_market_planks",
+      title: "Builder Supply Drop",
+      icon: "📦",
+      description: "List resin pine planks on the market.",
+      repeat: { kind: "none" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "lumber",
+        requiresQuestsCompleted: ["starter_lumber_saw_resin"],
+      },
+      steps: [
+        {
+          kind: "market_list_item",
+          itemId: "resin_pine_plank",
+          qty: 4,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 120 }],
+        xp: 65,
+      },
+    },
+    {
+      id: "lumber_craft_axe_t2",
+      title: "Forge Upgrade: Tier 2 Axe",
+      icon: "🛠️",
+      description: "Craft your first profession upgrade axe.",
+      repeat: { kind: "none" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "lumber",
+        requiresQuestsCompleted: ["starter_lumber_market_planks"],
+      },
+      steps: [
+        {
+          kind: "craft_recipe",
+          recipeId: "craft_lumber_axe_t2",
+          qty: 1,
+        },
+      ],
+      rewards: {
+        xp: 90,
+        items: [{ itemId: "resin_pine_plank", qty: 3 }],
+      },
+    },
+    {
+      id: "lumber_daily_grove_shift",
+      title: "Daily Grove Shift",
+      icon: "🗓️",
+      description: "Run a full resin timber production cycle.",
+      repeat: { kind: "daily" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "lumber",
+        minLevel: 1,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "resin_pine_wood",
+          qty: 20,
+          locationTierMin: 2,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "resin_pine_wood",
+          outputItemId: "resin_pine_plank",
+          qty: 8,
+          successOnly: true,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 180 }],
+        xp: 100,
+        tokens: 1,
+      },
+    },
+    {
+      id: "lumber_weekly_oak_drive",
+      title: "Dark Oak Supply Drive",
+      icon: "🌲",
+      description: "Fill weekly dark-oak demand from construction guilds.",
+      repeat: { kind: "weekly" },
+      difficulty: "hard",
+      prerequisites: {
+        profession: "lumber",
+        minLevel: 4,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "dark_oak_wood",
+          qty: 25,
+          locationTierMin: 3,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "dark_oak_wood",
+          outputItemId: "dark_oak_plank",
+          qty: 10,
+          successOnly: true,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "dark_oak_plank",
+          qty: 6,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 480 }],
+        xp: 260,
+        items: [{ itemId: "moon_silver_ingot", qty: 4 }],
+        tokens: 3,
+      },
+    },
+    {
+      id: "lumber_master_amberheart",
+      title: "Amberheart Master Contract",
+      icon: "✨",
+      description: "Complete a full tier-4 lumber loop and forge the top axe.",
+      repeat: { kind: "cooldown", hours: 72 },
+      difficulty: "legendary",
+      prerequisites: {
+        profession: "lumber",
+        minLevel: 6,
+        requiresQuestsCompleted: ["lumber_craft_axe_t2"],
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "amberheart_wood",
+          qty: 18,
+          locationTierMin: 4,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "amberheart_wood",
+          outputItemId: "amberheart_plank",
+          qty: 8,
+          successOnly: true,
+        },
+        {
+          kind: "craft_recipe",
+          recipeId: "craft_lumber_axe_t4",
+          qty: 1,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 950 }],
+        xp: 520,
+        items: [{ itemId: "amberheart_plank", qty: 2 }],
+        tokens: 6,
+      },
+    },
+
+    {
+      id: "market_trade_runner",
+      title: "Trade Runner",
+      icon: "💹",
+      description: "Flip materials between buy orders and new listings.",
+      repeat: { kind: "daily" },
+      difficulty: "medium",
+      steps: [
+        {
+          kind: "market_buy_item",
+          itemId: "pyrite_ore",
+          qty: 10,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "pyrite_ingot",
+          qty: 5,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 220 }],
+        xp: 110,
+      },
+    },
+    {
+      id: "arena_victor",
+      title: "Arena Victor",
+      icon: "⚔️",
+      description: "Win fights in the arena.",
+      repeat: { kind: "weekly" },
+      difficulty: "hard",
+      steps: [
+        {
+          kind: "fight_win",
+          qty: 3,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 300 }],
+        xp: 180,
+        tokens: 2,
+      },
+    },
+    {
+      id: "arena_champion",
+      title: "Arena Champion",
+      icon: "🏆",
+      description: "Maintain a winning streak and dominate weekly duels.",
+      repeat: { kind: "cooldown", hours: 168 },
+      difficulty: "expert",
+      prerequisites: {
+        minLevel: 3,
+        requiresQuestsCompleted: ["arena_victor"],
+      },
+      steps: [
+        {
+          kind: "fight_win",
+          qty: 7,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 750 }],
+        xp: 420,
+        items: [{ itemId: "sunstone_shard", qty: 3 }],
+        tokens: 4,
+      },
+    },
+  ],
+}

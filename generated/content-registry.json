@@ -1,0 +1,216 @@
+{
+  "generatedAt": "2026-02-07T00:00:37.384Z",
+  "loadedFrom": "C:\\Users\\Hyvnt\\T\\Discord\\tx\\content\\packs",
+  "items": [
+    {
+      "id": "amberheart_plank",
+      "name": "Amberheart Plank",
+      "category": "components"
+    },
+    {
+      "id": "amberheart_wood",
+      "name": "Amberheart Wood",
+      "category": "materials"
+    },
+    {
+      "id": "axe_lv2",
+      "name": "Resin Pine Axe",
+      "category": "tools"
+    },
+    {
+      "id": "axe_lv3",
+      "name": "Dark Oak Axe",
+      "category": "tools"
+    },
+    {
+      "id": "axe_lv4",
+      "name": "Amberheart Axe",
+      "category": "tools"
+    },
+    {
+      "id": "dark_oak_plank",
+      "name": "Dark Oak Plank",
+      "category": "components"
+    },
+    {
+      "id": "dark_oak_wood",
+      "name": "Dark Oak Wood",
+      "category": "materials"
+    },
+    {
+      "id": "moon_silver_ingot",
+      "name": "Moon Silver Ingot",
+      "category": "components"
+    },
+    {
+      "id": "moon_silver_ore",
+      "name": "Moon Silver Ore",
+      "category": "materials"
+    },
+    {
+      "id": "pickaxe_lv2",
+      "name": "Pyrite Pickaxe",
+      "category": "tools"
+    },
+    {
+      "id": "pickaxe_lv3",
+      "name": "Moon Silver Pickaxe",
+      "category": "tools"
+    },
+    {
+      "id": "pickaxe_lv4",
+      "name": "Sunstone Pickaxe",
+      "category": "tools"
+    },
+    {
+      "id": "pyrite_ingot",
+      "name": "Pyrite Ingot",
+      "category": "components"
+    },
+    {
+      "id": "pyrite_ore",
+      "name": "Pyrite Ore",
+      "category": "materials"
+    },
+    {
+      "id": "resin_pine_plank",
+      "name": "Resin Pine Plank",
+      "category": "components"
+    },
+    {
+      "id": "resin_pine_wood",
+      "name": "Resin Pine Wood",
+      "category": "materials"
+    },
+    {
+      "id": "sunstone_core",
+      "name": "Sunstone Core",
+      "category": "components"
+    },
+    {
+      "id": "sunstone_shard",
+      "name": "Sunstone Shard",
+      "category": "materials"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "craft_lumber_axe_t2",
+      "name": "Forge Resin Pine Axe",
+      "type": "crafting"
+    },
+    {
+      "id": "craft_lumber_axe_t3",
+      "name": "Forge Dark Oak Axe",
+      "type": "crafting"
+    },
+    {
+      "id": "craft_lumber_axe_t4",
+      "name": "Forge Amberheart Axe",
+      "type": "crafting"
+    },
+    {
+      "id": "craft_miner_pickaxe_t2",
+      "name": "Forge Pyrite Pickaxe",
+      "type": "crafting"
+    },
+    {
+      "id": "craft_miner_pickaxe_t3",
+      "name": "Forge Moon Silver Pickaxe",
+      "type": "crafting"
+    },
+    {
+      "id": "craft_miner_pickaxe_t4",
+      "name": "Forge Sunstone Pickaxe",
+      "type": "crafting"
+    },
+    {
+      "id": "process_amberheart_wood",
+      "name": "Saw Amberheart",
+      "type": "processing"
+    },
+    {
+      "id": "process_dark_oak_wood",
+      "name": "Saw Dark Oak",
+      "type": "processing"
+    },
+    {
+      "id": "process_moon_silver_ore",
+      "name": "Refine Moon Silver",
+      "type": "processing"
+    },
+    {
+      "id": "process_pyrite_ore",
+      "name": "Refine Pyrite",
+      "type": "processing"
+    },
+    {
+      "id": "process_resin_pine_wood",
+      "name": "Saw Resin Pine",
+      "type": "processing"
+    },
+    {
+      "id": "process_sunstone_shard",
+      "name": "Compress Sunstone",
+      "type": "processing"
+    }
+  ],
+  "locations": [
+    {
+      "id": "copper_mine",
+      "name": "Pyrite Cavern",
+      "action": "mine",
+      "requiredTier": 2,
+      "profession": "miner"
+    },
+    {
+      "id": "iron_mine",
+      "name": "Moon Silver Rift",
+      "action": "mine",
+      "requiredTier": 3,
+      "profession": "miner"
+    },
+    {
+      "id": "oak_forest",
+      "name": "Oak Forest",
+      "action": "forest",
+      "requiredTier": 1,
+      "profession": "lumber"
+    },
+    {
+      "id": "palm_forest",
+      "name": "Dark Oak Wilds",
+      "action": "forest",
+      "requiredTier": 3,
+      "profession": "lumber"
+    },
+    {
+      "id": "pine_forest",
+      "name": "Amberheart Canopy",
+      "action": "forest",
+      "requiredTier": 4,
+      "profession": "lumber"
+    },
+    {
+      "id": "silver_mine",
+      "name": "Sunstone Depths",
+      "action": "mine",
+      "requiredTier": 4,
+      "profession": "miner"
+    },
+    {
+      "id": "spruce_forest",
+      "name": "Resin Grove",
+      "action": "forest",
+      "requiredTier": 2,
+      "profession": "lumber"
+    },
+    {
+      "id": "stone_mine",
+      "name": "Stone Mine",
+      "action": "mine",
+      "requiredTier": 1,
+      "profession": "miner"
+    }
+  ]
+}

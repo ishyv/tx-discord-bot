@@ -33,7 +33,7 @@ const slotOption = {
 
 @Declare({
   name: "unequip",
-  description: "⚔️ Unequip RPG gear. For economy items use /unequip",
+  description: "⚔️ Unequip RPG weapons and armor",
 })
 export default class RpgUnequipSubcommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof slotOption>) {

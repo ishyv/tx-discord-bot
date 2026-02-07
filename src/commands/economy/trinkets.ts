@@ -1,8 +1,8 @@
 /**
- * Equip Command.
+ * Trinkets Command.
  *
- * Purpose: Show equipable items and let users equip them.
- * Opens with select menu filtered by slot.
+ * Purpose: Manage magical trinkets, rings, and necklaces that provide boons.
+ * These are NOT combat equipment - use /rpg equip for weapons and armor.
  */
 import {
   Command,
@@ -27,6 +27,7 @@ import {
   getEquipableItemDefinition,
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
+import { RARITY_CONFIG } from "@/modules/economy/equipment/types";
 import {
   createSelectMenu,
   createButton,
@@ -37,6 +38,30 @@ import {
 
 // Pending confirmations
 const pendingEquips = new Map<string, { guildId: string; itemId: string }>();
+
+/** Helper to get rarity emoji for an item based on its level. */
+function getRarityEmoji(level: number | undefined): string {
+  if (!level || level <= 3) return RARITY_CONFIG.common.emoji;
+  if (level <= 5) return RARITY_CONFIG.uncommon.emoji;
+  if (level <= 7) return RARITY_CONFIG.rare.emoji;
+  return RARITY_CONFIG.holy.emoji;
+}
+
+/** Helper to get rarity color for embeds. */
+function getRarityColor(level: number | undefined): number {
+  if (!level || level <= 3) return RARITY_CONFIG.common.color;
+  if (level <= 5) return RARITY_CONFIG.uncommon.color;
+  if (level <= 7) return RARITY_CONFIG.rare.color;
+  return RARITY_CONFIG.holy.color;
+}
+
+/** Helper to get rarity name. */
+function getRarityName(level: number | undefined): string {
+  if (!level || level <= 3) return RARITY_CONFIG.common.name;
+  if (level <= 5) return RARITY_CONFIG.uncommon.name;
+  if (level <= 7) return RARITY_CONFIG.rare.name;
+  return RARITY_CONFIG.holy.name;
+}
 
 const slotOption = {
   slot: createStringOption({
@@ -50,8 +75,8 @@ const slotOption = {
 };
 
 @Declare({
-  name: "equip",
-  description: "🎒 Equip an economy item (perks/badges). For RPG equipment use /rpg equip",
+  name: "trinkets",
+  description: "🔮 Manage your magical trinkets, rings, and necklaces (boons)",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })
@@ -61,7 +86,7 @@ const slotOption = {
   interval: 3000,
   uses: { default: 1 },
 })
-export default class EquipCommand extends Command {
+export default class TrinketsCommand extends Command {
   async run(ctx: GuildCommandContext<typeof slotOption>) {
     const { guildId, userId } = getContextInfo(ctx);
 
@@ -115,15 +140,16 @@ async function showSlotSelection(
     .setTitle("👤 Equipment Loadout")
     .setDescription("Select a slot to equip an item.");
 
-  // Show current equipment
+  // Show current equipment with rarity
   for (const slot of EQUIPMENT_SLOTS) {
     const equipped = loadout.slots[slot];
     const slotName = getSlotDisplayName(slot);
     if (equipped) {
       const def = getEquipableItemDefinition(equipped.itemId);
+      const rarityEmoji = getRarityEmoji(def?.requiredLevel);
       embed.addFields({
         name: slotName,
-        value: `${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}`,
+        value: `${rarityEmoji} ${def?.emoji ?? "📦"} ${def?.name ?? equipped.itemId}`,
         inline: true,
       });
     } else {
@@ -144,7 +170,7 @@ async function showSlotSelection(
   }));
 
   const selectMenu = createSelectMenu({
-    customId: `equip_slot_select_${userId}`,
+    customId: `trinket_slot_select_${userId}`,
     placeholder: "Select a slot...",
     options: selectOptions,
   });
@@ -187,12 +213,20 @@ async function showSlotItems(
     return;
   }
 
+  // Calculate rarity for currently equipped item
+  const equippedDef = currentlyEquipped
+    ? getEquipableItemDefinition(currentlyEquipped.itemId)
+    : null;
+  const equippedRarityEmoji = equippedDef
+    ? getRarityEmoji(equippedDef.requiredLevel)
+    : "";
+
   const embed = new Embed()
     .setColor(UIColors.amethyst)
     .setTitle(`${getSlotDisplayName(slot)} — Available Items`)
     .setDescription(
       currentlyEquipped
-        ? `Currently equipped: ${getEquipableItemDefinition(currentlyEquipped.itemId)?.emoji ?? "📦"} ${getEquipableItemDefinition(currentlyEquipped.itemId)?.name ?? currentlyEquipped.itemId}`
+        ? `Currently equipped: ${equippedRarityEmoji} ${equippedDef?.emoji ?? "📦"} **${equippedDef?.name ?? currentlyEquipped.itemId}**`
         : "*Empty slot*",
     );
 
@@ -223,11 +257,13 @@ async function showSlotItems(
       })
       .join(", ");
 
-    const levelReq = item.requiredLevel ? ` (Lv.${item.requiredLevel}+)` : "";
+    const rarityEmoji = getRarityEmoji(item.requiredLevel);
+    const rarityName = getRarityName(item.requiredLevel);
+    const levelReq = item.requiredLevel ? `Lv.${item.requiredLevel}+` : "Lv.1+";
 
     embed.addFields({
-      name: `${item.emoji} ${item.name}${levelReq}`,
-      value: `${item.description}\n📊 ${statsText}\n📦 Qty: \`${item.quantity}\``,
+      name: `${rarityEmoji} ${item.emoji} ${item.name}`,
+      value: `*${rarityName}* · ${levelReq}\n${item.description}\n📊 ${statsText}\n📦 Qty: \`${item.quantity}\``,
       inline: false,
     });
   }
@@ -241,7 +277,7 @@ async function showSlotItems(
   }));
 
   const selectMenu = createSelectMenu({
-    customId: `equip_item_select_${userId}_${slot}`,
+    customId: `trinket_item_select_${userId}_${slot}`,
     placeholder: "Select an item to equip...",
     options: selectOptions,
   });
@@ -249,7 +285,7 @@ async function showSlotItems(
   const row = new ActionRow<typeof selectMenu>().addComponents(selectMenu);
 
   const backBtn = createButton({
-    customId: `equip_back_${userId}`,
+    customId: `trinket_back_${userId}`,
     label: "← Back",
     style: ButtonStyle.Secondary,
   });
@@ -265,10 +301,10 @@ async function showSlotItems(
 
 // Component handlers
 @Declare({
-  name: "equip_slot_select",
+  name: "trinket_slot_select",
   description: "Handle slot selection for equip",
 })
-export class EquipSlotSelectHandler extends SubCommand {
+export class TrinketSlotSelectHandler extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const { userId, guildId } = getContextInfo(ctx);
 
@@ -282,10 +318,10 @@ export class EquipSlotSelectHandler extends SubCommand {
 }
 
 @Declare({
-  name: "equip_item_select",
+  name: "trinket_item_select",
   description: "Handle item selection for equip",
 })
-export class EquipItemSelectHandler extends SubCommand {
+export class TrinketItemSelectHandler extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const { userId, guildId } = getContextInfo(ctx);
 
@@ -332,24 +368,30 @@ export class EquipItemSelectHandler extends SubCommand {
       })
       .join(", ");
 
+    const rarityEmoji = getRarityEmoji(itemDef.requiredLevel);
+    const rarityName = getRarityName(itemDef.requiredLevel);
+    const rarityColor = getRarityColor(itemDef.requiredLevel);
+    const levelReq = itemDef.requiredLevel ? `Lv.${itemDef.requiredLevel}+` : "Lv.1+";
+
     const embed = new Embed()
-      .setColor(UIColors.warning)
-      .setTitle("🔰 Confirm Equipment")
+      .setColor(rarityColor)
+      .setTitle(`${rarityEmoji} Confirm Equipment`)
       .setDescription(
         `Equip **${itemDef.emoji ?? "📦"} ${itemDef.name}**?\n\n` +
+        `*${rarityName}* · ${levelReq}\n` +
         `${itemDef.description}\n\n` +
         `📊 Stats: ${statsText}\n` +
         `👤 Slot: ${getSlotDisplayName(itemDef.slot)}`,
       );
 
     const confirmBtn = createButton({
-      customId: `equip_confirm_${userId}`,
+      customId: `trinket_confirm_${userId}`,
       label: "✓ Equip",
       style: ButtonStyle.Success,
     });
 
     const cancelBtn = createButton({
-      customId: `equip_cancel_${userId}`,
+      customId: `trinket_cancel_${userId}`,
       label: "✕ Cancel",
       style: ButtonStyle.Secondary,
     });
@@ -368,10 +410,10 @@ export class EquipItemSelectHandler extends SubCommand {
 }
 
 @Declare({
-  name: "equip_confirm",
+  name: "trinket_confirm",
   description: "Confirm equip button",
 })
-export class EquipConfirmHandler extends SubCommand {
+export class TrinketConfirmHandler extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const { userId, guildId } = getContextInfo(ctx);
 
@@ -425,10 +467,10 @@ export class EquipConfirmHandler extends SubCommand {
 }
 
 @Declare({
-  name: "equip_cancel",
+  name: "trinket_cancel",
   description: "Cancel equip button",
 })
-export class EquipCancelHandler extends SubCommand {
+export class TrinketCancelHandler extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const { userId } = getContextInfo(ctx);
     pendingEquips.delete(userId);
@@ -438,10 +480,10 @@ export class EquipCancelHandler extends SubCommand {
 }
 
 @Declare({
-  name: "equip_back",
+  name: "trinket_back",
   description: "Back to slot selection button",
 })
-export class EquipBackHandler extends SubCommand {
+export class TrinketBackHandler extends SubCommand {
   async run(ctx: GuildCommandContext) {
     const { userId, guildId } = getContextInfo(ctx);
 
