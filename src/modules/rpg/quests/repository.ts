@@ -34,16 +34,16 @@ function normalizeActiveState(
   const data = (raw ?? {}) as Record<string, unknown>;
   const progress = Array.isArray(data.stepProgress)
     ? data.stepProgress.map((value) =>
-        Number.isFinite(value) ? Math.max(0, Math.trunc(Number(value))) : 0,
-      )
+      Number.isFinite(value) ? Math.max(0, Math.trunc(Number(value))) : 0,
+    )
     : [];
 
   const inFlightRaw = data.claimInFlight as Record<string, unknown> | undefined;
   const inFlight = inFlightRaw
     ? {
-        correlationId: String(inFlightRaw.correlationId ?? ""),
-        startedAt: asDate(inFlightRaw.startedAt, fallbackNow),
-      }
+      correlationId: String(inFlightRaw.correlationId ?? ""),
+      startedAt: asDate(inFlightRaw.startedAt, fallbackNow),
+    }
     : undefined;
 
   return {
@@ -59,9 +59,9 @@ function normalizeActiveState(
     claimInFlight:
       inFlight && inFlight.correlationId
         ? {
-            correlationId: inFlight.correlationId,
-            startedAt: inFlight.startedAt,
-          }
+          correlationId: inFlight.correlationId,
+          startedAt: inFlight.startedAt,
+        }
         : undefined,
   };
 }
@@ -139,7 +139,7 @@ class RpgQuestProgressRepositoryImpl implements RpgQuestProgressRepository {
     await Promise.all([
       collection.createIndex({ guildId: 1, userId: 1 }, { name: "guild_user_idx" }),
       collection.createIndex({ updatedAt: -1 }, { name: "updatedAt_idx" }),
-      collection.createIndex({ "active.$**": 1 }, { name: "active_wildcard_idx", sparse: true }),
+      collection.createIndex({ "active.$**": 1 }, { name: "active_wildcard_idx" }),
     ]);
   }
 

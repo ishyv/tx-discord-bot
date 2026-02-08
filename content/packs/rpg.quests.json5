@@ -22,7 +22,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 80 }],
+        currency: [{ id: "coins", amount: 20 }],
         xp: 40,
         items: [{ itemId: "resin_pine_plank", qty: 2 }],
       },
@@ -48,7 +48,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 100 }],
+        currency: [{ id: "coins", amount: 25 }],
         xp: 55,
       },
     },
@@ -71,7 +71,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 120 }],
+        currency: [{ id: "coins", amount: 30 }],
         xp: 65,
       },
     },
@@ -126,7 +126,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 180 }],
+        currency: [{ id: "coins", amount: 45 }],
         xp: 100,
         tokens: 1,
       },
@@ -164,7 +164,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 480 }],
+        currency: [{ id: "coins", amount: 120 }],
         xp: 260,
         items: [{ itemId: "dark_oak_plank", qty: 6 }],
         tokens: 3,
@@ -204,7 +204,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 950 }],
+        currency: [{ id: "coins", amount: 250 }],
         xp: 520,
         items: [{ itemId: "sunstone_core", qty: 2 }],
         tokens: 6,
@@ -232,7 +232,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 80 }],
+        currency: [{ id: "coins", amount: 20 }],
         xp: 40,
         items: [{ itemId: "pyrite_ingot", qty: 2 }],
       },
@@ -258,7 +258,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 100 }],
+        currency: [{ id: "coins", amount: 25 }],
         xp: 55,
       },
     },
@@ -281,7 +281,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 120 }],
+        currency: [{ id: "coins", amount: 30 }],
         xp: 65,
       },
     },
@@ -336,7 +336,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 180 }],
+        currency: [{ id: "coins", amount: 45 }],
         xp: 100,
         tokens: 1,
       },
@@ -374,7 +374,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 480 }],
+        currency: [{ id: "coins", amount: 120 }],
         xp: 260,
         items: [{ itemId: "moon_silver_ingot", qty: 4 }],
         tokens: 3,
@@ -414,7 +414,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 950 }],
+        currency: [{ id: "coins", amount: 250 }],
         xp: 520,
         items: [{ itemId: "amberheart_plank", qty: 2 }],
         tokens: 6,
@@ -441,7 +441,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 220 }],
+        currency: [{ id: "coins", amount: 55 }],
         xp: 110,
       },
     },
@@ -459,7 +459,7 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 300 }],
+        currency: [{ id: "coins", amount: 75 }],
         xp: 180,
         tokens: 2,
       },
@@ -482,9 +482,379 @@
         },
       ],
       rewards: {
-        currency: [{ id: "coins", amount: 750 }],
+        currency: [{ id: "coins", amount: 180 }],
         xp: 420,
         items: [{ itemId: "sunstone_shard", qty: 3 }],
+        tokens: 4,
+      },
+    },
+
+    {
+      id: "guild_supply_lantern_oil",
+      title: "Quartermaster: Night Shift Fuel",
+      icon: "🪔",
+      description: "Secure supplies so night crews can keep tunnels and roads lit.",
+      repeat: { kind: "none" },
+      difficulty: "easy",
+      prerequisites: {
+        minLevel: 1,
+      },
+      steps: [
+        {
+          kind: "process_item",
+          inputItemId: "resin_pine_wood",
+          outputItemId: "resin_pine_plank",
+          qty: 4,
+          successOnly: true,
+        },
+        {
+          kind: "market_buy_item",
+          itemId: "pyrite_ore",
+          qty: 6,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 35 }],
+        xp: 70,
+        items: [
+          { itemId: "lantern_oil", qty: 3 },
+          { itemId: "warded_rope", qty: 1 },
+        ],
+      },
+    },
+    {
+      id: "guild_supply_field_rations",
+      title: "Quartermaster: Field Rations",
+      icon: "🥘",
+      description: "Prepare provisions for workers scheduled on long frontier routes.",
+      repeat: { kind: "none" },
+      difficulty: "medium",
+      prerequisites: {
+        requiresQuestsCompleted: ["guild_supply_lantern_oil"],
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "resin_pine_wood",
+          qty: 16,
+          locationTierMin: 2,
+        },
+        {
+          kind: "market_buy_item",
+          itemId: "lantern_oil",
+          qty: 2,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 45 }],
+        xp: 95,
+        items: [{ itemId: "miner_field_ration", qty: 4 }],
+      },
+    },
+    {
+      id: "guild_supply_cavern_salt",
+      title: "Salt Crate Rotation",
+      icon: "🧂",
+      description: "Keep preservation salt moving between caravans and storage halls.",
+      repeat: { kind: "daily" },
+      difficulty: "medium",
+      prerequisites: {
+        minLevel: 2,
+      },
+      steps: [
+        {
+          kind: "market_buy_item",
+          itemId: "cavern_salt",
+          qty: 6,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "cavern_salt",
+          qty: 3,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 50 }],
+        xp: 105,
+        items: [{ itemId: "guild_scrip", qty: 2 }],
+      },
+    },
+    {
+      id: "guild_expedition_staging",
+      title: "Expedition Staging Yard",
+      icon: "🧭",
+      description: "Assemble core expedition supplies before teams depart the city walls.",
+      repeat: { kind: "none" },
+      difficulty: "medium",
+      prerequisites: {
+        requiresQuestsCompleted: ["guild_supply_field_rations"],
+      },
+      steps: [
+        {
+          kind: "market_buy_item",
+          itemId: "miner_field_ration",
+          qty: 3,
+        },
+        {
+          kind: "market_buy_item",
+          itemId: "warded_rope",
+          qty: 1,
+        },
+        {
+          kind: "market_buy_item",
+          itemId: "lantern_oil",
+          qty: 2,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 60 }],
+        xp: 130,
+        items: [{ itemId: "surveyor_charm", qty: 1 }],
+      },
+    },
+    {
+      id: "guild_logistics_scrip_circuit",
+      title: "Guild Scrip Circuit",
+      icon: "📜",
+      description: "Cycle guild scrip and consumables through weekly quartermaster contracts.",
+      repeat: { kind: "weekly" },
+      difficulty: "hard",
+      prerequisites: {
+        minLevel: 3,
+        requiresQuestsCompleted: ["guild_supply_cavern_salt"],
+      },
+      steps: [
+        {
+          kind: "market_buy_item",
+          itemId: "guild_scrip",
+          qty: 6,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "guild_scrip",
+          qty: 4,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "lantern_oil",
+          qty: 2,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 100 }],
+        xp: 230,
+        items: [{ itemId: "cavern_salt", qty: 4 }],
+        tokens: 2,
+      },
+    },
+    {
+      id: "alchemist_glowcap_contract",
+      title: "Alchemist: Glowcap Contract",
+      icon: "🍄",
+      description: "Harvest glowcap spores and move batches to alchemy stalls.",
+      repeat: { kind: "daily" },
+      difficulty: "medium",
+      prerequisites: {
+        profession: "lumber",
+        minLevel: 2,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "glowcap_spore",
+          qty: 14,
+          locationTierMin: 2,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "glowcap_spore",
+          qty: 6,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 55 }],
+        xp: 120,
+        items: [
+          { itemId: "lantern_oil", qty: 1 },
+          { itemId: "guild_scrip", qty: 1 },
+        ],
+      },
+    },
+    {
+      id: "miner_survey_moon_silver",
+      title: "Survey Ledger: Moon Silver",
+      icon: "📐",
+      description: "Document and deliver a full moon-silver extraction cycle.",
+      repeat: { kind: "weekly" },
+      difficulty: "hard",
+      prerequisites: {
+        profession: "miner",
+        minLevel: 4,
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "mine",
+          itemId: "moon_silver_ore",
+          qty: 18,
+          locationTierMin: 3,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "moon_silver_ore",
+          outputItemId: "moon_silver_ingot",
+          qty: 8,
+          successOnly: true,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "moon_silver_ingot",
+          qty: 5,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 130 }],
+        xp: 280,
+        items: [
+          { itemId: "surveyor_charm", qty: 1 },
+          { itemId: "guild_scrip", qty: 2 },
+        ],
+        tokens: 3,
+      },
+    },
+    {
+      id: "frontier_waystation_stockpile",
+      title: "Frontier Waystation Stockpile",
+      icon: "🏕️",
+      description: "Rebuild stock at the outer waystation before the next caravan wave.",
+      repeat: { kind: "daily" },
+      difficulty: "medium",
+      prerequisites: {
+        minLevel: 2,
+      },
+      steps: [
+        {
+          kind: "market_buy_item",
+          itemId: "pyrite_ingot",
+          qty: 5,
+        },
+        {
+          kind: "market_buy_item",
+          itemId: "dark_oak_plank",
+          qty: 5,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "warded_rope",
+          qty: 2,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 65 }],
+        xp: 135,
+        items: [{ itemId: "miner_field_ration", qty: 2 }],
+      },
+    },
+    {
+      id: "sunstone_convoy_manifest",
+      title: "Sunstone Convoy Manifest",
+      icon: "🚚",
+      description: "Assemble and dispatch high-tier sunstone cargo under guild seal.",
+      repeat: { kind: "cooldown", hours: 96 },
+      difficulty: "legendary",
+      prerequisites: {
+        profession: "miner",
+        minLevel: 6,
+        requiresQuestsCompleted: [
+          "miner_master_sunstone",
+          "miner_survey_moon_silver",
+        ],
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "mine",
+          itemId: "sunstone_shard",
+          qty: 14,
+          locationTierMin: 4,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "sunstone_shard",
+          outputItemId: "sunstone_core",
+          qty: 6,
+          successOnly: true,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "sunstone_core",
+          qty: 4,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "surveyor_charm",
+          qty: 1,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 250 }],
+        xp: 560,
+        items: [
+          { itemId: "guild_scrip", qty: 6 },
+          { itemId: "cavern_salt", qty: 8 },
+        ],
+        tokens: 6,
+      },
+    },
+    {
+      id: "grand_cartographer_commission",
+      title: "Grand Cartographer's Commission",
+      icon: "🗺️",
+      description: "Deliver timber, mapping tools, and route marks for a new frontier atlas.",
+      repeat: { kind: "cooldown", hours: 120 },
+      difficulty: "expert",
+      prerequisites: {
+        minLevel: 5,
+        requiresQuestsCompleted: [
+          "guild_expedition_staging",
+          "lumber_weekly_oak_drive",
+        ],
+      },
+      steps: [
+        {
+          kind: "gather_item",
+          action: "forest",
+          itemId: "amberheart_wood",
+          qty: 16,
+          locationTierMin: 4,
+        },
+        {
+          kind: "process_item",
+          inputItemId: "amberheart_wood",
+          outputItemId: "amberheart_plank",
+          qty: 8,
+          successOnly: true,
+        },
+        {
+          kind: "market_buy_item",
+          itemId: "surveyor_charm",
+          qty: 1,
+        },
+        {
+          kind: "market_list_item",
+          itemId: "amberheart_plank",
+          qty: 5,
+        },
+      ],
+      rewards: {
+        currency: [{ id: "coins", amount: 200 }],
+        xp: 430,
+        items: [
+          { itemId: "surveyor_charm", qty: 2 },
+          { itemId: "lantern_oil", qty: 4 },
+        ],
         tokens: 4,
       },
     },

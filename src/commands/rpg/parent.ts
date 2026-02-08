@@ -8,7 +8,7 @@ import { AutoLoad, Command, Declare } from "seyfert";
 
 @Declare({
   name: "rpg",
-  description: "RPG system - profile, equipment, gathering, and combat",
+  description: "🎮 RPG system - profile, loadout, gather, fight, craft, upgrade",
   contexts: ["Guild"],
   integrationTypes: ["GuildInstall"],
 })

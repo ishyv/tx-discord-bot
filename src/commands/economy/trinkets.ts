@@ -2,21 +2,23 @@
  * Trinkets Command.
  *
  * Purpose: Manage magical trinkets, rings, and necklaces that provide boons.
- * These are NOT combat equipment - use /rpg equip for weapons and armor.
+ * These are NOT combat equipment - use /rpg equipment for weapons and armor.
  */
 import {
   Command,
   Declare,
-  SubCommand,
-  type GuildCommandContext,
   createStringOption,
+  type GuildCommandContext,
   Embed,
   ActionRow,
+  StringSelectMenu,
+  StringSelectOption,
 } from "seyfert";
 import { ButtonStyle } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
+import { Button } from "@/modules/ui";
 import {
   equipmentService,
   getSlotDisplayName,
@@ -28,16 +30,11 @@ import {
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
 import { RARITY_CONFIG } from "@/modules/economy/equipment/types";
-import {
-  createSelectMenu,
-  createButton,
-  replyEphemeral,
-  getContextInfo,
-  getSelectValue,
-} from "@/adapters/seyfert";
+import { replyEphemeral, getContextInfo } from "@/adapters/seyfert";
 
-// Pending confirmations
-const pendingEquips = new Map<string, { guildId: string; itemId: string }>();
+type WritableContext = {
+  write: (message: any) => Promise<any>;
+};
 
 /** Helper to get rarity emoji for an item based on its level. */
 function getRarityEmoji(level: number | undefined): string {
@@ -120,16 +117,14 @@ export default class TrinketsCommand extends Command {
   }
 }
 
-// Extracted helper functions (not methods, to avoid private access issues)
-
 async function showSlotSelection(
-  ctx: GuildCommandContext,
+  ctx: WritableContext,
   guildId: string,
   userId: string,
 ) {
   const loadoutResult = await equipmentService.getLoadout(guildId, userId);
   if (loadoutResult.isErr()) {
-    await replyEphemeral(ctx, { content: "Could not load your equipment." });
+    await ctx.write({ content: "Could not load your equipment.", flags: 64 });
     return;
   }
 
@@ -140,7 +135,6 @@ async function showSlotSelection(
     .setTitle("👤 Equipment Loadout")
     .setDescription("Select a slot to equip an item.");
 
-  // Show current equipment with rarity
   for (const slot of EQUIPMENT_SLOTS) {
     const equipped = loadout.slots[slot];
     const slotName = getSlotDisplayName(slot);
@@ -161,31 +155,38 @@ async function showSlotSelection(
     }
   }
 
-  const selectOptions = EQUIPMENT_SLOTS.map((slot) => ({
-    label: SLOT_DISPLAY_NAMES[slot] ?? slot,
-    value: slot,
-    description: loadout.slots[slot]
-      ? `Swap: ${getEquipableItemDefinition(loadout.slots[slot]!.itemId)?.name ?? "Equipped"}`
-      : "Empty slot - Equip item",
-  }));
-
-  const selectMenu = createSelectMenu({
-    customId: `trinket_slot_select_${userId}`,
-    placeholder: "Select a slot...",
-    options: selectOptions,
-  });
+  const selectMenu = new StringSelectMenu()
+    .setPlaceholder("Select a slot...")
+    .setValuesLength({ min: 1, max: 1 })
+    .setOptions(
+      EQUIPMENT_SLOTS.map((slot) =>
+        new StringSelectOption()
+          .setLabel(SLOT_DISPLAY_NAMES[slot] ?? slot)
+          .setValue(slot)
+          .setDescription(
+            loadout.slots[slot]
+              ? `Swap: ${getEquipableItemDefinition(loadout.slots[slot]!.itemId)?.name ?? "Equipped"}`
+              : "Empty slot - Equip item",
+          ),
+      ),
+    )
+    .onSelect("trinkets_slot_select", async (menuCtx) => {
+      const slot = menuCtx.interaction.values?.[0] as EquipmentSlot | undefined;
+      if (!slot) return;
+      await showSlotItems(menuCtx as any, guildId, userId, slot);
+    });
 
   const row = new ActionRow<typeof selectMenu>().addComponents(selectMenu);
 
   await ctx.write({
     embeds: [embed],
     components: [row],
-    flags: 64, // Ephemeral
+    flags: 64,
   });
 }
 
 async function showSlotItems(
-  ctx: GuildCommandContext,
+  ctx: WritableContext,
   guildId: string,
   userId: string,
   slot: EquipmentSlot,
@@ -198,7 +199,7 @@ async function showSlotItems(
   const loadoutResult = await equipmentService.getLoadout(guildId, userId);
 
   if (itemsResult.isErr() || loadoutResult.isErr()) {
-    await replyEphemeral(ctx, { content: "Could not load your inventory." });
+    await ctx.write({ content: "Could not load your inventory.", flags: 64 });
     return;
   }
 
@@ -207,13 +208,13 @@ async function showSlotItems(
   const currentlyEquipped = loadout.slots[slot];
 
   if (items.length === 0) {
-    await replyEphemeral(ctx, {
+    await ctx.write({
       content: `No equipable items for **${getSlotDisplayName(slot)}** in your inventory.`,
+      flags: 64,
     });
     return;
   }
 
-  // Calculate rarity for currently equipped item
   const equippedDef = currentlyEquipped
     ? getEquipableItemDefinition(currentlyEquipped.itemId)
     : null;
@@ -255,6 +256,7 @@ async function showSlotItems(
             return "";
         }
       })
+      .filter(Boolean)
       .join(", ");
 
     const rarityEmoji = getRarityEmoji(item.requiredLevel);
@@ -268,227 +270,166 @@ async function showSlotItems(
     });
   }
 
-  const selectOptions = items.slice(0, 25).map((item) => ({
-    label: `${item.name} (×${item.quantity})`,
-    value: item.itemId,
-    description: item.requiredLevel
-      ? `Requires Lv.${item.requiredLevel}`
-      : "Available",
-  }));
+  const selectMenu = new StringSelectMenu()
+    .setPlaceholder("Select an item to equip...")
+    .setValuesLength({ min: 1, max: 1 })
+    .setOptions(
+      items.slice(0, 25).map((item) =>
+        new StringSelectOption()
+          .setLabel(`${item.name} (×${item.quantity})`)
+          .setValue(item.itemId)
+          .setDescription(
+            item.requiredLevel ? `Requires Lv.${item.requiredLevel}` : "Available",
+          ),
+      ),
+    )
+    .onSelect("trinkets_item_select", async (menuCtx) => {
+      const itemId = menuCtx.interaction.values?.[0];
+      if (!itemId) return;
+      await showEquipConfirmation(menuCtx as any, guildId, userId, slot, itemId);
+    });
 
-  const selectMenu = createSelectMenu({
-    customId: `trinket_item_select_${userId}_${slot}`,
-    placeholder: "Select an item to equip...",
-    options: selectOptions,
-  });
+  const backBtn = new Button()
+    .setLabel("← Back")
+    .setStyle(ButtonStyle.Secondary)
+    .onClick("trinkets_back", async (buttonCtx) => {
+      await showSlotSelection(buttonCtx as any, guildId, userId);
+    });
 
   const row = new ActionRow<typeof selectMenu>().addComponents(selectMenu);
-
-  const backBtn = createButton({
-    customId: `trinket_back_${userId}`,
-    label: "← Back",
-    style: ButtonStyle.Secondary,
-  });
-
   const row2 = new ActionRow<typeof backBtn>().addComponents(backBtn);
 
   await ctx.write({
     embeds: [embed],
     components: [row, row2],
-    flags: 64, // Ephemeral
+    flags: 64,
   });
 }
 
-// Component handlers
-@Declare({
-  name: "trinket_slot_select",
-  description: "Handle slot selection for equip",
-})
-export class TrinketSlotSelectHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId, guildId } = getContextInfo(ctx);
-
-    if (!guildId) return;
-
-    const slot = getSelectValue(ctx) as EquipmentSlot | undefined;
-    if (!slot) return;
-
-    await showSlotItems(ctx, guildId, userId, slot);
+async function showEquipConfirmation(
+  ctx: WritableContext,
+  guildId: string,
+  userId: string,
+  slot: EquipmentSlot,
+  itemId: string,
+) {
+  const itemDef = getEquipableItemDefinition(itemId);
+  if (!itemDef) {
+    await ctx.write({ content: "Item not found.", flags: 64 });
+    return;
   }
-}
 
-@Declare({
-  name: "trinket_item_select",
-  description: "Handle item selection for equip",
-})
-export class TrinketItemSelectHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId, guildId } = getContextInfo(ctx);
+  const statsText = Object.entries(itemDef.stats)
+    .filter(([, v]) => v !== undefined && v !== 0)
+    .map(([k, v]) => {
+      const valueText =
+        typeof v === "number" && v < 1 && v > 0
+          ? `+${(v * 100).toFixed(0)}%`
+          : `+${v}`;
+      switch (k) {
+        case "luck":
+          return `${valueText} luck`;
+        case "workBonusPct":
+          return `${valueText} work`;
+        case "shopDiscountPct":
+          return `${valueText} discount`;
+        case "weightCap":
+          return `${valueText} weight`;
+        case "slotCap":
+          return `${valueText} slots`;
+        case "dailyBonusCap":
+          return `${valueText} streak`;
+        default:
+          return "";
+      }
+    })
+    .filter(Boolean)
+    .join(", ");
 
-    if (!guildId) return;
+  const rarityEmoji = getRarityEmoji(itemDef.requiredLevel);
+  const rarityName = getRarityName(itemDef.requiredLevel);
+  const rarityColor = getRarityColor(itemDef.requiredLevel);
+  const levelReq = itemDef.requiredLevel ? `Lv.${itemDef.requiredLevel}+` : "Lv.1+";
 
-    const itemId = getSelectValue(ctx);
-    if (!itemId) {
-      await replyEphemeral(ctx, { content: "Item not found." });
-      return;
-    }
-
-    const itemDef = getEquipableItemDefinition(itemId);
-    if (!itemDef) {
-      await replyEphemeral(ctx, { content: "Item not found." });
-      return;
-    }
-
-    // Show confirmation
-    pendingEquips.set(userId, { guildId, itemId });
-
-    const statsText = Object.entries(itemDef.stats)
-      .filter(([, v]) => v !== undefined && v !== 0)
-      .map(([k, v]) => {
-        const valueText =
-          typeof v === "number" && v < 1 && v > 0
-            ? `+${(v * 100).toFixed(0)}%`
-            : `+${v}`;
-        switch (k) {
-          case "luck":
-            return `${valueText} luck`;
-          case "workBonusPct":
-            return `${valueText} work`;
-          case "shopDiscountPct":
-            return `${valueText} discount`;
-          case "weightCap":
-            return `${valueText} weight`;
-          case "slotCap":
-            return `${valueText} slots`;
-          case "dailyBonusCap":
-            return `${valueText} streak`;
-          default:
-            return "";
-        }
-      })
-      .join(", ");
-
-    const rarityEmoji = getRarityEmoji(itemDef.requiredLevel);
-    const rarityName = getRarityName(itemDef.requiredLevel);
-    const rarityColor = getRarityColor(itemDef.requiredLevel);
-    const levelReq = itemDef.requiredLevel ? `Lv.${itemDef.requiredLevel}+` : "Lv.1+";
-
-    const embed = new Embed()
-      .setColor(rarityColor)
-      .setTitle(`${rarityEmoji} Confirm Equipment`)
-      .setDescription(
-        `Equip **${itemDef.emoji ?? "📦"} ${itemDef.name}**?\n\n` +
+  const embed = new Embed()
+    .setColor(rarityColor)
+    .setTitle(`${rarityEmoji} Confirm Equipment`)
+    .setDescription(
+      `Equip **${itemDef.emoji ?? "📦"} ${itemDef.name}**?\n\n` +
         `*${rarityName}* · ${levelReq}\n` +
         `${itemDef.description}\n\n` +
-        `📊 Stats: ${statsText}\n` +
+        `📊 Stats: ${statsText || "No stat bonuses"}\n` +
         `👤 Slot: ${getSlotDisplayName(itemDef.slot)}`,
-      );
-
-    const confirmBtn = createButton({
-      customId: `trinket_confirm_${userId}`,
-      label: "✓ Equip",
-      style: ButtonStyle.Success,
-    });
-
-    const cancelBtn = createButton({
-      customId: `trinket_cancel_${userId}`,
-      label: "✕ Cancel",
-      style: ButtonStyle.Secondary,
-    });
-
-    const row = new ActionRow<typeof confirmBtn>().addComponents(
-      confirmBtn,
-      cancelBtn,
     );
 
-    await ctx.write({
-      embeds: [embed],
-      components: [row],
-      flags: 64, // Ephemeral
-    });
-  }
-}
-
-@Declare({
-  name: "trinket_confirm",
-  description: "Confirm equip button",
-})
-export class TrinketConfirmHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId, guildId } = getContextInfo(ctx);
-
-    if (!guildId) return;
-
-    const pending = pendingEquips.get(userId);
-    if (!pending || pending.guildId !== guildId) {
-      await replyEphemeral(ctx, {
-        content: "❌ No pending equipment action or it has expired.",
+  const confirmBtn = new Button()
+    .setLabel("✓ Equip")
+    .setStyle(ButtonStyle.Success)
+    .onClick("trinkets_confirm", async (buttonCtx) => {
+      const result = await equipmentService.equipItem({
+        guildId,
+        userId,
+        itemId,
       });
-      return;
-    }
 
-    pendingEquips.delete(userId);
+      if (result.isErr()) {
+        const error = result.error;
+        const messages: Record<string, string> = {
+          ITEM_NOT_EQUIPABLE: "❌ This item cannot be equipped.",
+          ITEM_NOT_IN_INVENTORY: "❌ You don't have this item in your inventory.",
+          LEVEL_REQUIRED: "❌ You don't meet the level requirement for this item.",
+          ACCOUNT_BLOCKED: "⛔ Your account has restrictions.",
+          ACCOUNT_BANNED: "🚫 Your account is suspended.",
+          RATE_LIMITED: "⏱️ Too many changes. Please wait a moment.",
+        };
 
-    const result = await equipmentService.equipItem({
-      guildId,
-      userId,
-      itemId: pending.itemId,
-    });
+        await buttonCtx.write({
+          content: messages[error.code] ?? "❌ Failed to equip item.",
+          flags: 64,
+        });
+        return;
+      }
 
-    if (result.isErr()) {
-      const error = result.error;
-      const messages: Record<string, string> = {
-        ITEM_NOT_EQUIPABLE: "❌ This item cannot be equipped.",
-        ITEM_NOT_IN_INVENTORY: "❌ You don't have this item in your inventory.",
-        LEVEL_REQUIRED: "❌ You don't meet the level requirement for this item.",
-        ACCOUNT_BLOCKED: "⛔ Your account has restrictions.",
-        ACCOUNT_BANNED: "🚫 Your account is suspended.",
-        RATE_LIMITED: "⏱️ Too many changes. Please wait a moment.",
-      };
+      const operation = result.unwrap();
+      const operationItemDef = getEquipableItemDefinition(operation.itemId);
+      const operationText =
+        operation.operation === "swap"
+          ? `Swapped ${getEquipableItemDefinition(operation.previousItemId!)?.name ?? "previous"} for ${operationItemDef?.name ?? operation.itemId}`
+          : `Equipped ${operationItemDef?.name ?? operation.itemId}`;
 
-      await replyEphemeral(ctx, {
-        content: messages[error.code] ?? "❌ Failed to equip item.",
+      await buttonCtx.write({
+        content: `✅ ${operationText} in ${getSlotDisplayName(operation.slot)}.`,
+        flags: 64,
       });
-      return;
-    }
-
-    const operation = result.unwrap();
-    const itemDef = getEquipableItemDefinition(operation.itemId);
-
-    const operationText =
-      operation.operation === "swap"
-        ? `Swapped ${getEquipableItemDefinition(operation.previousItemId!)?.name ?? "previous"} for ${itemDef?.name ?? operation.itemId}`
-        : `Equipped ${itemDef?.name ?? operation.itemId}`;
-
-    await replyEphemeral(ctx, {
-      content: `✅ ${operationText} in ${getSlotDisplayName(operation.slot)}.`,
     });
-  }
+
+  const cancelBtn = new Button()
+    .setLabel("✕ Cancel")
+    .setStyle(ButtonStyle.Secondary)
+    .onClick("trinkets_cancel", async (buttonCtx) => {
+      await buttonCtx.write({
+        content: "❌ Equipment action cancelled.",
+        flags: 64,
+      });
+    });
+
+  const backBtn = new Button()
+    .setLabel("← Back")
+    .setStyle(ButtonStyle.Secondary)
+    .onClick("trinkets_confirm_back", async (buttonCtx) => {
+      await showSlotItems(buttonCtx as any, guildId, userId, slot);
+    });
+
+  const row = new ActionRow<typeof confirmBtn>().addComponents(
+    confirmBtn,
+    cancelBtn,
+    backBtn,
+  );
+
+  await ctx.write({
+    embeds: [embed],
+    components: [row],
+    flags: 64,
+  });
 }
 
-@Declare({
-  name: "trinket_cancel",
-  description: "Cancel equip button",
-})
-export class TrinketCancelHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId } = getContextInfo(ctx);
-    pendingEquips.delete(userId);
-
-    await replyEphemeral(ctx, { content: "❌ Equipment action cancelled." });
-  }
-}
-
-@Declare({
-  name: "trinket_back",
-  description: "Back to slot selection button",
-})
-export class TrinketBackHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId, guildId } = getContextInfo(ctx);
-
-    if (!guildId) return;
-
-    await showSlotSelection(ctx, guildId, userId);
-  }
-}

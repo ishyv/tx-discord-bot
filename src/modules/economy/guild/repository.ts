@@ -79,6 +79,9 @@ export const GuildEconomyDataSchema = z.object({
       dailyFeeSector: z.enum(["global", "works", "trade", "tax"]).catch("tax"),
       dailyStreakBonus: z.number().int().min(0).catch(5),
       dailyStreakCap: z.number().int().min(0).catch(10),
+      rewardScaleMode: z.enum(["flat", "percent"]).catch("flat"),
+      rewardBaseMint: z.number().int().min(0).catch(10),
+      rewardBonusMax: z.number().int().min(0).catch(40),
     })
     .optional()
     .catch(() => ({ ...DEFAULT_DAILY_CONFIG })),
@@ -570,6 +573,21 @@ class GuildEconomyRepoImpl implements GuildEconomyRepo {
         setPaths["economy.daily.dailyStreakCap"] = Math.max(
           0,
           Math.trunc(daily.dailyStreakCap),
+        );
+      }
+      if (daily.rewardScaleMode !== undefined) {
+        setPaths["economy.daily.rewardScaleMode"] = daily.rewardScaleMode;
+      }
+      if (daily.rewardBaseMint !== undefined) {
+        setPaths["economy.daily.rewardBaseMint"] = Math.max(
+          0,
+          Math.trunc(daily.rewardBaseMint),
+        );
+      }
+      if (daily.rewardBonusMax !== undefined) {
+        setPaths["economy.daily.rewardBonusMax"] = Math.max(
+          0,
+          Math.trunc(daily.rewardBonusMax),
         );
       }
 

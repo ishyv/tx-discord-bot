@@ -28,10 +28,10 @@
         "currency": [
           {
             "id": "coins",
-            "amount": 100
+            "amount": 25
           }
         ],
-        "xp": 50
+        "xp": 20
       }
     }
   ]

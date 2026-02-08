@@ -102,82 +102,91 @@ class WorkServiceImpl implements WorkService {
                 const workClaimsCol = db.collection("economy_work_claims");
                 const claimId = `${guildId}:${userId}`;
 
-                const claimUpdate = await workClaimsCol.findOneAndUpdate(
-                    {
+                // Strategy: explicit find -> insert/update to avoid E11000 killing the transaction
+                let curClaim: any;
+                const existingClaim = await workClaimsCol.findOne({ _id: claimId as any }, { session });
+
+                if (!existingClaim) {
+                    // New user state - Insert
+                    await workClaimsCol.insertOne({
                         _id: claimId as any,
-                        $and: [
-                            {
-                                $or: [
-                                    { lastWorkAt: { $exists: false } },
-                                    { lastWorkAt: { $lt: cutoff } },
-                                ],
-                            },
-                            {
-                                $or: [
-                                    { dayStamp: { $ne: dayStamp } },
-                                    { workCountToday: { $lt: workDailyCap } },
-                                ],
-                            },
-                        ],
-                    } as any,
-                    [
-                        {
-                            $set: {
-                                _id: claimId,
-                                guildId,
-                                userId,
-                                dayStamp,
-                                lastWorkAt: now,
-                                workCountToday: {
-                                    $cond: [
-                                        { $eq: ["$dayStamp", dayStamp] },
-                                        { $add: [{ $ifNull: ["$workCountToday", 0] }, 1] },
-                                        1,
-                                    ],
-                                },
-                            },
-                        },
-                    ] as any,
-                    { upsert: true, returnDocument: "after", session }
-                );
+                        guildId,
+                        userId,
+                        dayStamp,
+                        lastWorkAt: now,
+                        workCountToday: 1
+                    } as any, { session });
 
-                if (!claimUpdate) {
-                    const existing = await workClaimsCol.findOne({ _id: claimId as any }, { session });
-                    let reason: WorkPayoutResult["reason"] = "unknown";
+                    curClaim = {
+                        _id: claimId,
+                        workCountToday: 1,
+                        dayStamp,
+                        lastWorkAt: now
+                    };
+                } else {
+                    // Existing user state - Check constraints & Update
+                    const rec = existingClaim as any;
+                    let denyReason: WorkPayoutResult["reason"] | undefined;
                     let cooldownEndsAt: Date | undefined;
-                    let remainingToday = workDailyCap;
 
-                    if (existing) {
-                        remainingToday = (existing as any).dayStamp === dayStamp ? Math.max(0, workDailyCap - (existing as any).workCountToday) : workDailyCap;
-                        if ((existing as any).lastWorkAt && (existing as any).lastWorkAt >= cutoff) {
-                            reason = "cooldown";
-                            cooldownEndsAt = new Date((existing as any).lastWorkAt.getTime() + cooldownMs);
-                        } else if ((existing as any).dayStamp === dayStamp && (existing as any).workCountToday >= workDailyCap) {
-                            reason = "cap";
+                    if (rec.dayStamp === dayStamp) {
+                        if (rec.workCountToday >= workDailyCap) {
+                            denyReason = "cap";
                         }
                     }
+                    if (!denyReason && rec.lastWorkAt && rec.lastWorkAt >= cutoff) {
+                        denyReason = "cooldown";
+                        cooldownEndsAt = new Date(rec.lastWorkAt.getTime() + cooldownMs);
+                    }
 
-                    finalResult = {
-                        granted: false,
-                        reason,
-                        cooldownEndsAt,
-                        baseMint: 0,
-                        bonusFromWorks: 0,
-                        totalPaid: 0,
-                        currencyId,
-                        bonusPct,
-                        remainingToday,
-                        dailyCap: workDailyCap,
-                        userBalanceBefore: 0,
-                        userBalanceAfter: 0,
-                        correlationId,
-                        levelUp: false,
-                        newLevel: 0,
-                    };
-                    throw new Error("CLAIM_DENIED");
+                    if (denyReason) {
+                        finalResult = {
+                            granted: false,
+                            reason: denyReason,
+                            cooldownEndsAt,
+                            baseMint: 0,
+                            bonusFromWorks: 0,
+                            totalPaid: 0,
+                            currencyId,
+                            bonusPct,
+                            remainingToday: Math.max(0, workDailyCap - (rec.dayStamp === dayStamp ? rec.workCountToday : 0)),
+                            dailyCap: workDailyCap,
+                            userBalanceBefore: 0,
+                            userBalanceAfter: 0,
+                            correlationId,
+                            levelUp: false,
+                            newLevel: 0,
+                        };
+                        throw new Error("CLAIM_DENIED");
+                    }
+
+                    // Approved - Update
+                    const updateResult = await workClaimsCol.findOneAndUpdate(
+                        { _id: claimId as any } as any,
+                        [
+                            {
+                                $set: {
+                                    dayStamp,
+                                    lastWorkAt: now,
+                                    workCountToday: {
+                                        $cond: [
+                                            { $eq: ["$dayStamp", dayStamp] },
+                                            { $add: [{ $ifNull: ["$workCountToday", 0] }, 1] },
+                                            1,
+                                        ],
+                                    },
+                                },
+                            },
+                        ] as any,
+                        { returnDocument: "after", session }
+                    );
+
+                    // Should be guaranteed to exist since we found it, but safety check
+                    curClaim = updateResult || existingClaim; // Fallback only if strange race, but update updates return doc.
+                    // Note: findOneAndUpdate might return object with value or doc depending on driver. 
+                    // In previous steps we assumed it returns doc.
                 }
-
-                const claimRecord = claimUpdate as any;
+                const claimRecord = (curClaim.value || curClaim) as any;
                 const remainingToday = Math.max(0, workDailyCap - claimRecord.workCountToday);
 
                 if (failed) {
@@ -243,14 +252,18 @@ class WorkServiceImpl implements WorkService {
                     }
                 }
 
-                const totalPaid = baseMint + bonusFromWorks;
+                // Ensure successful claims always grant a positive payout.
+                // (Failures are handled above and can remain zero.)
+                const adjustedBaseMint =
+                    baseMint + bonusFromWorks > 0 ? baseMint : 1;
+                const totalPaid = adjustedBaseMint + bonusFromWorks;
 
                 const usersCol = db.collection("users");
                 const userBeforeDoc = await usersCol.findOne({ _id: userId as any }, { session });
                 if (!userBeforeDoc) throw new Error("USER_NOT_FOUND");
 
                 const balancePath = `currency.${currencyId}`;
-                const userBalanceBefore = (userBeforeDoc as any).currency?.[currencyId]?.hand ?? (userBeforeDoc as any).currency?.[currencyId] ?? 0;
+                const userBalanceBefore = ((userBeforeDoc as any).currency?.[currencyId] as any)?.hand ?? (userBeforeDoc as any).currency?.[currencyId] ?? 0;
 
                 let levelUp = false;
                 let newLevel = 0;
@@ -280,7 +293,7 @@ class WorkServiceImpl implements WorkService {
                 };
                 progressionMap[guildId] = nextProgData;
 
-                const balanceIncPath = balancePath + (userSnapshot.currency?.[currencyId]?.hand !== undefined ? ".hand" : "");
+                const balanceIncPath = balancePath + ((userSnapshot.currency?.[currencyId] as any)?.hand !== undefined ? ".hand" : "");
 
                 const userUpdate = await usersCol.findOneAndUpdate(
                     { _id: userId as any } as any,
@@ -295,7 +308,7 @@ class WorkServiceImpl implements WorkService {
                 );
                 if (!userUpdate) throw new Error("USER_UPDATE_FAILED");
 
-                const userBalanceAfter = (userUpdate as any).currency?.[currencyId]?.hand ?? (userUpdate as any).currency?.[currencyId] ?? 0;
+                const userBalanceAfter = ((userUpdate as any).currency?.[currencyId] as any)?.hand ?? (userUpdate as any).currency?.[currencyId] ?? 0;
 
                 await economyAuditRepo.create({
                     operationType: "work_claim",
@@ -312,14 +325,14 @@ class WorkServiceImpl implements WorkService {
                     },
                     metadata: {
                         correlationId,
-                        baseMint,
+                        baseMint: adjustedBaseMint,
                         bonusFromWorks,
                         totalPaid,
                         currencyId,
                         sectorUsed: workPaysFromSector,
                         sectorBefore: sectorBalanceBefore,
                         sectorAfter: sectorBalanceAfter,
-                        isMinted: baseMint > 0,
+                        isMinted: adjustedBaseMint > 0,
                         isRedistribution: bonusFromWorks > 0,
                         capCount: claimRecord.workCountToday,
                         remainingToday,
@@ -356,7 +369,7 @@ class WorkServiceImpl implements WorkService {
 
                 finalResult = {
                     granted: true,
-                    baseMint,
+                    baseMint: adjustedBaseMint,
                     bonusFromWorks,
                     totalPaid,
                     currencyId,

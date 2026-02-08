@@ -35,8 +35,8 @@ export {
 export const DEFAULT_COINFLIP_CONFIG: CoinflipConfig = {
   enabled: true,
   currencyId: "coins",
-  minBet: 10,
-  maxBet: 10000,
+  minBet: 5,
+  maxBet: 500,
   houseEdge: 0.05, // 5% house edge
   cooldownSeconds: 10,
   dailyMaxBets: 50,
@@ -46,7 +46,7 @@ export const DEFAULT_COINFLIP_CONFIG: CoinflipConfig = {
 export const DEFAULT_TRIVIA_CONFIG: TriviaConfig = {
   enabled: true,
   currencyId: "coins",
-  baseCurrencyReward: 50,
+  baseCurrencyReward: 5,
   baseXpReward: 15,
   difficultyMultipliers: {
     1: 1.0, // Muy Fácil
@@ -71,12 +71,12 @@ export const DEFAULT_ROB_CONFIG: RobConfig = {
   cooldownSeconds: 300, // 5 minutes
   dailyMaxAttempts: 10,
   maxStealPct: 0.15, // 15% of target balance
-  maxStealAmount: 5000, // Absolute cap
-  minTargetBalance: 500, // Target must have at least 500
-  minRobberBalance: 200, // Robber must have at least 200
+  maxStealAmount: 500, // Absolute cap
+  minTargetBalance: 50, // Target must have at least 50
+  minRobberBalance: 20, // Robber must have at least 20
   failChance: 0.35, // 35% base fail chance
   failFinePct: 0.2, // 20% fine of attempted amount
-  failFineMin: 50, // Minimum 50 fine
+  failFineMin: 5, // Minimum 5 fine
   pairCooldownSeconds: 3600, // 1 hour between robbing same person
   targetActivityHours: 24, // Target must have been active in last 24h
   taxSector: "tax",

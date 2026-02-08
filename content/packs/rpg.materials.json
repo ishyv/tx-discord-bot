@@ -9,13 +9,13 @@
       "maxStack": 99,
       "weight": 3,
       "canStack": true,
-      "value": 24,
+      "value": 2,
       "market": {
         "tradable": true,
         "category": "materials",
-        "suggestedPrice": 24,
+        "suggestedPrice": 2,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -26,13 +26,13 @@
       "maxStack": 99,
       "weight": 4,
       "canStack": true,
-      "value": 68,
+      "value": 5,
       "market": {
         "tradable": true,
         "category": "materials",
-        "suggestedPrice": 68,
+        "suggestedPrice": 5,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -43,13 +43,13 @@
       "maxStack": 99,
       "weight": 4,
       "canStack": true,
-      "value": 132,
+      "value": 10,
       "market": {
         "tradable": true,
         "category": "materials",
-        "suggestedPrice": 132,
+        "suggestedPrice": 10,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -60,13 +60,13 @@
       "maxStack": 99,
       "weight": 2,
       "canStack": true,
-      "value": 22,
+      "value": 2,
       "market": {
         "tradable": true,
         "category": "materials",
-        "suggestedPrice": 22,
+        "suggestedPrice": 2,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -77,13 +77,13 @@
       "maxStack": 99,
       "weight": 3,
       "canStack": true,
-      "value": 58,
+      "value": 5,
       "market": {
         "tradable": true,
         "category": "materials",
-        "suggestedPrice": 58,
+        "suggestedPrice": 5,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -94,13 +94,13 @@
       "maxStack": 99,
       "weight": 3,
       "canStack": true,
-      "value": 120,
+      "value": 12,
       "market": {
         "tradable": true,
         "category": "materials",
-        "suggestedPrice": 120,
+        "suggestedPrice": 12,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -111,13 +111,13 @@
       "maxStack": 99,
       "weight": 3,
       "canStack": true,
-      "value": 42,
+      "value": 5,
       "market": {
         "tradable": true,
         "category": "components",
-        "suggestedPrice": 42,
+        "suggestedPrice": 5,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -128,13 +128,13 @@
       "maxStack": 99,
       "weight": 4,
       "canStack": true,
-      "value": 120,
+      "value": 15,
       "market": {
         "tradable": true,
         "category": "components",
-        "suggestedPrice": 120,
+        "suggestedPrice": 15,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -145,13 +145,13 @@
       "maxStack": 99,
       "weight": 5,
       "canStack": true,
-      "value": 260,
+      "value": 30,
       "market": {
         "tradable": true,
         "category": "components",
-        "suggestedPrice": 260,
+        "suggestedPrice": 30,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -162,13 +162,13 @@
       "maxStack": 99,
       "weight": 1,
       "canStack": true,
-      "value": 36,
+      "value": 4,
       "market": {
         "tradable": true,
         "category": "components",
-        "suggestedPrice": 36,
+        "suggestedPrice": 4,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -179,13 +179,13 @@
       "maxStack": 99,
       "weight": 1,
       "canStack": true,
-      "value": 92,
+      "value": 10,
       "market": {
         "tradable": true,
         "category": "components",
-        "suggestedPrice": 92,
+        "suggestedPrice": 10,
         "minPrice": 1,
-        "maxPrice": 5000
+        "maxPrice": 500
       }
     },
     {
@@ -196,11 +196,147 @@
       "maxStack": 99,
       "weight": 1,
       "canStack": true,
-      "value": 188,
+      "value": 25,
       "market": {
         "tradable": true,
         "category": "components",
-        "suggestedPrice": 188,
+        "suggestedPrice": 25,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "glowcap_spore",
+      "name": "Glowcap Spore",
+      "description": "Luminous spores collected from damp grove mushrooms.",
+      "emoji": ":mushroom:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 3,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 3,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "cavern_salt",
+      "name": "Cavern Salt",
+      "description": "Mineral flakes used to preserve food for long shifts underground.",
+      "emoji": ":salt:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 2,
+      "market": {
+        "tradable": true,
+        "category": "materials",
+        "suggestedPrice": 2,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "lantern_oil",
+      "name": "Lantern Oil",
+      "description": "Refined fuel that keeps miners and foresters working after dusk.",
+      "emoji": ":oil_drum:",
+      "maxStack": 99,
+      "weight": 2,
+      "canStack": true,
+      "value": 15,
+      "market": {
+        "tradable": true,
+        "category": "consumables",
+        "suggestedPrice": 15,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "miner_field_ration",
+      "name": "Miner Field Ration",
+      "description": "Salt-cured travel meal packed for extended excavation routes.",
+      "emoji": ":bento:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 10,
+      "market": {
+        "tradable": true,
+        "category": "consumables",
+        "suggestedPrice": 10,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "warded_rope",
+      "name": "Warded Rope",
+      "description": "Braided rope treated with resin and runic salt for deep caverns.",
+      "emoji": ":knot:",
+      "maxStack": 99,
+      "weight": 2,
+      "canStack": true,
+      "value": 12,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 12,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "trail_map_fragment",
+      "name": "Trail Map Fragment",
+      "description": "A partial route sketch traded between caravan scouts.",
+      "emoji": ":scroll:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 8,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 8,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "guild_scrip",
+      "name": "Guild Scrip",
+      "description": "Internal trade notes used by quartermasters and expedition crews.",
+      "emoji": ":receipt:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 10,
+      "market": {
+        "tradable": true,
+        "category": "components",
+        "suggestedPrice": 10,
+        "minPrice": 1,
+        "maxPrice": 500
+      }
+    },
+    {
+      "id": "surveyor_charm",
+      "name": "Surveyor Charm",
+      "description": "A weighted brass charm used to map tunnels and mark safe routes.",
+      "emoji": ":compass:",
+      "maxStack": 99,
+      "weight": 1,
+      "canStack": true,
+      "value": 50,
+      "market": {
+        "tradable": true,
+        "category": "gear",
+        "suggestedPrice": 50,
         "minPrice": 1,
         "maxPrice": 5000
       }

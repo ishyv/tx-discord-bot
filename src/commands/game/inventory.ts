@@ -17,7 +17,8 @@ import {
   type CommandContext,
   Embed,
   ActionRow,
-  ComponentContext,
+  StringSelectMenu,
+  StringSelectOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
@@ -32,7 +33,6 @@ import {
   EconomyError,
   DEFAULT_INVENTORY_PAGINATION,
 } from "@/modules/economy";
-import { createSelectMenu, replyEphemeral } from "@/adapters/seyfert";
 import { getItemDefinition } from "@/modules/inventory/items";
 import { UIColors } from "@/modules/ui/design-system";
 
@@ -138,22 +138,76 @@ export default class InventoryCommand extends Command {
 
     const pageView = result.unwrap();
 
+    const buildInspectEmbed = (itemId: string) => {
+      const def = getItemDefinition(itemId);
+      if (!def) return null;
+
+      const embed = new Embed()
+        .setColor(UIColors.info)
+        .setTitle(`${def.emoji ?? "📦"} ${def.name}`)
+        .setDescription(def.description);
+
+      if (def.stats) {
+        const stats = [];
+        if (def.stats.atk) stats.push(`⚔️ ATK: ${def.stats.atk}`);
+        if (def.stats.def) stats.push(`🛡️ DEF: ${def.stats.def}`);
+        if (def.stats.hp) stats.push(`❤️ HP: ${def.stats.hp}`);
+
+        if (stats.length > 0) {
+          embed.addFields({ name: "Stats", value: stats.join("\n"), inline: true });
+        }
+      }
+
+      if (def.tool) {
+        embed.addFields({
+          name: "Tool",
+          value: `Kind: ${def.tool.toolKind}\nTier: ${def.tool.tier}\nMax Durability: ${def.tool.maxDurability}`,
+          inline: true,
+        });
+      }
+
+      embed.addFields({
+        name: "Info",
+        value: `Category: ${def.rpgSlot ? "Gear" : (def.tool ? "Tool" : "Item")}\nStackable: ${def.canStack !== false ? "Yes" : "No"}\nWeight: ${def.weight ?? 1}`,
+        inline: false,
+      });
+
+      return embed;
+    };
+
     // Helper to add components (inspect menu)
     const getComponents = (items: typeof pageView.items) => {
       if (items.length === 0) return [];
 
-      const selectOptions = items.slice(0, 25).map((item) => ({
-        label: item.name,
-        value: item.id,
-        description: item.description?.slice(0, 50) || "No description",
-        // Note: emoji parsing omitted for simplicity/compatibility
-      }));
+      const selectOptions = items.slice(0, 25).map((item) =>
+        new StringSelectOption()
+          .setLabel(item.name)
+          .setValue(item.id)
+          .setDescription(item.description?.slice(0, 50) || "No description"),
+      );
 
-      const menu = createSelectMenu({
-        customId: `inv_inspect_${userId}`,
-        placeholder: "🔍 Inspect an item...",
-        options: selectOptions,
-      });
+      const menu = new StringSelectMenu()
+        .setPlaceholder("🔍 Inspect an item...")
+        .setValuesLength({ min: 1, max: 1 })
+        .setOptions(selectOptions)
+        .onSelect("inventory_inspect_select", async (menuCtx) => {
+          const selectedValue = menuCtx.interaction.values?.[0];
+          if (!selectedValue) return;
+
+          const embed = buildInspectEmbed(selectedValue);
+          if (!embed) {
+            await menuCtx.write({
+              content: "Item definition not found.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          await menuCtx.write({
+            embeds: [embed],
+            flags: MessageFlags.Ephemeral,
+          });
+        });
 
       return [new ActionRow<typeof menu>().addComponents(menu)];
     };
@@ -229,63 +283,5 @@ export default class InventoryCommand extends Command {
         next: "Next ▶",
       },
     });
-  }
-}
-
-// Handler for inspect menu
-@Declare({
-  name: "inv_inspect",
-  description: "Inspect inventory item"
-})
-export class InventoryInspectHandler extends Command {
-  // @ts-ignore - Component context
-  async run(ctx: ComponentContext) {
-    // @ts-ignore
-    const selectedValue = ctx.values?.[0];
-
-    if (!selectedValue) return;
-
-    const def = getItemDefinition(selectedValue);
-    if (!def) {
-      // @ts-ignore
-      await replyEphemeral(ctx, { content: "Item definition not found." });
-      return;
-    }
-
-    const embed = new Embed()
-      .setColor(UIColors.info)
-      .setTitle(`${def.emoji ?? "📦"} ${def.name}`)
-      .setDescription(def.description);
-
-    // Add stats if available
-    if (def.stats) {
-      const stats = [];
-      if (def.stats.atk) stats.push(`⚔️ ATK: ${def.stats.atk}`);
-      if (def.stats.def) stats.push(`🛡️ DEF: ${def.stats.def}`);
-      if (def.stats.hp) stats.push(`❤️ HP: ${def.stats.hp}`);
-
-      if (stats.length > 0) {
-        embed.addFields({ name: "Stats", value: stats.join("\n"), inline: true });
-      }
-    }
-
-    // Add tool info
-    if (def.tool) {
-      embed.addFields({
-        name: "Tool",
-        value: `Kind: ${def.tool.toolKind}\nTier: ${def.tool.tier}\nMax Durability: ${def.tool.maxDurability}`,
-        inline: true
-      });
-    }
-
-    // Add other info
-    embed.addFields({
-      name: "Info",
-      value: `Category: ${def.rpgSlot ? "Gear" : (def.tool ? "Tool" : "Item")}\nStackable: ${def.canStack !== false ? "Yes" : "No"}\nWeight: ${def.weight ?? 1}`,
-      inline: false
-    });
-
-    // @ts-ignore
-    await replyEphemeral(ctx, { embeds: [embed] });
   }
 }

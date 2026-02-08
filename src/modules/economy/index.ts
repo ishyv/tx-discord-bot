@@ -64,6 +64,7 @@ export {
   dailyClaimRepo,
   computeDailyStreakBonus,
   buildDailyClaimAuditMetadata,
+  dailyService,
 } from "./daily";
 
 // -------------------------------------------------------------------------

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "itemId": "pyrite_ore",
+      "name": "Pyrite Ore",
+      "buyPrice": 2,
+      "sellPrice": 1,
+      "stock": -1,
+      "available": true
+    },
+    {
+      "itemId": "miner_field_ration",
+      "name": "Miner Field Ration",
+      "buyPrice": 10,
+      "sellPrice": 8,
+      "stock": -1,
+      "available": true
+    },
+    {
+      "itemId": "lantern_oil",
+      "name": "Lantern Oil",
+      "buyPrice": 15,
+      "sellPrice": 12,
+      "stock": -1,
+      "available": true
+    }
+  ]
+}

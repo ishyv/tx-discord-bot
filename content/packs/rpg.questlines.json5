@@ -33,5 +33,20 @@
       description: "Combat-focused chain for duel specialists.",
       questIds: ["arena_victor", "arena_champion"],
     },
+    {
+      id: "guild_logistics_path",
+      title: "Guild Logistics Path",
+      description: "Quartermaster and convoy progression across supplies, staging, and high-tier manifests.",
+      questIds: [
+        "guild_supply_lantern_oil",
+        "guild_supply_field_rations",
+        "guild_supply_cavern_salt",
+        "guild_expedition_staging",
+        "guild_logistics_scrip_circuit",
+        "frontier_waystation_stockpile",
+        "sunstone_convoy_manifest",
+        "grand_cartographer_commission",
+      ],
+    },
   ],
 }

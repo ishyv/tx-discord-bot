@@ -42,6 +42,37 @@ export const suite: Suite = {
     name: "hybrid work payout",
     tests: [
         {
+            name: "successful claim enforces minimum payout of 1",
+            ops: [ops.create, ops.update, ops.read],
+            run: async ({ factory, cleanup }) => {
+                const guildId = factory.guildId();
+                const userId = factory.userId();
+                cleanupGuild(cleanup, guildId);
+                cleanupUser(cleanup, userId);
+
+                await GuildsRepo.ensureGuild(guildId);
+                await UsersRepo.ensureUser(userId);
+                assertOk(await economyAccountRepo.ensure(userId));
+                assertOk(await guildEconomyRepo.ensure(guildId));
+
+                await guildEconomyRepo.updateWorkConfig(guildId, {
+                    workBaseMintReward: 0,
+                    workBonusFromWorksMax: 0,
+                    workFailureChance: 0,
+                });
+
+                const res = await workService.processHybridWorkPayout(guildId, userId);
+                assertOk(res);
+                const payout = res.unwrap();
+
+                assertEqual(payout.granted, true, "work should be granted");
+                assertEqual(payout.failed, undefined, "work should not fail");
+                assertEqual(payout.totalPaid, 1, "successful payout should never be 0");
+                assertEqual(payout.baseMint, 1, "minimum payout should be minted");
+                assertEqual(payout.bonusFromWorks, 0, "bonus remains zero");
+            },
+        },
+        {
             name: "grants baseMint even if treasury is empty",
             ops: [ops.create, ops.update, ops.read],
             run: async ({ factory, cleanup }) => {

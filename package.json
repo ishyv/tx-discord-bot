@@ -21,6 +21,7 @@
     "content:cli": "python tools/rpg_content_cli.py",
     "quests:validate": "bun src/modules/rpg/quests/validate.ts",
     "quest-builder": "bun run --cwd apps/quest-builder dev",
+    "economy:reset": "bun scripts/reset-economy.ts",
     "clean": "rimraf dist commands.json"
   },
   "author": "Comunidad PyE",

@@ -6,7 +6,6 @@
 import {
   Command,
   Declare,
-  SubCommand,
   type GuildCommandContext,
   createStringOption,
   Embed,
@@ -16,6 +15,7 @@ import { ButtonStyle } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
+import { Button } from "@/modules/ui";
 import {
   equipmentService,
   getSlotDisplayName,
@@ -27,11 +27,11 @@ import {
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
 import { RARITY_CONFIG } from "@/modules/economy/equipment/types";
-import {
-  createButton,
-  replyEphemeral,
-  getContextInfo,
-} from "@/adapters/seyfert";
+import { replyEphemeral, getContextInfo } from "@/adapters/seyfert";
+
+type WritableContext = {
+  write: (message: any) => Promise<any>;
+};
 
 /** Helper to get rarity emoji for an item based on its level. */
 function getRarityEmoji(level: number | undefined): string {
@@ -40,12 +40,6 @@ function getRarityEmoji(level: number | undefined): string {
   if (level <= 7) return RARITY_CONFIG.rare.emoji;
   return RARITY_CONFIG.holy.emoji;
 }
-
-// Pending confirmations
-const pendingUnequips = new Map<
-  string,
-  { guildId: string; slot: EquipmentSlot }
->();
 
 const slotOption = {
   slot: createStringOption({
@@ -97,26 +91,22 @@ export default class TrinketsUnequipCommand extends Command {
     const directSlot = ctx.options.slot as EquipmentSlot | undefined;
 
     if (directSlot) {
-      // Direct unequip with confirmation
       await promptUnequip(ctx, guildId, userId, directSlot);
     } else {
-      // Show slots with equipped items
       await showEquippedSlots(ctx, guildId, userId);
     }
   }
 }
 
-// Extracted helper functions
-
 async function showEquippedSlots(
-  ctx: GuildCommandContext,
+  ctx: WritableContext,
   guildId: string,
   userId: string,
 ) {
   const loadoutResult = await equipmentService.getLoadout(guildId, userId);
 
   if (loadoutResult.isErr()) {
-    await replyEphemeral(ctx, { content: "Could not load your equipment." });
+    await ctx.write({ content: "Could not load your equipment.", flags: 64 });
     return;
   }
 
@@ -124,16 +114,15 @@ async function showEquippedSlots(
   const equippedSlots = EQUIPMENT_SLOTS.filter((slot) => loadout.slots[slot]);
 
   if (equippedSlots.length === 0) {
-    await replyEphemeral(ctx, { content: "You have no equipped items." });
+    await ctx.write({ content: "You have no equipped items.", flags: 64 });
     return;
   }
 
   const embed = new Embed()
     .setColor(EmbedColors.Orange)
     .setTitle("🔧 Select a slot to unequip")
-    .setDescription("Click the button for the slot you'd like to clear.");
+    .setDescription("Choose the slot you'd like to clear.");
 
-  // Show current equipment with rarity
   for (const slot of equippedSlots) {
     const equipped = loadout.slots[slot]!;
     const def = getEquipableItemDefinition(equipped.itemId);
@@ -145,35 +134,37 @@ async function showEquippedSlots(
     });
   }
 
-  // Create buttons for equipped slots (max 5 per row)
-  const rows: ActionRow<ReturnType<typeof createButton>>[] = [];
-  let currentRow = new ActionRow<ReturnType<typeof createButton>>();
+  const rows: ActionRow<Button>[] = [];
+  let currentRow = new ActionRow<Button>();
 
-  for (let i = 0; i < equippedSlots.length; i++) {
-    const slot = equippedSlots[i];
-    const btn = createButton({
-      customId: `trinket_unequip_slot_${userId}_${slot}`,
-      label: getSlotDisplayName(slot),
-      style: ButtonStyle.Primary,
-    });
+  for (const slot of equippedSlots) {
+    const button = new Button()
+      .setLabel(getSlotDisplayName(slot))
+      .setStyle(ButtonStyle.Primary)
+      .onClick("trinket_unequip_slot", async (buttonCtx) => {
+        await promptUnequip(buttonCtx as any, guildId, userId, slot);
+      });
 
-    currentRow.addComponents(btn);
-
-    if (currentRow.components.length >= 5 || i === equippedSlots.length - 1) {
+    currentRow.addComponents(button);
+    if (currentRow.components.length === 5) {
       rows.push(currentRow);
-      currentRow = new ActionRow<ReturnType<typeof createButton>>();
+      currentRow = new ActionRow<Button>();
     }
+  }
+
+  if (currentRow.components.length > 0) {
+    rows.push(currentRow);
   }
 
   await ctx.write({
     embeds: [embed],
     components: rows,
-    flags: 64, // Ephemeral
+    flags: 64,
   });
 }
 
 async function promptUnequip(
-  ctx: GuildCommandContext,
+  ctx: WritableContext,
   guildId: string,
   userId: string,
   slot: EquipmentSlot,
@@ -181,7 +172,7 @@ async function promptUnequip(
   const loadoutResult = await equipmentService.getLoadout(guildId, userId);
 
   if (loadoutResult.isErr()) {
-    await replyEphemeral(ctx, { content: "Could not load your equipment." });
+    await ctx.write({ content: "Could not load your equipment.", flags: 64 });
     return;
   }
 
@@ -189,17 +180,15 @@ async function promptUnequip(
   const equipped = loadout.slots[slot];
 
   if (!equipped) {
-    await replyEphemeral(ctx, {
+    await ctx.write({
       content: `Nothing is equipped in ${getSlotDisplayName(slot)}.`,
+      flags: 64,
     });
     return;
   }
 
   const def = getEquipableItemDefinition(equipped.itemId);
   const rarityEmoji = getRarityEmoji(def?.requiredLevel);
-
-  // Store pending
-  pendingUnequips.set(userId, { guildId, slot });
 
   const embed = new Embed()
     .setColor(EmbedColors.Yellow)
@@ -209,81 +198,18 @@ async function promptUnequip(
         "The item will return to your inventory.",
     );
 
-  const confirmBtn = createButton({
-    customId: `trinket_unequip_confirm_${userId}`,
-    label: "✅ Unequip",
-    style: ButtonStyle.Success,
-  });
-
-  const cancelBtn = createButton({
-    customId: `trinket_unequip_cancel_${userId}`,
-    label: "❌ Cancel",
-    style: ButtonStyle.Secondary,
-  });
-
-  const row = new ActionRow<typeof confirmBtn>().addComponents(
-    confirmBtn,
-    cancelBtn,
-  );
-
-  await ctx.write({
-    embeds: [embed],
-    components: [row],
-    flags: 64, // Ephemeral
-  });
-}
-
-// Component handlers
-@Declare({
-  name: "trinket_unequip_slot",
-  description: "Handle slot button for unequip",
-})
-export class UnequipSlotHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId, guildId } = getContextInfo(ctx);
-
-    if (!guildId) return;
-
-    // Parse slot from custom_id
-    // @ts-ignore - custom_id access
-    const customId = ctx.customId as string | undefined;
-    if (!customId) return;
-
-    const slot = customId.split("_").pop() as EquipmentSlot | undefined;
-    if (!slot) return;
-
-    await promptUnequip(ctx, guildId, userId, slot);
-  }
-}
-
-@Declare({
-  name: "trinket_unequip_confirm",
-  description: "Confirm unequip button",
-})
-export class UnequipConfirmHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId, guildId } = getContextInfo(ctx);
-
-    if (!guildId) return;
-
-    const pending = pendingUnequips.get(userId);
-    if (!pending || pending.guildId !== guildId) {
-      await replyEphemeral(ctx, {
-        content: "❌ You have no pending unequip request or it has expired.",
+  const confirmBtn = new Button()
+    .setLabel("✅ Unequip")
+    .setStyle(ButtonStyle.Success)
+    .onClick("trinket_unequip_confirm", async (buttonCtx) => {
+      const result = await equipmentService.unequipSlot({
+        guildId,
+        userId,
+        slot,
       });
-      return;
-    }
 
-    pendingUnequips.delete(userId);
-
-    const result = await equipmentService.unequipSlot({
-      guildId,
-      userId,
-      slot: pending.slot,
-    });
-
-    if (result.isErr()) {
-      const error = result.error;
+      if (result.isErr()) {
+        const error = result.error;
         const messages: Record<string, string> = {
           SLOT_EMPTY: "❌ There's nothing equipped in that slot.",
           ACCOUNT_BLOCKED: "⛔ Your account has restrictions.",
@@ -291,30 +217,41 @@ export class UnequipConfirmHandler extends SubCommand {
           RATE_LIMITED: "⏱️ Too many changes. Please wait a moment.",
         };
 
-      await replyEphemeral(ctx, {
-        content: messages[error.code] ?? "❌ Error unequipping the item.",
+        await buttonCtx.write({
+          content: messages[error.code] ?? "❌ Error unequipping the item.",
+          flags: 64,
+        });
+        return;
+      }
+
+      const operation = result.unwrap();
+      const itemDef = getEquipableItemDefinition(operation.itemId);
+
+      await buttonCtx.write({
+        content: `✅ Unequipped ${itemDef?.name ?? operation.itemId} from ${getSlotDisplayName(operation.slot)}. The item has returned to your inventory.`,
+        flags: 64,
       });
-      return;
-    }
+    });
 
-    const operation = result.unwrap();
-    const def = getEquipableItemDefinition(operation.itemId);
+  const cancelBtn = new Button()
+    .setLabel("❌ Cancel")
+    .setStyle(ButtonStyle.Secondary)
+    .onClick("trinket_unequip_cancel", async (buttonCtx) => {
+      await buttonCtx.write({ content: "❌ Unequip canceled.", flags: 64 });
+    });
 
-      await replyEphemeral(ctx, {
-        content: `✅ Unequipped ${def?.name ?? operation.itemId} from ${getSlotDisplayName(operation.slot)}. The item has returned to your inventory.`,
-      });
-  }
-}
+  const backBtn = new Button()
+    .setLabel("← Back")
+    .setStyle(ButtonStyle.Secondary)
+    .onClick("trinket_unequip_back", async (buttonCtx) => {
+      await showEquippedSlots(buttonCtx as any, guildId, userId);
+    });
 
-@Declare({
-  name: "trinket_unequip_cancel",
-  description: "Cancel unequip button",
-})
-export class UnequipCancelHandler extends SubCommand {
-  async run(ctx: GuildCommandContext) {
-    const { userId } = getContextInfo(ctx);
-    pendingUnequips.delete(userId);
+  const row = new ActionRow<Button>().addComponents(confirmBtn, cancelBtn, backBtn);
 
-    await replyEphemeral(ctx, { content: "❌ Unequip canceled." });
-  }
+  await ctx.write({
+    embeds: [embed],
+    components: [row],
+    flags: 64,
+  });
 }

@@ -44,19 +44,19 @@ export const DEFAULT_TAX_CONFIG: TaxConfig = {
 
 /** Transfer thresholds for large transfer alerts. */
 export interface TransferThresholds {
-  /** Warning threshold (default: 100,000) */
+  /** Warning threshold (default: 1,000) */
   readonly warning: number;
-  /** Alert threshold (default: 1,000,000) */
+  /** Alert threshold (default: 10,000) */
   readonly alert: number;
-  /** Critical threshold (default: 10,000,000) */
+  /** Critical threshold (default: 100,000) */
   readonly critical: number;
 }
 
 /** Default transfer thresholds. */
 export const DEFAULT_TRANSFER_THRESHOLDS: TransferThresholds = {
-  warning: 100_000,
-  alert: 1_000_000,
-  critical: 10_000_000,
+  warning: 1_000,
+  alert: 10_000,
+  critical: 100_000,
 };
 
 /** Alert level for transfers. */
@@ -78,7 +78,7 @@ export interface TaxResult {
 
 /** Daily claim configuration (guild-scoped). */
 export interface DailyConfig {
-  /** Amount of primary currency granted per claim (default 250). */
+  /** Amount of primary currency granted per claim (default 50). */
   readonly dailyReward: number;
   /** Cooldown in hours between claims (default 24). */
   readonly dailyCooldownHours: number;
@@ -92,26 +92,35 @@ export interface DailyConfig {
   readonly dailyStreakBonus: number;
   /** Max streak days counted for bonus (default 10). */
   readonly dailyStreakCap: number;
+  /** Scale mode for reward calculation ("flat" | "percent", default "flat"). */
+  readonly rewardScaleMode: "flat" | "percent";
+  /** Base amount minted regardless of guild funds (integer, default 10). */
+  readonly rewardBaseMint: number;
+  /** Max additional bonus from guild treasury (integer, default 40). */
+  readonly rewardBonusMax: number;
 }
 
 /** Default daily config. */
 export const DEFAULT_DAILY_CONFIG: DailyConfig = {
-  dailyReward: 250,
+  dailyReward: 50,
   dailyCooldownHours: 24,
   dailyCurrencyId: "coins",
   dailyFeeRate: 0.0,
   dailyFeeSector: "tax",
   dailyStreakBonus: 5,
   dailyStreakCap: 10,
+  rewardScaleMode: "flat",
+  rewardBaseMint: 10,
+  rewardBonusMax: 40,
 };
 
 /** Work claim configuration (guild-scoped). */
 export interface WorkConfig {
   /** Base amount granted per work claim (historic/deprecated if using hybrid). */
   readonly workRewardBase: number;
-  /** Base amount minted per work claim (integer, default 100). */
+  /** Base amount minted per work claim (integer, default 10). */
   readonly workBaseMintReward: number;
-  /** Max additional bonus from guild works sector (integer, default 100). */
+  /** Max additional bonus from guild works sector (integer, default 20). */
   readonly workBonusFromWorksMax: number;
   /** Scale mode for bonus calculation ("flat" | "percent", default "flat"). */
   readonly workBonusScaleMode: "flat" | "percent";
@@ -129,12 +138,12 @@ export interface WorkConfig {
 
 /** Default work config. */
 export const DEFAULT_WORK_CONFIG: WorkConfig = {
-  workRewardBase: 120,
-  workBaseMintReward: 100,
-  workBonusFromWorksMax: 100,
+  workRewardBase: 10,
+  workBaseMintReward: 10,
+  workBonusFromWorksMax: 20,
   workBonusScaleMode: "flat",
   workCooldownMinutes: 30,
-  workDailyCap: 5,
+  workDailyCap: 8,
   workCurrencyId: DEFAULT_DAILY_CONFIG.dailyCurrencyId,
   workPaysFromSector: "works",
   workFailureChance: 0.1,
