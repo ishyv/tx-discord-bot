@@ -87,9 +87,23 @@ export type ItemUseFunction = (ctx: {
   userId: string;
 }) => Promise<void>;
 
+export type ItemUsePersistenceHook = (ctx: {
+  item: InventoryItem;
+  userId: string;
+  usedAt: Date;
+}) => Promise<void> | void;
+
 export type ItemDefinitionWithUse = ItemDefinition & {
   onUse?: ItemUseFunction;
 };
+
+let itemUsePersistenceHook: ItemUsePersistenceHook | null = null;
+
+export function registerItemUsePersistenceHook(
+  hook: ItemUsePersistenceHook | null,
+): void {
+  itemUsePersistenceHook = hook;
+}
 
 export const DEFAULT_MAX_STACK = 99;
 export const DEFAULT_ITEM_WEIGHT = 1;
@@ -113,8 +127,11 @@ export const ITEM_DEFINITIONS: Record<ItemId, ItemDefinitionWithUse> = {
     weight: 1,
     canStack: true,
     onUse: async ({ item, userId }) => {
-      console.log(`[inventory] User ${userId} used item ${item.id}`);
-      // TODO: add real item behavior/persistence hook here.
+      const hook = itemUsePersistenceHook;
+      if (!hook) {
+        return;
+      }
+      await hook({ item, userId, usedAt: new Date() });
     },
   },
   sword: {

@@ -32,11 +32,13 @@
  *   - The OCR service can become permanently "unavailable" if initialization fails
  */
 import type { Message, UsingClient } from "seyfert";
+import { ActionRow, Button } from "seyfert";
+import { ButtonStyle } from "seyfert/lib/types";
 import { scamFilterList, spamFilterList } from "@/constants/automod";
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import type { CoreChannelRecord } from "@/db/schemas/guild";
 import { getGuildChannels } from "@/modules/guild-channels";
-import { recognizeText } from "@/services/ocr";
+import { recognizeText } from "@/services/ocr/paddle";
 import { Cache } from "@/utils/cache";
 import {
   fetchStoredChannel,
@@ -735,10 +737,34 @@ export class AutoModSystem {
       );
       return;
     }
-    // TODO: buttons to delete message directly and jump to message
+    const deleteButton = new Button()
+      .setLabel("Delete Message")
+      .setStyle(ButtonStyle.Danger)
+      .onClick(`automod_delete_msg:${message.id}`, async (ctx) => {
+        try {
+          await message.delete();
+          await ctx.write({
+            content: "Message deleted.",
+            flags: 64,
+          });
+        } catch (error) {
+          await ctx.write({
+            content: "Couldn't delete the message (already removed or missing permissions).",
+            flags: 64,
+          });
+          console.error("AutoModSystem: Error deleting flagged message:", error);
+        }
+      });
+    const jumpButton = new Button()
+      .setLabel("Jump to Message")
+      .setStyle(ButtonStyle.Link)
+      .setURL(message.url ?? "https://discord.com");
+    const row = new ActionRow<Button>().addComponents(deleteButton, jumpButton);
+
     await this.client.messages
       .write(fetched.channelId, {
         content: `**Warning:** ${warning}. ${message.url ?? ""}`,
+        components: [row],
       })
       .catch(async (err: Error) => {
         if (isUnknownChannelError(err)) {

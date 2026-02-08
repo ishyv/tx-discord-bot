@@ -31,28 +31,7 @@ function generateCorrelationId(action: string): string {
   return `mod_${action}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
-/** Service interface for economy moderation. */
-export interface EconomyModerationService {
-  /** Freeze a user's economy account. */
-  freeze(input: FreezeAccountInput): Promise<Result<FreezeOperationResult, Error>>;
-
-  /** Unfreeze a user's economy account. */
-  unfreeze(input: UnfreezeAccountInput): Promise<Result<FreezeOperationResult, Error>>;
-
-  /** Check if user is frozen. */
-  isFrozen(userId: UserId): Promise<Result<{ frozen: boolean; expiresAt: Date | null; reason: string | null }, Error>>;
-
-  /** Peek at user data for moderation review. */
-  peek(userId: UserId): Promise<Result<EconomyPeekResult, Error>>;
-
-  /** Query audit logs with moderation filters. */
-  queryAudit(query: ModerationAuditQuery): Promise<Result<import("../audit/types").AuditQueryResult, Error>>;
-
-  /** Validate freeze hours. */
-  validateFreezeHours(hours: number | null): { valid: boolean; error?: string };
-}
-
-class EconomyModerationServiceImpl implements EconomyModerationService {
+export class EconomyModerationService {
   async freeze(input: FreezeAccountInput): Promise<Result<FreezeOperationResult, Error>> {
     try {
       // Validate hours
@@ -326,4 +305,4 @@ class EconomyModerationServiceImpl implements EconomyModerationService {
 }
 
 /** Singleton instance. */
-export const economyModerationService: EconomyModerationService = new EconomyModerationServiceImpl();
+export const economyModerationService = new EconomyModerationService();

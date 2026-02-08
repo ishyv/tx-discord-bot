@@ -40,6 +40,7 @@ import {
   EconomyError,
 } from "./types";
 import type { EconomyAccountRepo } from "./repository";
+import { economyAccountRepo } from "./repository";
 import {
   buildBalanceView,
   buildBankBreakdown,
@@ -137,7 +138,7 @@ export interface EconomyAccountService {
   repairAccount(userId: UserId): Promise<Result<AccountRepairResult, Error>>;
 }
 
-class EconomyAccountServiceImpl implements EconomyAccountService {
+export class EconomyAccountService {
   constructor(private repo: EconomyAccountRepo) { }
 
   async ensureAccount(
@@ -377,9 +378,10 @@ class EconomyAccountServiceImpl implements EconomyAccountService {
   }
 }
 
-// Factory function for creating service instances
-export function createEconomyAccountService(
-  repo: EconomyAccountRepo,
-): EconomyAccountService {
-  return new EconomyAccountServiceImpl(repo);
+/** Singleton instance wired with the default repository. */
+export const economyAccountService = new EconomyAccountService(economyAccountRepo);
+
+// Deprecated: use economyAccountService singleton directly
+export function createEconomyAccountService(repo: EconomyAccountRepo): EconomyAccountService {
+  return new EconomyAccountService(repo);
 }

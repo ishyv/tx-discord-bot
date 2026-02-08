@@ -51,105 +51,7 @@ export function calculateTax(amount: number, config: TaxConfig): TaxResult {
   };
 }
 
-export interface GuildEconomyService {
-  /**
-   * Get or create guild economy config.
-   */
-  getConfig(guildId: GuildId): Promise<Result<GuildEconomyConfig, Error>>;
-
-  /**
-   * Apply tax to an amount and optionally deposit to guild.
-   * Returns the net amount after tax.
-   */
-  applyTax(
-    guildId: GuildId,
-    operationType: TaxableOperationType,
-    amount: number,
-    options?: {
-      depositToGuild?: boolean;
-      source?: string;
-    },
-  ): Promise<Result<TaxResult, Error>>;
-
-  /**
-   * Check if a transfer triggers a large transfer alert.
-   */
-  checkLargeTransfer(
-    guildId: GuildId,
-    amount: number,
-    currencyId: CurrencyId,
-    senderId: string,
-    recipientId: string,
-  ): Promise<Result<LargeTransferAlert | null, Error>>;
-
-  /**
-   * Deposit funds to a guild sector.
-   */
-  depositToSector(
-    input: DepositToSectorInput,
-  ): Promise<Result<SectorBalanceResult, Error>>;
-
-  /**
-   * Withdraw funds from a guild sector.
-   */
-  withdrawFromSector(
-    input: WithdrawFromSectorInput,
-  ): Promise<Result<SectorBalanceResult, Error>>;
-
-  /**
-   * Get balance for a specific sector.
-   */
-  getSectorBalance(
-    guildId: GuildId,
-    sector: EconomySector,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Get all sector balances.
-   */
-  getAllSectorBalances(
-    guildId: GuildId,
-  ): Promise<Result<Record<EconomySector, number>, Error>>;
-
-  /**
-   * Update tax configuration (admin only).
-   */
-  updateTaxConfig(
-    guildId: GuildId,
-    config: Partial<TaxConfig>,
-  ): Promise<Result<GuildEconomyConfig, Error>>;
-
-  /**
-   * Update transfer thresholds (admin only).
-   */
-  updateThresholds(
-    guildId: GuildId,
-    thresholds: Partial<TransferThresholds>,
-  ): Promise<Result<GuildEconomyConfig, Error>>;
-
-  /**
-   * Update progression configuration (admin only).
-   */
-  updateProgressionConfig(
-    guildId: GuildId,
-    config: ProgressionConfigUpdate,
-  ): Promise<Result<GuildEconomyConfig, Error>>;
-
-  /**
-   * Transfer funds between sectors within a guild.
-   */
-  transferBetweenSectors(
-    guildId: GuildId,
-    from: EconomySector,
-    to: EconomySector,
-    amount: number,
-    reason?: string,
-  ): Promise<
-    Result<{ from: SectorBalanceResult; to: SectorBalanceResult }, Error>
-  >;
-}
-
-class GuildEconomyServiceImpl implements GuildEconomyService {
+export class GuildEconomyService {
   async getConfig(
     guildId: GuildId,
   ): Promise<Result<GuildEconomyConfig, Error>> {
@@ -412,5 +314,4 @@ class GuildEconomyServiceImpl implements GuildEconomyService {
 }
 
 /** Singleton instance. */
-export const guildEconomyService: GuildEconomyService =
-  new GuildEconomyServiceImpl();
+export const guildEconomyService = new GuildEconomyService();

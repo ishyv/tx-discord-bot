@@ -18,30 +18,6 @@ import type {
 } from "./types";
 import type { GuildId } from "@/db/types";
 
-/** Service interface for launch operations. */
-export interface LaunchOpsService {
-  /** Initialize the launch ops system (call at bot startup). */
-  initialize(): Promise<InitializationResult>;
-
-  /** Get ops config for a guild. */
-  getConfig(guildId: GuildId): Promise<Result<GuildOpsConfig, Error>>;
-
-  /** Update ops config for a guild. */
-  updateConfig(guildId: GuildId, input: UpdateOpsConfigInput): Promise<Result<GuildOpsConfig, Error>>;
-
-  /** Get current health status. */
-  getHealth(): Promise<OpsHealthStatus>;
-
-  /** Get kill switch status. */
-  getKillSwitches(): Promise<KillSwitch[]>;
-
-  /** Run manual startup assertions. */
-  runAssertions(): Promise<{ passed: AssertionResult[]; failed: AssertionResult[] }>;
-
-  /** Manually trigger a scheduled report. */
-  triggerReport(guildId: GuildId): Promise<Result<string, Error>>;
-}
-
 /** Result of initialization. */
 export interface InitializationResult {
   readonly success: boolean;
@@ -54,7 +30,7 @@ export interface InitializationResult {
   readonly error?: string;
 }
 
-class LaunchOpsServiceImpl implements LaunchOpsService {
+class LaunchOpsServiceImpl {
 
   async initialize(): Promise<InitializationResult> {
     console.log("[LaunchOps] Initializing launch operations...");
@@ -149,4 +125,4 @@ class LaunchOpsServiceImpl implements LaunchOpsService {
 }
 
 /** Singleton instance. */
-export const launchOps: LaunchOpsService = new LaunchOpsServiceImpl();
+export const launchOps = new LaunchOpsServiceImpl();

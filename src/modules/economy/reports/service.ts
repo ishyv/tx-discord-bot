@@ -44,35 +44,18 @@ const MAX_REPORT_DAYS = 30;
 /** Default report window in days. */
 const DEFAULT_REPORT_DAYS = 7;
 
-/** Interface for the report service. */
-export interface EconomyReportService {
-  /**
-   * Generate a comprehensive economy report for a guild.
-   */
-  generateReport(
-    input: GenerateReportInput,
-  ): Promise<Result<EconomyReportWithRecommendations, Error>>;
-
-  /**
-   * Get quick stats without full report generation.
-   */
-  getQuickStats(
-    guildId: string,
-    days?: number,
-  ): Promise<Result<QuickStats, Error>>;
-}
-
 /** Quick stats for dashboard display. */
-export interface QuickStats {
+export type QuickStats = {
   readonly days: number;
   readonly totalMinted: number;
   readonly totalSunk: number;
   readonly netInflation: number;
   readonly transactionCount: number;
   readonly uniqueUsers: number;
-}
+};
 
-class EconomyReportServiceImpl implements EconomyReportService {
+/** Service for generating economy reports. */
+export class EconomyReportService {
   async generateReport(
     input: GenerateReportInput,
   ): Promise<Result<EconomyReportWithRecommendations, Error>> {
@@ -567,4 +550,4 @@ class EconomyReportServiceImpl implements EconomyReportService {
 }
 
 /** Singleton instance. */
-export const economyReportService: EconomyReportService = new EconomyReportServiceImpl();
+export const economyReportService = new EconomyReportService();

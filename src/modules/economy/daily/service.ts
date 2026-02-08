@@ -37,11 +37,7 @@ export interface DailyPayoutResult {
     readonly newLevel: number;
 }
 
-export interface DailyService {
-    processDynamicDailyPayout(guildId: GuildId, userId: UserId): Promise<Result<DailyPayoutResult, Error>>;
-}
-
-class DailyServiceImpl implements DailyService {
+export class DailyService {
     async processDynamicDailyPayout(guildId: GuildId, userId: UserId): Promise<Result<DailyPayoutResult, Error>> {
         const configResult = await guildEconomyService.getConfig(guildId);
         if (configResult.isErr()) return ErrResult(configResult.error);
@@ -282,4 +278,4 @@ class DailyServiceImpl implements DailyService {
     }
 }
 
-export const dailyService: DailyService = new DailyServiceImpl();
+export const dailyService = new DailyService();

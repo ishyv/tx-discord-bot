@@ -14,7 +14,7 @@ import {
   StringSelectMenu,
   StringSelectOption,
 } from "seyfert";
-import { ButtonStyle } from "seyfert/lib/types";
+import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
@@ -30,7 +30,6 @@ import {
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
 import { RARITY_CONFIG } from "@/modules/economy/equipment/types";
-import { replyEphemeral, getContextInfo } from "@/adapters/seyfert";
 
 type WritableContext = {
   write: (message: any) => Promise<any>;
@@ -85,11 +84,13 @@ const slotOption = {
 })
 export default class TrinketsCommand extends Command {
   async run(ctx: GuildCommandContext<typeof slotOption>) {
-    const { guildId, userId } = getContextInfo(ctx);
+    const { guildId } = ctx;
+    const userId = ctx.author.id;
 
     if (!guildId) {
-      await replyEphemeral(ctx, {
+      await ctx.editOrReply({
         content: "This command can only be used in a server.",
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -97,13 +98,13 @@ export default class TrinketsCommand extends Command {
     const accountService = createEconomyAccountService(economyAccountRepo);
     const ensureResult = await accountService.ensureAccount(userId);
     if (ensureResult.isErr()) {
-      await replyEphemeral(ctx, { content: "Could not load your account." });
+      await ctx.editOrReply({ content: "Could not load your account.", flags: MessageFlags.Ephemeral });
       return;
     }
 
     const { account } = ensureResult.unwrap();
     if (account.status !== "ok") {
-      await replyEphemeral(ctx, { content: "Your account has restrictions." });
+      await ctx.editOrReply({ content: "Your account has restrictions.", flags: MessageFlags.Ephemeral });
       return;
     }
 

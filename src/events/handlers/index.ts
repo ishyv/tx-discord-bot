@@ -1,34 +1,7 @@
 /**
- * Motivación: cargar automáticamente todos los eventos base del bot sin hacerlo archivo por archivo.
- *
- * Idea/concepto: recorre el directorio y requiere dinámicamente cada módulo que exporta createEvent.
- *
- * Alcance: solo registra eventos; no contiene la lógica de los listeners.
- */
-import { readdirSync, statSync } from "node:fs";
-import { basename, extname, join } from "node:path";
-
-/**
  * Auto-import all Seyfert event modules located in this directory.
  * Each file is expected to default-export the result of `createEvent(...)`.
  */
-const eventsDirectory = __dirname;
+import { autoRequireDirectory } from "../autoRequireDirectory";
 
-for (const entry of readdirSync(eventsDirectory)) {
-  const fullPath = join(eventsDirectory, entry);
-  if (statSync(fullPath).isDirectory()) continue;
-
-  const extension = extname(entry);
-  if (!extension || (extension !== ".ts" && extension !== ".js")) continue;
-
-  const fileName = basename(entry);
-  if (fileName.startsWith("index.")) continue;
-  if (fileName.endsWith(".d.ts")) continue;
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires -- dynamic event registration
-    require(fullPath);
-  } catch (error) {
-    console.error(`[events] Failed to load handler ${fileName}:`, error);
-  }
-}
+autoRequireDirectory(__dirname, "events");

@@ -171,6 +171,14 @@ export interface AchievementRepository {
     slot: 1 | 2 | 3,
     badgeId: string | null,
   ): Promise<Result<boolean, AchievementError>>;
+
+  /** Get achievements for audit evaluation. */
+  getAchievementsForAudit(
+    userId: UserId,
+    guildId: GuildId,
+    operationType: string,
+    metadata: Record<string, unknown>,
+  ): Promise<string[]>;
 }
 
 class AchievementRepositoryImpl implements AchievementRepository {
@@ -849,6 +857,27 @@ class AchievementRepositoryImpl implements AchievementRepository {
       return ErrResult(
         new AchievementErrorClass("UPDATE_FAILED", "Failed to set badge slot."),
       );
+    }
+  }
+
+  async getAchievementsForAudit(
+    userId: UserId,
+    guildId: GuildId,
+    _operationType: string,
+    _metadata: Record<string, unknown>,
+  ): Promise<string[]> {
+    try {
+      const db = await getDb();
+      const collection = db.collection(COLLECTIONS.unlocked);
+
+      const docs = await collection
+        .find({ userId, guildId } as any)
+        .toArray();
+
+      return docs.map((doc) => doc.achievementId as string);
+    } catch (error) {
+      console.error("[AchievementRepository] getAchievementsForAudit error:", error);
+      return [];
     }
   }
 }

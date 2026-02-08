@@ -37,11 +37,27 @@ export interface WorkPayoutResult {
     readonly failed?: boolean;
 }
 
-export interface WorkService {
-    processHybridWorkPayout(guildId: GuildId, userId: UserId): Promise<Result<WorkPayoutResult, Error>>;
-}
-
-class WorkServiceImpl implements WorkService {
+export class WorkService {
+    /**
+     * Processes one work claim end-to-end inside a Mongo transaction.
+     *
+     * High-level flow:
+     * 1) Load guild work config and compute payout inputs (perk/equipment bonus, RNG, failure roll).
+     * 2) Enforce daily cap + cooldown via `economy_work_claims` upsert-like logic.
+     *    - First claim inserts state.
+     *    - Existing claim validates constraints, then atomically increments/reset daily count.
+     * 3) If failure roll hits, record a zero-payout audit entry and exit as granted+failed.
+     * 4) Otherwise:
+     *    - Read guild sector balance and try to fund `desiredBonus` from sector treasury.
+     *    - Guarantee successful non-failure claims pay at least 1 unit total (base mint floor).
+     *    - Credit user balance, grant progression XP/level updates, and write audit entries.
+     *
+     * Consistency guarantees:
+     * - All claim-state updates, treasury debits, user credits, progression changes, and audits
+     *   happen in the same transaction.
+     * - Cooldown/cap denials are returned as `OkResult` with `granted: false` (not as errors).
+     * - Unexpected operational problems return `ErrResult`.
+     */
     async processHybridWorkPayout(guildId: GuildId, userId: UserId): Promise<Result<WorkPayoutResult, Error>> {
         const configResult = await guildEconomyService.getConfig(guildId);
         if (configResult.isErr()) return ErrResult(configResult.error);
@@ -398,4 +414,4 @@ class WorkServiceImpl implements WorkService {
     }
 }
 
-export const workService: WorkService = new WorkServiceImpl();
+export const workService = new WorkService();

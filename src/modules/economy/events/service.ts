@@ -23,92 +23,7 @@ import {
   buildEventModifiers,
 } from "./types";
 
-export interface EventService {
-  /**
-   * Get current event status for a guild.
-   */
-  getEventStatus(guildId: GuildId): Promise<Result<EventStatus, Error>>;
-
-  /**
-   * Start a new event.
-   */
-  startEvent(
-    guildId: GuildId,
-    input: StartEventInput,
-    startedBy: string,
-  ): Promise<Result<StartEventResult, Error>>;
-
-  /**
-   * Stop the current event.
-   */
-  stopEvent(
-    guildId: GuildId,
-    stoppedBy: string,
-  ): Promise<Result<StopEventResult, Error>>;
-
-  /**
-   * Check if an event is active and return modifiers.
-   */
-  getActiveModifiers(guildId: GuildId): Promise<Result<EventModifiers, Error>>;
-
-  /**
-   * Apply XP multiplier if event is active.
-   */
-  applyXPMultiplier(
-    guildId: GuildId,
-    baseXP: number,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Apply daily reward bonus if event is active.
-   */
-  applyDailyBonus(
-    guildId: GuildId,
-    baseReward: number,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Apply work reward bonus if event is active.
-   */
-  applyWorkBonus(
-    guildId: GuildId,
-    baseReward: number,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Apply trivia reward bonus if event is active.
-   */
-  applyTriviaBonus(
-    guildId: GuildId,
-    baseReward: number,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Apply store discount if event is active.
-   */
-  applyStoreDiscount(
-    guildId: GuildId,
-    basePrice: number,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Apply quest reward bonus if event is active.
-   */
-  applyQuestBonus(
-    guildId: GuildId,
-    baseReward: number,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * Apply crafting cost reduction if event is active.
-   */
-  applyCraftingReduction(
-    guildId: GuildId,
-    baseCost: number,
-  ): Promise<Result<number, Error>>;
-}
-
-class EventServiceImpl implements EventService {
+export class EventService {
   async getEventStatus(guildId: GuildId): Promise<Result<EventStatus, Error>> {
     const configResult = await eventRepository.getConfig(guildId);
     if (configResult.isErr()) {
@@ -346,4 +261,4 @@ class EventServiceImpl implements EventService {
 }
 
 /** Singleton instance. */
-export const eventService: EventService = new EventServiceImpl();
+export const eventService = new EventService();

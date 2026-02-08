@@ -26,7 +26,6 @@ import { HpBarRenderer } from "@/modules/rpg/views/hp-bar";
 import { buildRoundCard } from "@/modules/rpg/views/combat/round-card";
 import { COMBAT_CONFIG } from "@/modules/rpg/config";
 import { getItemDefinition } from "@/modules/inventory/items";
-import { replyEphemeral } from "@/adapters/seyfert";
 import { CombatLogFormatter } from "@/modules/rpg/views/combat-log";
 import type { CombatMove } from "@/modules/rpg/types";
 
@@ -107,23 +106,26 @@ export default class RpgFightSubcommand extends SubCommand {
         ]);
 
         if (inviterProfile.isErr() || !inviterProfile.unwrap()) {
-            await replyEphemeral(ctx, {
+            await ctx.editOrReply({
                 content: "❌ You need an RPG profile first! Use `/rpg profile` to create one.",
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         if (targetProfile.isErr() || !targetProfile.unwrap()) {
-            await replyEphemeral(ctx, {
+            await ctx.editOrReply({
                 content: "❌ That user doesn't have an RPG profile.",
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
 
         // Check inviter not in combat
         if (inviterProfile.unwrap()!.isFighting) {
-            await replyEphemeral(ctx, {
+            await ctx.editOrReply({
                 content: "❌ You are already in a fight!",
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -147,8 +149,9 @@ export default class RpgFightSubcommand extends SubCommand {
                 UPDATE_FAILED: "❌ Failed to create challenge.",
             };
 
-            await replyEphemeral(ctx, {
+            await ctx.editOrReply({
                 content: messages[(error as { code?: string }).code ?? ""] ?? `❌ ${error.message}`,
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -216,7 +219,7 @@ export default class RpgFightSubcommand extends SubCommand {
         const activeFight = await rpgFightService.isInFight(userId);
 
         if (!activeFight) {
-            await replyEphemeral(ctx, { content: "❌ You don't have any pending challenges." });
+            await ctx.editOrReply({ content: "❌ You don't have any pending challenges.", flags: MessageFlags.Ephemeral });
             return;
         }
 
@@ -258,14 +261,15 @@ export default class RpgFightSubcommand extends SubCommand {
             }
         }
 
-        await replyEphemeral(ctx, { content: "❌ You don't have any pending challenges." });
+        await ctx.editOrReply({ content: "❌ You don't have any pending challenges.", flags: MessageFlags.Ephemeral });
     }
 
     private async showStatus(ctx: GuildCommandContext, userId: string) {
         const profileResult = await rpgProfileRepo.findById(userId);
         if (profileResult.isErr() || !profileResult.unwrap()) {
-            await replyEphemeral(ctx, {
+            await ctx.editOrReply({
                 content: "❌ You need an RPG profile first!",
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }
@@ -273,13 +277,13 @@ export default class RpgFightSubcommand extends SubCommand {
         const profile = profileResult.unwrap()!;
 
         if (!profile.isFighting || !profile.activeFightId) {
-            await replyEphemeral(ctx, { content: "ℹ️ You are not currently in a fight." });
+            await ctx.editOrReply({ content: "ℹ️ You are not currently in a fight.", flags: MessageFlags.Ephemeral });
             return;
         }
 
         const fightResult = await rpgFightService.getFight(profile.activeFightId);
         if (fightResult.isErr() || !fightResult.unwrap()) {
-            await replyEphemeral(ctx, { content: "❌ Could not load fight status." });
+            await ctx.editOrReply({ content: "❌ Could not load fight status.", flags: MessageFlags.Ephemeral });
             return;
         }
 
@@ -409,20 +413,20 @@ export default class RpgFightSubcommand extends SubCommand {
     private async forfeit(ctx: GuildCommandContext, userId: string) {
         const profileResult = await rpgProfileRepo.findById(userId);
         if (profileResult.isErr() || !profileResult.unwrap()?.isFighting) {
-            await replyEphemeral(ctx, { content: "❌ You are not in a fight." });
+            await ctx.editOrReply({ content: "❌ You are not in a fight.", flags: MessageFlags.Ephemeral });
             return;
         }
 
         const fightId = profileResult.unwrap()!.activeFightId;
         if (!fightId) {
-            await replyEphemeral(ctx, { content: "❌ Could not find your active fight." });
+            await ctx.editOrReply({ content: "❌ Could not find your active fight.", flags: MessageFlags.Ephemeral });
             return;
         }
 
         const result = await rpgFightService.forfeit(fightId, userId);
 
         if (result.isErr()) {
-            await replyEphemeral(ctx, { content: `❌ ${result.error.message}` });
+            await ctx.editOrReply({ content: `❌ ${result.error.message}`, flags: MessageFlags.Ephemeral });
             return;
         }
 

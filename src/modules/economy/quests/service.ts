@@ -36,211 +36,8 @@ import type {
 } from "./types";
 import { QuestError } from "./types";
 
-/** Service interface for quest operations. */
-export interface QuestService {
-  // -------------------------------------------------------------------------
-  // Template Management
-  // -------------------------------------------------------------------------
-
-  /** Create a new quest template. */
-  createTemplate(
-    guildId: GuildId,
-    input: CreateQuestTemplateInput,
-    createdBy: UserId,
-  ): Promise<Result<QuestTemplate, QuestError>>;
-
-  /** Get a quest template. */
-  getTemplate(
-    guildId: GuildId,
-    questId: string,
-  ): Promise<Result<QuestTemplate | null, QuestError>>;
-
-  /** List all quest templates for a guild. */
-  listTemplates(guildId: GuildId): Promise<Result<QuestTemplate[], QuestError>>;
-
-  // -------------------------------------------------------------------------
-  // Rotation Management
-  // -------------------------------------------------------------------------
-
-  /** Get current quest board view for a user. */
-  getQuestBoard(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<QuestBoardView, QuestError>>;
-
-  /** Get specific quest view with progress. */
-  getQuestView(
-    guildId: GuildId,
-    userId: UserId,
-    rotationId: string,
-    questId: string,
-  ): Promise<Result<QuestView | null, QuestError>>;
-
-  // -------------------------------------------------------------------------
-  // Progress Tracking
-  // -------------------------------------------------------------------------
-
-  /** Update quest progress based on an event. */
-  updateProgress(
-    input: UpdateQuestProgressInput,
-  ): Promise<Result<QuestProgress, QuestError>>;
-
-  /** Check if a quest is completed and mark it. */
-  checkAndCompleteQuest(
-    userId: UserId,
-    rotationId: string,
-    questId: string,
-  ): Promise<Result<QuestProgress, QuestError>>;
-
-  // -------------------------------------------------------------------------
-  // Reward Claiming
-  // -------------------------------------------------------------------------
-
-  /** Claim rewards for a completed quest. */
-  claimRewards(
-    input: ClaimQuestRewardsInput,
-  ): Promise<Result<ClaimQuestRewardsResult, QuestError>>;
-
-  // -------------------------------------------------------------------------
-  // Statistics
-  // -------------------------------------------------------------------------
-
-  /** Get quest statistics for a user. */
-  getStats(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<QuestStats, QuestError>>;
-
-  // -------------------------------------------------------------------------
-  // Configuration
-  // -------------------------------------------------------------------------
-
-  /** Get rotation configuration. */
-  getConfig(guildId: GuildId): Promise<Result<QuestRotationConfig, QuestError>>;
-}
-
-/** Build requirement description. */
-function buildRequirementDescription(req: QuestRequirement): string {
-  switch (req.type) {
-    case "do_command":
-      return `Use the command "/${req.command}" ${req.count} veces`;
-    case "spend_currency":
-      return `Gasta ${req.amount} ${req.currencyId}`;
-    case "craft_recipe":
-      return `Craft recipe "${req.recipeId}" ${req.count} times`;
-    case "win_minigame":
-      return `Gana ${req.count} veces en ${req.game}`;
-    case "vote_cast":
-      return `Vota ${req.count} veces con ${req.voteType === "love" ? "💝" : "💔"}`;
-    default:
-      return "Requisito desconocido";
-  }
-}
-
-/** Build a quest view with progress info. */
-async function buildQuestView(
-  template: QuestTemplate,
-  rotation: QuestRotation,
-  progress: QuestProgress | null,
-): Promise<QuestView> {
-  const isFeatured = rotation.featuredQuestId === template.id;
-  const multiplier = isFeatured ? template.featuredMultiplier : 1;
-
-  const requirementViews = template.requirements.map((req, idx) => ({
-    type: req.type,
-    description: buildRequirementDescription(req),
-    current: progress?.requirementProgress[idx] ?? 0,
-    target: getRequirementTarget(req),
-    completed:
-      (progress?.requirementProgress[idx] ?? 0) >= getRequirementTarget(req),
-  }));
-
-  const completedCount = requirementViews.filter((r) => r.completed).length;
-  const totalCount = requirementViews.length;
-  const percentComplete =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-
-  // Apply multiplier to rewards
-  const scaledRewards = template.rewards.map((reward) => {
-    if (
-      reward.type === "currency" ||
-      reward.type === "xp" ||
-      reward.type === "quest_token"
-    ) {
-      return { ...reward, amount: Math.floor(reward.amount * multiplier) };
-    }
-    return reward;
-  });
-
-  return {
-    id: template.id,
-    name: template.name,
-    description: template.description,
-    category: template.category,
-    difficulty: template.difficulty,
-    requirements: requirementViews,
-    rewards: scaledRewards,
-    isFeatured,
-    rewardMultiplier: multiplier,
-    progress: progress
-      ? {
-          percentComplete,
-          isCompleted: progress.completed,
-          isClaimed: progress.rewardsClaimed,
-          completions: progress.completionCount,
-          maxCompletions: template.maxCompletions,
-        }
-      : undefined,
-    expiresAt: rotation.endsAt,
-  };
-}
-
-/** Get target value from requirement. */
-function getRequirementTarget(req: QuestRequirement): number {
-  switch (req.type) {
-    case "do_command":
-      return req.count;
-    case "spend_currency":
-      return req.amount;
-    case "craft_recipe":
-      return req.count;
-    case "win_minigame":
-      return req.count;
-    case "vote_cast":
-      return req.count;
-    default:
-      return 0;
-  }
-}
-
-/** Check if all requirements are met. */
-function areRequirementsMet(
-  template: QuestTemplate,
-  progress: QuestProgress,
-): boolean {
-  if (progress.requirementProgress.length !== template.requirements.length) {
-    return false;
-  }
-
-  for (let i = 0; i < template.requirements.length; i++) {
-    const target = getRequirementTarget(template.requirements[i]);
-    if ((progress.requirementProgress[i] ?? 0) < target) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/** Find requirement index by type (best effort match). */
-function findRequirementIndex(
-  template: QuestTemplate,
-  type: QuestRequirementType,
-): number {
-  return template.requirements.findIndex((r) => r.type === type);
-}
-
-class QuestServiceImpl implements QuestService {
+/** Service for quest operations. */
+export class QuestService {
   // -------------------------------------------------------------------------
   // Template Management
   // -------------------------------------------------------------------------
@@ -737,6 +534,127 @@ class QuestServiceImpl implements QuestService {
   }
 }
 
+/** Build requirement description. */
+function buildRequirementDescription(req: QuestRequirement): string {
+  switch (req.type) {
+    case "do_command":
+      return `Use the command "/${req.command}" ${req.count} veces`;
+    case "spend_currency":
+      return `Gasta ${req.amount} ${req.currencyId}`;
+    case "craft_recipe":
+      return `Craft recipe "${req.recipeId}" ${req.count} times`;
+    case "win_minigame":
+      return `Gana ${req.count} veces en ${req.game}`;
+    case "vote_cast":
+      return `Vota ${req.count} veces con ${req.voteType === "love" ? "💝" : "💔"}`;
+    default:
+      return "Requisito desconocido";
+  }
+}
+
+/** Build a quest view with progress info. */
+async function buildQuestView(
+  template: QuestTemplate,
+  rotation: QuestRotation,
+  progress: QuestProgress | null,
+): Promise<QuestView> {
+  const isFeatured = rotation.featuredQuestId === template.id;
+  const multiplier = isFeatured ? template.featuredMultiplier : 1;
+
+  const requirementViews = template.requirements.map((req, idx) => ({
+    type: req.type,
+    description: buildRequirementDescription(req),
+    current: progress?.requirementProgress[idx] ?? 0,
+    target: getRequirementTarget(req),
+    completed:
+      (progress?.requirementProgress[idx] ?? 0) >= getRequirementTarget(req),
+  }));
+
+  const completedCount = requirementViews.filter((r) => r.completed).length;
+  const totalCount = requirementViews.length;
+  const percentComplete =
+    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Apply multiplier to rewards
+  const scaledRewards = template.rewards.map((reward) => {
+    if (
+      reward.type === "currency" ||
+      reward.type === "xp" ||
+      reward.type === "quest_token"
+    ) {
+      return { ...reward, amount: Math.floor(reward.amount * multiplier) };
+    }
+    return reward;
+  });
+
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    category: template.category,
+    difficulty: template.difficulty,
+    requirements: requirementViews,
+    rewards: scaledRewards,
+    isFeatured,
+    rewardMultiplier: multiplier,
+    progress: progress
+      ? {
+          percentComplete,
+          isCompleted: progress.completed,
+          isClaimed: progress.rewardsClaimed,
+          completions: progress.completionCount,
+          maxCompletions: template.maxCompletions,
+        }
+      : undefined,
+    expiresAt: rotation.endsAt,
+  };
+}
+
+/** Get target value from requirement. */
+function getRequirementTarget(req: QuestRequirement): number {
+  switch (req.type) {
+    case "do_command":
+      return req.count;
+    case "spend_currency":
+      return req.amount;
+    case "craft_recipe":
+      return req.count;
+    case "win_minigame":
+      return req.count;
+    case "vote_cast":
+      return req.count;
+    default:
+      return 0;
+  }
+}
+
+/** Check if all requirements are met. */
+function areRequirementsMet(
+  template: QuestTemplate,
+  progress: QuestProgress,
+): boolean {
+  if (progress.requirementProgress.length !== template.requirements.length) {
+    return false;
+  }
+
+  for (let i = 0; i < template.requirements.length; i++) {
+    const target = getRequirementTarget(template.requirements[i]);
+    if ((progress.requirementProgress[i] ?? 0) < target) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/** Find requirement index by type (best effort match). */
+function findRequirementIndex(
+  template: QuestTemplate,
+  type: QuestRequirementType,
+): number {
+  return template.requirements.findIndex((r) => r.type === type);
+}
+
 /** Check if metadata matches a requirement. */
 function matchesRequirement(
   req: QuestRequirement,
@@ -911,6 +829,6 @@ async function applyReward(
   }
 }
 
-export const questService: QuestService = new QuestServiceImpl();
+export const questService = new QuestService();
 
 

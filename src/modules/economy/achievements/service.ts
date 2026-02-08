@@ -42,234 +42,8 @@ import {
 } from "./types";
 import type { AchievementDefinition } from "./types";
 
-/** Service interface for achievement operations. */
-export interface AchievementService {
-  // -------------------------------------------------------------------------
-  // Achievement Views
-  // -------------------------------------------------------------------------
-
-  /** Get achievement board view for user. */
-  getAchievementBoard(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<AchievementBoardView, AchievementError>>;
-
-  /** Get specific achievement view with progress. */
-  getAchievementView(
-    userId: UserId,
-    guildId: GuildId,
-    achievementId: string,
-  ): Promise<Result<AchievementView | null, AchievementError>>;
-
-  // -------------------------------------------------------------------------
-  // Progress Tracking
-  // -------------------------------------------------------------------------
-
-  /** Update progress for a condition type. */
-  updateProgress(
-    userId: UserId,
-    guildId: GuildId,
-    conditionType: UnlockConditionType,
-    value: number,
-    metadata?: Record<string, unknown>,
-  ): Promise<Result<void, AchievementError>>;
-
-  /** Increment progress for a condition type. */
-  incrementProgress(
-    userId: UserId,
-    guildId: GuildId,
-    conditionType: UnlockConditionType,
-    increment?: number,
-    metadata?: Record<string, unknown>,
-  ): Promise<Result<void, AchievementError>>;
-
-  // -------------------------------------------------------------------------
-  // Reward Claiming
-  // -------------------------------------------------------------------------
-
-  /** Claim rewards for an unlocked achievement. */
-  claimRewards(
-    input: ClaimAchievementRewardsInput,
-  ): Promise<Result<ClaimAchievementRewardsResult, AchievementError>>;
-
-  // -------------------------------------------------------------------------
-  // Title Management
-  // -------------------------------------------------------------------------
-
-  /** Get all titles for user. */
-  getTitles(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<TitleView[], AchievementError>>;
-
-  /** Equip a title. */
-  equipTitle(
-    input: EquipTitleInput,
-  ): Promise<Result<EquippedTitle, AchievementError>>;
-
-  /** Unequip current title. */
-  unequipTitle(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<boolean, AchievementError>>;
-
-  /** Get equipped title. */
-  getEquippedTitle(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<EquippedTitle | null, AchievementError>>;
-
-  // -------------------------------------------------------------------------
-  // Badge Management
-  // -------------------------------------------------------------------------
-
-  /** Set badge slot. */
-  setBadgeSlot(
-    userId: UserId,
-    guildId: GuildId,
-    slot: 1 | 2 | 3,
-    badgeId: string | null,
-  ): Promise<Result<boolean, AchievementError>>;
-
-  /** Get equipped badges. */
-  getEquippedBadges(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<(UserBadge | null)[], AchievementError>>;
-
-  // -------------------------------------------------------------------------
-  // Profile Cosmetics
-  // -------------------------------------------------------------------------
-
-  /** Get profile cosmetics. */
-  getProfileCosmetics(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<Result<ProfileCosmetics, AchievementError>>;
-
-  // -------------------------------------------------------------------------
-  // Audit-based Evaluation
-  // -------------------------------------------------------------------------
-
-  /** Evaluate achievements from audit log for user. */
-  evaluateFromAudit(
-    userId: UserId,
-    guildId: GuildId,
-    operationType: string,
-    metadata: Record<string, unknown>,
-  ): Promise<Result<string[], AchievementError>>;
-}
-
-/** Build achievement view with progress. */
-async function buildAchievementView(
-  userId: UserId,
-  guildId: GuildId,
-  definition: AchievementDefinition,
-): Promise<AchievementView> {
-  const [unlockedResult, progressResult] = await Promise.all([
-    achievementRepo.hasUnlocked(userId, guildId, definition.id),
-    achievementRepo.getOrCreateProgress(
-      userId,
-      guildId,
-      definition.id,
-      getTargetFromCondition(definition.condition),
-    ),
-  ]);
-
-  const isUnlocked = unlockedResult.isOk() ? unlockedResult.unwrap() : false;
-  const progress = progressResult.isOk() ? progressResult.unwrap() : null;
-
-  let unlockedAt: Date | undefined;
-  let rewardsClaimed = false;
-
-  if (isUnlocked) {
-    const unlockedResult = await achievementRepo.getUnlocked(userId, guildId);
-    if (unlockedResult.isOk()) {
-      const unlocked = unlockedResult
-        .unwrap()
-        .find((u) => u.achievementId === definition.id);
-      if (unlocked) {
-        unlockedAt = unlocked.unlockedAt;
-        rewardsClaimed = unlocked.rewardsClaimed;
-      }
-    }
-  }
-
-  const progressView: AchievementProgressView | undefined = progress
-    ? {
-        current: progress.progress,
-        target: progress.target,
-        percent: Math.min(
-          100,
-          Math.round((progress.progress / progress.target) * 100),
-        ),
-        completed: progress.completed,
-      }
-    : undefined;
-
-  return {
-    id: definition.id,
-    name: definition.name,
-    description: definition.description,
-    tier: definition.tier,
-    category: definition.category,
-    tierEmoji: TIER_DISPLAY[definition.tier].emoji,
-    rewards: definition.rewards,
-    title: definition.title,
-    progress: progressView,
-    hidden: definition.hidden ?? false,
-    isUnlocked,
-    unlockedAt,
-    rewardsClaimed,
-  };
-}
-
-/** Get target value from condition. */
-function getTargetFromCondition(
-  condition: AchievementDefinition["condition"],
-): number {
-  switch (condition.type) {
-    case "streak_milestone":
-      return condition.days;
-    case "level_milestone":
-      return condition.level;
-    case "craft_count":
-      return condition.count;
-    case "trivia_wins":
-      return condition.count;
-    case "coinflip_streak":
-      return condition.consecutiveWins;
-    case "rob_success":
-      return condition.totalAmount;
-    case "store_purchases":
-      return condition.count;
-    case "quest_completions":
-      return condition.count;
-    case "currency_held":
-      return condition.amount;
-    case "items_collected":
-      return condition.uniqueItems;
-    case "votes_cast":
-      return condition.count;
-    case "login_streak":
-      return condition.days;
-    case "special":
-      return 1;
-    default:
-      return 0;
-  }
-}
-
-/** Get relevant achievement IDs for a condition type. */
-function getAchievementsForConditionType(
-  conditionType: UnlockConditionType,
-): string[] {
-  return getAllAchievementDefinitions()
-    .filter((a) => a.condition.type === conditionType)
-    .map((a) => a.id);
-}
-
-class AchievementServiceImpl implements AchievementService {
+/** Service for achievement operations. */
+export class AchievementService {
   // -------------------------------------------------------------------------
   // Achievement Views
   // -------------------------------------------------------------------------
@@ -884,89 +658,124 @@ class AchievementServiceImpl implements AchievementService {
     operationType: string,
     metadata: Record<string, unknown>,
   ): Promise<Result<string[], AchievementError>> {
-    const unlockedIds: string[] = [];
-
-    switch (operationType) {
-      case "craft": {
-        // Increment craft count
-        await this.incrementProgress(
-          userId,
-          guildId,
-          "craft_count",
-          1,
-          metadata,
-        );
-        break;
-      }
-
-      case "currency_adjust": {
-        // Check for coinflip wins
-        if (metadata.type === "coinflip" && metadata.won === true) {
-          // Coinflip streak is handled separately via hook
-        }
-
-        // Check for rob success (amount stolen)
-        if (metadata.type === "rob" && metadata.success === true) {
-          const amountStolen = metadata.amountStolen as number;
-          if (amountStolen && amountStolen > 0) {
-            // Get current rob total and add this
-            const progressResult = await achievementRepo.getOrCreateProgress(
-              userId,
-              guildId,
-              "rob_total_5000",
-              5000,
-            );
-            if (progressResult.isOk()) {
-              const current = progressResult.unwrap().progress;
-              await this.updateProgress(
-                userId,
-                guildId,
-                "rob_success",
-                current + amountStolen,
-                metadata,
-              );
-            }
-          }
-        }
-        break;
-      }
-
-      case "xp_grant": {
-        // Check level up
-        if (metadata.afterLevel) {
-          const newLevel = metadata.afterLevel as number;
-          await this.updateProgress(
-            userId,
-            guildId,
-            "level_milestone",
-            newLevel,
-            metadata,
-          );
-        }
-        break;
-      }
-
-      case "daily_claim": {
-        // Streak is tracked separately in daily system
-        break;
-      }
-
-      case "item_purchase": {
-        await this.incrementProgress(
-          userId,
-          guildId,
-          "store_purchases",
-          1,
-          metadata,
-        );
-        break;
-      }
-    }
-
-    return OkResult(unlockedIds);
+    const achievements = await achievementRepo.getAchievementsForAudit(
+      userId,
+      guildId,
+      operationType,
+      metadata,
+    );
+    return OkResult(achievements);
   }
 }
 
+/** Build achievement view with progress. */
+async function buildAchievementView(
+  userId: UserId,
+  guildId: GuildId,
+  definition: AchievementDefinition,
+): Promise<AchievementView> {
+  const [unlockedResult, progressResult] = await Promise.all([
+    achievementRepo.hasUnlocked(userId, guildId, definition.id),
+    achievementRepo.getOrCreateProgress(
+      userId,
+      guildId,
+      definition.id,
+      getTargetFromCondition(definition.condition),
+    ),
+  ]);
+
+  const isUnlocked = unlockedResult.isOk() ? unlockedResult.unwrap() : false;
+  const progress = progressResult.isOk() ? progressResult.unwrap() : null;
+
+  let unlockedAt: Date | undefined;
+  let rewardsClaimed = false;
+
+  if (isUnlocked) {
+    const unlockedResult = await achievementRepo.getUnlocked(userId, guildId);
+    if (unlockedResult.isOk()) {
+      const unlocked = unlockedResult
+        .unwrap()
+        .find((u) => u.achievementId === definition.id);
+      if (unlocked) {
+        unlockedAt = unlocked.unlockedAt;
+        rewardsClaimed = unlocked.rewardsClaimed;
+      }
+    }
+  }
+
+  const progressView: AchievementProgressView | undefined = progress
+    ? {
+        current: progress.progress,
+        target: progress.target,
+        percent: Math.min(
+          100,
+          Math.round((progress.progress / progress.target) * 100),
+        ),
+        completed: progress.completed,
+      }
+    : undefined;
+
+  return {
+    id: definition.id,
+    name: definition.name,
+    description: definition.description,
+    tier: definition.tier,
+    category: definition.category,
+    tierEmoji: TIER_DISPLAY[definition.tier].emoji,
+    rewards: definition.rewards,
+    title: definition.title,
+    progress: progressView,
+    hidden: definition.hidden ?? false,
+    isUnlocked,
+    unlockedAt,
+    rewardsClaimed,
+  };
+}
+
+/** Get target value from condition. */
+function getTargetFromCondition(
+  condition: AchievementDefinition["condition"],
+): number {
+  switch (condition.type) {
+    case "streak_milestone":
+      return condition.days;
+    case "level_milestone":
+      return condition.level;
+    case "craft_count":
+      return condition.count;
+    case "trivia_wins":
+      return condition.count;
+    case "coinflip_streak":
+      return condition.consecutiveWins;
+    case "rob_success":
+      return condition.totalAmount;
+    case "store_purchases":
+      return condition.count;
+    case "quest_completions":
+      return condition.count;
+    case "currency_held":
+      return condition.amount;
+    case "items_collected":
+      return condition.uniqueItems;
+    case "votes_cast":
+      return condition.count;
+    case "login_streak":
+      return condition.days;
+    case "special":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+/** Get relevant achievement IDs for a condition type. */
+function getAchievementsForConditionType(
+  conditionType: UnlockConditionType,
+): string[] {
+  return getAllAchievementDefinitions()
+    .filter((a) => a.condition.type === conditionType)
+    .map((a) => a.id);
+}
+
 /** Singleton instance. */
-export const achievementService: AchievementService =
-  new AchievementServiceImpl();
+export const achievementService = new AchievementService();

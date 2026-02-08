@@ -90,38 +90,7 @@ function getSessionKey(userId: string, guildId: string): string {
 // Service Interface
 // =============================================================================
 
-export interface MinigameService {
-  /** Coinflip game. */
-  coinflip(
-    input: CoinflipInput,
-  ): Promise<Result<CoinflipResult, MinigameError>>;
-
-  /** Trivia game (Phase 9c Enhanced). */
-  startTrivia(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<TriviaStartResult, MinigameError>>;
-  answerTrivia(
-    input: TriviaInput,
-  ): Promise<Result<TriviaResult, MinigameError>>;
-  getTriviaSession(
-    userId: UserId,
-    guildId: GuildId,
-  ): Promise<TriviaSession | undefined>;
-  clearTriviaSession(userId: UserId, guildId: GuildId): void;
-
-  /** Rob game. */
-  rob(input: RobInput): Promise<Result<RobResult, MinigameError>>;
-
-  /** Admin: Reset daily limits for a user. */
-  resetDailyLimits(userId: UserId): Promise<Result<void, Error>>;
-}
-
-// =============================================================================
-// Service Implementation
-// =============================================================================
-
-class MinigameServiceImpl implements MinigameService {
+export class MinigameService {
   // ============================================================================
   // Coinflip
   // ============================================================================
@@ -1261,7 +1230,7 @@ class MinigameServiceImpl implements MinigameService {
   }
 }
 
-export const minigameService: MinigameService = new MinigameServiceImpl();
+export const minigameService = new MinigameService();
 
 
 

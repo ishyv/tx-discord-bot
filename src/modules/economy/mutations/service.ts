@@ -478,46 +478,7 @@ function buildResponse(
   });
 }
 
-export interface CurrencyMutationService {
-  /**
-   * Adjust currency balance (mod-only, supports negative delta).
-   *
-   * Steps:
-   * 1. Validate actor permissions
-   * 2. Validate currency exists
-   * 3. Ensure target account exists
-   * 4. Gate on target status (blocked/banned)
-   * 5. Get current balance
-   * 6. Perform atomic $inc update
-   * 7. Create audit log entry
-   * 8. Return result with before/after
-   */
-  adjustCurrencyBalance(
-    input: AdjustCurrencyBalanceInput,
-    checkAdmin: (actorId: UserId, guildId?: string) => Promise<boolean>,
-  ): Promise<Result<AdjustCurrencyBalanceResult, CurrencyMutationError>>;
-
-  /**
-   * Transfer currency between users (user-to-user).
-   *
-   * Steps:
-   * 1. Validate currency exists
-   * 2. Validate amount is positive
-   * 3. Ensure both accounts exist
-   * 4. Gate on both account statuses
-   * 5. Check sender has sufficient funds
-   * 6. Atomically decrement sender and increment recipient
-   * 7. Create audit log entry with correlation ID
-   * 8. Return result with both before/after balances
-   */
-  transferCurrency(
-    input: import("./types").TransferCurrencyInput,
-  ): Promise<
-    Result<import("./types").TransferCurrencyResult, CurrencyMutationError>
-  >;
-}
-
-class CurrencyMutationServiceImpl implements CurrencyMutationService {
+export class CurrencyMutationService {
   async adjustCurrencyBalance(
     input: AdjustCurrencyBalanceInput,
     checkAdmin: (actorId: UserId, guildId?: string) => Promise<boolean>,
@@ -815,7 +776,6 @@ class CurrencyMutationServiceImpl implements CurrencyMutationService {
 }
 
 /** Singleton instance. */
-export const currencyMutationService: CurrencyMutationService =
-  new CurrencyMutationServiceImpl();
+export const currencyMutationService = new CurrencyMutationService();
 
 

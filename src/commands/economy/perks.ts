@@ -16,7 +16,6 @@ import {
 	SubCommand,
 } from "seyfert";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
-import { getContextInfo, replyEphemeral } from "@/adapters/seyfert";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
 	buildErrorEmbed,
@@ -61,7 +60,8 @@ export default class PerksParentCommand extends Command {}
 })
 export class PerksListCommand extends SubCommand {
 	async run(ctx: GuildCommandContext) {
-		const { guildId, userId } = getContextInfo(ctx);
+		const { guildId } = ctx;
+		const userId = ctx.author.id;
 
 		if (!guildId) {
 			await ctx.write({
@@ -216,20 +216,23 @@ export class PerksListCommand extends SubCommand {
 })
 export class PerksBuyCommand extends SubCommand {
 	async run(ctx: GuildCommandContext<typeof buyOptions>) {
-		const { guildId, userId } = getContextInfo(ctx);
+		const { guildId } = ctx;
+		const userId = ctx.author.id;
 		const perkId = ctx.options.perk;
 
 		if (!guildId) {
-			await replyEphemeral(ctx, {
+			await ctx.editOrReply({
 				content: "This command can only be used in a server.",
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
 		const perk = getPerkDefinition(perkId);
 		if (!perk) {
-			await replyEphemeral(ctx, {
+			await ctx.editOrReply({
 				content: `❌ Perk "${perkId}" not found. Use \`/perks list\` to see the available ones.`,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}

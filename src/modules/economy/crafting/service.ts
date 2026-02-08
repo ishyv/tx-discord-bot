@@ -148,31 +148,7 @@ function checkOutputCapacity(
   return !capacity.weightExceeded && !capacity.slotsExceeded;
 }
 
-export interface CraftingService {
-  /**
-   * Get all available recipes for a guild with user's craftability status.
-   */
-  getRecipes(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<CraftingRecipeView[], Error>>;
-
-  /**
-   * Get a specific recipe view.
-   */
-  getRecipe(
-    guildId: GuildId,
-    userId: UserId,
-    recipeId: string,
-  ): Promise<Result<CraftingRecipeView | null, Error>>;
-
-  /**
-   * Craft items using a recipe.
-   */
-  craft(input: CraftInput): Promise<Result<CraftResult, CraftingError>>;
-}
-
-class CraftingServiceImpl implements CraftingService {
+export class CraftingService {
   async getRecipes(
     guildId: GuildId,
     userId: UserId,
@@ -672,7 +648,7 @@ class CraftingServiceImpl implements CraftingService {
   }
 }
 
-export const craftingService: CraftingService = new CraftingServiceImpl();
+export const craftingService = new CraftingService();
 
 
 

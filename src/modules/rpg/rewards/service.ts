@@ -11,9 +11,11 @@
  * - Item grants respect stackability and instances.
  */
 
-import { OkResult, type Result } from "@/utils/result";
+import { ErrResult, OkResult, type Result } from "@/utils/result";
 import type { UserId, GuildId } from "@/db/types";
 import { economyAuditRepo } from "@/modules/economy/audit/repository";
+import { progressionRepo } from "@/modules/economy/progression/repository";
+import { getLevelFromXP } from "@/modules/economy/progression/curve";
 
 export interface AwardXpInput {
     readonly guildId: GuildId;
@@ -70,12 +72,30 @@ class RpgRewardServiceImpl implements RpgRewardService {
         const streakMult = input.modifiers?.streakMultiplier ?? 1.0;
         const effectiveAmount = Math.floor(input.amount * streakMult);
 
-        // TODO: Load user progression data, add XP, check level-up
-        // For now, create a placeholder implementation
-        const oldLevel = 1;
-        const newXp = effectiveAmount;
-        const newLevel = 1;
-        const leveledUp = false;
+        const progressionResult = await progressionRepo.updateState(
+            input.guildId,
+            input.userId,
+            (current) => {
+                const nextTotalXP = Math.max(0, current.totalXP + effectiveAmount);
+                const nextLevel = getLevelFromXP(nextTotalXP);
+
+                return OkResult({
+                    ...current,
+                    totalXP: nextTotalXP,
+                    level: nextLevel,
+                    updatedAt: new Date(),
+                });
+            },
+        );
+        if (progressionResult.isErr()) {
+            return ErrResult(progressionResult.error);
+        }
+
+        const { before, after } = progressionResult.unwrap();
+        const oldLevel = before.level;
+        const newXp = after.totalXP;
+        const newLevel = after.level;
+        const leveledUp = newLevel > oldLevel;
 
         // Audit the XP gain
         await economyAuditRepo.create({

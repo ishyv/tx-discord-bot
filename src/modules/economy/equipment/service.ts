@@ -83,65 +83,7 @@ function computeStatsSummary(loadout: EquipmentLoadout): EquipmentStatsSummary {
   return summary;
 }
 
-export interface EquipmentService {
-  /**
-   * Get user's equipment loadout.
-   */
-  getLoadout(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<EquipmentLoadout, Error>>;
-
-  /**
-   * Get equipped items with full details.
-   */
-  getEquippedItems(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<EquippedItemView[], Error>>;
-
-  /**
-   * Get equipment stats summary.
-   */
-  getStatsSummary(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<EquipmentStatsSummary, Error>>;
-
-  /**
-   * List equipable items in user's inventory.
-   */
-  listEquipableItems(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<EquipableItemView[], Error>>;
-
-  /**
-   * List equipable items for a specific slot.
-   */
-  listEquipableItemsForSlot(
-    guildId: GuildId,
-    userId: UserId,
-    slot: EquipmentSlot,
-  ): Promise<Result<EquipableItemView[], Error>>;
-
-  /**
-   * Equip an item from inventory.
-   * If slot is occupied, swaps items (old item returns to inventory).
-   */
-  equipItem(
-    input: EquipItemInput,
-  ): Promise<Result<EquipmentOperationResult, EquipmentError>>;
-
-  /**
-   * Unequip an item from a slot (returns to inventory).
-   */
-  unequipSlot(
-    input: UnequipSlotInput,
-  ): Promise<Result<EquipmentOperationResult, EquipmentError>>;
-}
-
-class EquipmentServiceImpl implements EquipmentService {
+export class EquipmentService {
   async getLoadout(
     guildId: GuildId,
     userId: UserId,
@@ -671,6 +613,6 @@ class EquipmentServiceImpl implements EquipmentService {
   }
 }
 
-export const equipmentService: EquipmentService = new EquipmentServiceImpl();
+export const equipmentService = new EquipmentService();
 
 

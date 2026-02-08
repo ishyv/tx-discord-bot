@@ -41,7 +41,7 @@
  */
 
 import { ConfigKey, ConfigOf, getSchema } from "./definitions";
-import { ConfigProvider, MongoGuildConfigProvider } from "./provider";
+import { MongoGuildConfigProvider } from "./provider";
 import { deepClone } from "@/db/helpers";
 
 const CACHE_TTL_MS = 30_000;
@@ -51,7 +51,7 @@ const MAX_CACHE_ENTRIES = 2_000;
  * Runtime config access with caching and validation.
  */
 export class ConfigStore {
-  constructor(private provider: ConfigProvider) {}
+  constructor(private provider: MongoGuildConfigProvider) {}
 
   private readonly cache = new Map<
     string,

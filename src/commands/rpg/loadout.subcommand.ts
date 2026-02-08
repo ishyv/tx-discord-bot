@@ -13,12 +13,12 @@ import {
     createUserOption,
     Embed,
 } from "seyfert";
+import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { rpgProfileRepo } from "@/modules/rpg/profile/repository";
 import { getItemDefinition, getToolMaxDurability } from "@/modules/inventory/items";
 import { EQUIPMENT_SLOTS } from "@/modules/rpg/config";
-import { getContextInfo, replyEphemeral } from "@/adapters/seyfert";
 import { StatsCalculator } from "@/modules/rpg/stats/calculator";
 import { renderProgressBar } from "@/modules/economy/account/formatting";
 import { UIColors } from "@/modules/ui/design-system";
@@ -44,20 +44,23 @@ const options = {
 export default class RpgLoadoutSubcommand extends SubCommand {
     async run(ctx: GuildCommandContext<typeof options>) {
         await ctx.deferReply(true);
-        const { userId, username } = getContextInfo(ctx);
+        const userId = ctx.author.id;
+        const username = ctx.author.username;
         const viewUserId = ctx.options.user?.id ?? userId;
 
         const profileResult = await rpgProfileRepo.findById(viewUserId);
 
         if (profileResult.isErr() || !profileResult.unwrap()) {
             if (viewUserId === userId) {
-                await replyEphemeral(ctx, {
+                await ctx.editOrReply({
                     content:
                         "❌ You need an RPG profile first! Use `/rpg profile` to create one.",
+                    flags: MessageFlags.Ephemeral,
                 });
             } else {
-                await replyEphemeral(ctx, {
+                await ctx.editOrReply({
                     content: "❌ That user doesn't have an RPG profile.",
+                    flags: MessageFlags.Ephemeral,
                 });
             }
             return;

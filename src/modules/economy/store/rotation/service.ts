@@ -51,48 +51,7 @@ function seededShuffle<T>(array: T[], seed: string): T[] {
   return result;
 }
 
-export interface StoreRotationService {
-  /**
-   * Get current featured items, rotating if needed.
-   */
-  getFeatured(guildId: GuildId): Promise<Result<FeaturedItem[], Error>>;
-
-  /**
-   * Get full rotation state.
-   */
-  getRotation(guildId: GuildId): Promise<Result<StoreRotation, Error>>;
-
-  /**
-   * Manually rotate featured items.
-   */
-  rotateFeatured(input: RotateFeaturedInput): Promise<Result<RotationResult, Error>>;
-
-  /**
-   * Update rotation configuration.
-   */
-  updateConfig(
-    guildId: GuildId,
-    config: Partial<StoreRotationConfig>,
-  ): Promise<Result<StoreRotation, Error>>;
-
-  /**
-   * Get featured price for an item (if featured).
-   */
-  getFeaturedPrice(
-    guildId: GuildId,
-    itemId: ItemId,
-  ): Promise<Result<{ price: number; item: FeaturedItem } | null, Error>>;
-
-  /**
-   * Record a purchase of a featured item.
-   */
-  recordFeaturedPurchase(
-    guildId: GuildId,
-    itemId: ItemId,
-  ): Promise<Result<void, Error>>;
-}
-
-class StoreRotationServiceImpl implements StoreRotationService {
+export class StoreRotationService {
   async getFeatured(guildId: GuildId): Promise<Result<FeaturedItem[], Error>> {
     // Check if rotation is needed
     const rotationResult = await this.checkAndRotate(guildId);
@@ -338,4 +297,4 @@ class StoreRotationServiceImpl implements StoreRotationService {
 }
 
 /** Singleton instance. */
-export const storeRotationService: StoreRotationService = new StoreRotationServiceImpl();
+export const storeRotationService = new StoreRotationService();

@@ -126,30 +126,7 @@ const computeEffects = (levels: Record<string, number>): PerkEffectsSummary => {
   return summary;
 };
 
-export interface PerkService {
-  listPerks(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<PerkView[], Error>>;
-  getState(guildId: GuildId, userId: UserId): Promise<Result<PerkState, Error>>;
-  getEffects(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<PerkEffectsSummary, Error>>;
-  getCapacityLimits(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<{ maxWeight: number; maxSlots: number }, Error>>;
-  getWorkBonusPct(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<number, Error>>;
-  purchasePerk(
-    input: PerkPurchaseInput,
-  ): Promise<Result<PerkPurchaseResult, PerkError>>;
-}
-
-class PerkServiceImpl implements PerkService {
+export class PerkService {
   async listPerks(
     guildId: GuildId,
     userId: UserId,
@@ -411,5 +388,5 @@ class PerkServiceImpl implements PerkService {
   }
 }
 
-export const perkService: PerkService = new PerkServiceImpl();
+export const perkService = new PerkService();
 

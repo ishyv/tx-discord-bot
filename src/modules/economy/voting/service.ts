@@ -21,83 +21,29 @@ import { votingRepo, type VotingRepo } from "./repository";
 import { getEligibleBadges } from "./config";
 import { guildEconomyRepo } from "@/modules/economy/guild/repository";
 
-export interface VotingService {
-  /** Cast a vote with all safety checks. */
-  castVote(input: CastVoteInput): Promise<Result<CastVoteResult, VoteError>>;
-
-  /** Get user's vote stats. */
-  getUserStats(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<UserVotingStats, Error>>;
-
-  /** Get user's voting preferences. */
-  getUserPrefs(userId: UserId): Promise<Result<UserVotingPrefs, Error>>;
-
-  /** Update user's voting preferences. */
-  updateUserPrefs(
-    userId: UserId,
-    prefs: Partial<UserVotingPrefs>,
-  ): Promise<Result<UserVotingPrefs, Error>>;
-
-  /** Toggle opt-out status. */
-  toggleOptOut(userId: UserId): Promise<Result<boolean, Error>>;
-
-  /** Get user's vote badges. */
-  getUserBadges(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<VoteBadge[], Error>>;
-
-  /** Get top users by love/hate/net score. */
-  getLeaderboard(
-    guildId: GuildId,
-    type: "love" | "hate" | "net",
-    limit?: number,
-  ): Promise<Result<{ userId: UserId; score: number }[], Error>>;
-
-  /** Check if user can vote (for UI). */
-  canVote(
-    guildId: GuildId,
-    voterId: UserId,
-    targetId: UserId,
-  ): Promise<
-    Result<
-      { canVote: boolean; reason?: string; cooldownSeconds?: number },
-      Error
-    >
-  >;
-
-  /** Admin: Reset daily limits. */
-  resetDailyLimits(
-    guildId: GuildId,
-    userId: UserId,
-  ): Promise<Result<void, Error>>;
-}
-
-/** Check if cooldown has expired. */
-function isCooldownExpired(
-  lastTime: Date | undefined,
-  cooldownSeconds: number,
-): boolean {
-  if (!lastTime) return true;
-  return Date.now() - new Date(lastTime).getTime() >= cooldownSeconds * 1000;
-}
-
-/** Check if repeat cooldown has expired. */
-function isRepeatCooldownExpired(
-  lastVoteTime: Date | undefined,
-  cooldownHours: number,
-): boolean {
-  if (!lastVoteTime) return true;
-  return (
-    Date.now() - new Date(lastVoteTime).getTime() >=
-    cooldownHours * 60 * 60 * 1000
-  );
-}
-
-class VotingServiceImpl implements VotingService {
+export class VotingService {
   constructor(private repo: VotingRepo) {}
+
+  /** Check if cooldown has expired. */
+  private isCooldownExpired(
+    lastTime: Date | undefined,
+    cooldownSeconds: number,
+  ): boolean {
+    if (!lastTime) return true;
+    return Date.now() - new Date(lastTime).getTime() >= cooldownSeconds * 1000;
+  }
+
+  /** Check if repeat cooldown has expired. */
+  private isRepeatCooldownExpired(
+    lastVoteTime: Date | undefined,
+    cooldownHours: number,
+  ): boolean {
+    if (!lastVoteTime) return true;
+    return (
+      Date.now() - new Date(lastVoteTime).getTime() >=
+      cooldownHours * 60 * 60 * 1000
+    );
+  }
 
   async castVote(
     input: CastVoteInput,
@@ -226,7 +172,7 @@ class VotingServiceImpl implements VotingService {
     }
 
     // Safety: Check cooldown
-    if (!isCooldownExpired(voterStats.lastVoteAt, config.cooldownSeconds)) {
+    if (!this.isCooldownExpired(voterStats.lastVoteAt, config.cooldownSeconds)) {
       const remaining = Math.ceil(
         (new Date(voterStats.lastVoteAt!).getTime() +
           config.cooldownSeconds * 1000 -
@@ -262,7 +208,7 @@ class VotingServiceImpl implements VotingService {
 
       // Check repeat cooldown
       if (
-        !isRepeatCooldownExpired(lastVote.timestamp, config.repeatCooldownHours)
+        !this.isRepeatCooldownExpired(lastVote.timestamp, config.repeatCooldownHours)
       ) {
         const remainingHours = Math.ceil(
           (new Date(lastVote.timestamp).getTime() +
@@ -553,7 +499,7 @@ class VotingServiceImpl implements VotingService {
   }
 }
 
-export const votingService: VotingService = new VotingServiceImpl(votingRepo);
+export const votingService = new VotingService(votingRepo);
 
 
 

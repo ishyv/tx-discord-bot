@@ -41,84 +41,7 @@ import {
 import { storeRotationService } from "./rotation/service";
 import type { FeaturedItem } from "./rotation/types";
 
-export interface StoreService {
-  /**
-   * Get store catalog for a guild.
-   */
-  getCatalog(guildId: GuildId): Promise<Result<StoreCatalog, Error>>;
-
-  /**
-   * Check if an item is in stock.
-   */
-  checkItemStock(
-    guildId: GuildId,
-    itemId: ItemId,
-    quantity: number,
-  ): Promise<Result<StockCheckResult, Error>>;
-
-  /**
-   * Calculate purchase price for an item.
-   */
-  calculatePurchasePrice(
-    guildId: GuildId,
-    itemId: ItemId,
-    quantity: number,
-  ): Promise<Result<PriceCalculation & { featuredItem?: FeaturedItem }, Error>>;
-
-  /**
-   * Buy an item from the store.
-   * Coordinates: stock check, capacity check, payment, item grant, audit.
-   */
-  buyItem(input: BuyItemInput): Promise<Result<BuyItemResult, Error>>;
-
-  /**
-   * Sell an item to the store.
-   * Coordinates: inventory check, guild liquidity check, item removal, payment, audit.
-   */
-  sellItem(input: SellItemInput): Promise<Result<SellItemResult, Error>>;
-
-  /**
-   * Get sell price for an item (for display).
-   */
-  getSellPrice(
-    guildId: GuildId,
-    itemId: ItemId,
-  ): Promise<Result<number, Error>>;
-
-  /**
-   * List available items in the store.
-   */
-  listAvailableItems(guildId: GuildId): Promise<Result<StoreItem[], Error>>;
-
-  /**
-   * Get featured items with rotation check (Phase 9d).
-   */
-  getFeaturedItems(guildId: GuildId): Promise<Result<FeaturedItem[], Error>>;
-
-  /**
-   * Add or update an item in the catalog (Admin).
-   */
-  addItem(
-    guildId: GuildId,
-    item: StoreItem,
-  ): Promise<Result<StoreCatalog, Error>>;
-
-  /**
-   * Edit an existing item in the catalog (Admin).
-   */
-  editItem(
-    guildId: GuildId,
-    itemId: ItemId,
-    update: Partial<StoreItem>,
-  ): Promise<Result<StoreCatalog, Error>>;
-
-  /**
-   * Remove an item from the catalog (Admin).
-   */
-  removeItem(guildId: GuildId, itemId: ItemId): Promise<Result<StoreCatalog, Error>>;
-}
-
-class StoreServiceImpl implements StoreService {
+export class StoreService {
   async getCatalog(guildId: GuildId): Promise<Result<StoreCatalog, Error>> {
     return storeRepo.ensure(guildId);
   }
@@ -836,5 +759,5 @@ class StoreServiceImpl implements StoreService {
 }
 
 /** Singleton instance. */
-export const storeService: StoreService = new StoreServiceImpl();
+export const storeService = new StoreService();
 

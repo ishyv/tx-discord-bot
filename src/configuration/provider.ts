@@ -21,36 +21,6 @@
 import { GuildStore, updateGuildPaths } from "@/db/repositories/guilds";
 import { getConfigPath, type ConfigKey } from "./definitions";
 
-export interface ConfigProvider {
-  /**
-   * Read a config slice for a guild.
-   *
-   * @param guildId Guild identifier.
-   * @param key Config key registered in the registry.
-   * @returns Partial config object (empty if missing).
-   * @sideEffects Reads from Mongo via `ensureGuild`.
-   * @errors None thrown; failures return `{}` and log.
-   */
-  getConfig<TConfig>(
-    guildId: string,
-    key: ConfigKey,
-  ): Promise<Partial<TConfig>>;
-  /**
-   * Persist a partial config update for a guild.
-   *
-   * @param guildId Guild identifier.
-   * @param key Config key registered in the registry.
-   * @param partial Partial update (only provided keys are written).
-   * @sideEffects Writes to Mongo via `updateGuildPaths`.
-   * @errors None thrown; failures log and no-op.
-   */
-  setConfig<TConfig>(
-    guildId: string,
-    key: ConfigKey,
-    partial: Partial<TConfig>,
-  ): Promise<void>;
-}
-
 const resolvePath = (key: ConfigKey): string | null => {
   const path = getConfigPath(key);
   if (!path) {
@@ -65,7 +35,7 @@ const resolvePath = (key: ConfigKey): string | null => {
 /**
  * MongoDB implementation of the ConfigProvider.
  */
-export class MongoGuildConfigProvider implements ConfigProvider {
+export class MongoGuildConfigProvider {
   /**
    * Resolve a config slice by traversing the guild document.
    *

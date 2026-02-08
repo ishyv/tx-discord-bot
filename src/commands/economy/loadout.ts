@@ -15,8 +15,6 @@ import {
   economyAccountRepo,
   createEconomyAccountService,
 } from "@/modules/economy";
-import { getContextInfo } from "@/adapters/seyfert";
-
 @Declare({
   name: "trinkets-loadout",
   description: "🔮 View your equipped trinkets and their boons",
@@ -31,7 +29,10 @@ import { getContextInfo } from "@/adapters/seyfert";
 })
 export default class TrinketsLoadoutCommand extends Command {
   async run(ctx: GuildCommandContext) {
-    const { guildId, userId, username, avatarURL } = getContextInfo(ctx);
+    const { guildId } = ctx;
+    const userId = ctx.author.id;
+    const username = ctx.author.username;
+    const avatarURL = ctx.author.avatarURL();
 
     if (!guildId) {
       await ctx.write({

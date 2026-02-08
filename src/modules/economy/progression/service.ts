@@ -43,17 +43,7 @@ function buildProgressionView(totalXP: number): ProgressionView {
   };
 }
 
-export interface ProgressionService {
-  addXP(
-    input: ProgressionGrantInput,
-  ): Promise<Result<ProgressionGrantResult, ProgressionError>>;
-  getProgressView(
-    guildId: string,
-    userId: string,
-  ): Promise<Result<ProgressionView, ProgressionError>>;
-}
-
-class ProgressionServiceImpl implements ProgressionService {
+export class ProgressionService {
   async addXP(
     input: ProgressionGrantInput,
   ): Promise<Result<ProgressionGrantResult, ProgressionError>> {
@@ -177,6 +167,5 @@ class ProgressionServiceImpl implements ProgressionService {
   }
 }
 
-export const progressionService: ProgressionService =
-  new ProgressionServiceImpl();
+export const progressionService = new ProgressionService();
 export { buildProgressionView };

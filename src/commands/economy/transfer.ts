@@ -19,6 +19,7 @@ import { currencyRegistry } from "@/modules/economy/transactions";
 import { currencyMutationService } from "@/modules/economy/mutations";
 import { sanitizeCurrencyId } from "@/modules/economy/mutations/validation";
 import { guildEconomyService } from "@/modules/economy/guild";
+import { getGuildChannels } from "@/modules/guild-channels";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 
@@ -120,7 +121,29 @@ export default class TransferCommand extends Command {
         // Log the alert (could also send to a log channel)
         console.log(`[LargeTransferAlert] ${alert.level}: ${alert.message}`);
 
-        // TODO: Send to configured log channel if available
+        try {
+          const channels = await getGuildChannels(guildId);
+          const core = channels.core as Record<
+            string,
+            { channelId: string } | null
+          >;
+          const logChannelId = core?.generalLogs?.channelId;
+
+          if (logChannelId) {
+            const logChannel = await ctx.client.channels
+              .fetch(logChannelId)
+              .catch(() => null);
+
+            if (logChannel?.isTextGuild()) {
+              await logChannel.messages.write({
+                content: alert.message,
+                allowed_mentions: { parse: [] },
+              });
+            }
+          }
+        } catch {
+          // Logging must never block transfers.
+        }
       }
     }
 
