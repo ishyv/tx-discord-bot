@@ -159,3 +159,16 @@ tmp/
 
 # Anything that start with cache
 *cache*
+
+# Agent configuration files
+.agents/
+agents/
+.skills/
+skills/
+Agents.md
+agents.md
+AGENTS.md
+.agentrc
+.agentrc.*
+!agentrc.example
+!agentrc.template
