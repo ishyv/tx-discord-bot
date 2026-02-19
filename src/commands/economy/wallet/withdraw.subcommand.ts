@@ -12,6 +12,7 @@ import {
     createStringOption,
     type CommandContext,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import { UserStore } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
@@ -27,6 +28,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "wallet withdraw",
+    category: HelpCategory.Economy,
+    description: "Withdraw coins from the bank to your hand for spending",
+    usage: "/wallet withdraw <amount>",
+    examples: ["/wallet withdraw 500", "/wallet withdraw all", "/wallet withdraw 25%"],
+})
 @Declare({
     name: "withdraw",
     description: "📤 Withdraw coins from the bank to your hand",

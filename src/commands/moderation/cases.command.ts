@@ -10,6 +10,8 @@ import { MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 import { UserStore } from "@/db/repositories/users";
 import { SanctionType } from "@/db/schemas/user";
+import { safeModerationRun } from "@/modules/moderation/executeSanction";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const options = {
   user: createUserOption({
@@ -18,6 +20,12 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "cases",
+  category: HelpCategory.Moderation,
+  description: "View the sanction history (cases) of a user on this server",
+  usage: "/cases [user]",
+})
 @Declare({
   name: "cases",
   description:
@@ -28,11 +36,14 @@ const options = {
 @Options(options)
 export default class CasesCommand extends Command {
   async run(ctx: GuildCommandContext<typeof options>) {
+    await safeModerationRun(ctx, () => this.execute(ctx));
+  }
+
+  private async execute(ctx: GuildCommandContext<typeof options>) {
     const userOption = ctx.options.user;
     const targetId = userOption ? userOption.id : ctx.author.id;
     const targetName = userOption ? userOption.username : ctx.author.username;
 
-    // If user is target, try to get avatarUrl, if not, use ctx.author
     const targetAvatar = userOption
       ? await userOption.avatarURL()
       : ctx.author.avatarURL();
@@ -40,33 +51,35 @@ export default class CasesCommand extends Command {
     const userResult = await UserStore.get(targetId);
 
     if (userResult.isErr()) {
-      return ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
-        content: "❌ There was an error fetching user history.",
+        content: "There was an error fetching user history.",
       });
+      return;
     }
 
     const userData = userResult.unwrap();
     if (!userData) {
-      return ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
-        content:
-          "❌ No records found for this user in the database.",
+        content: "No records found for this user in the database.",
       });
+      return;
     }
 
     const guildId = ctx.guildId!;
     const history = userData.sanction_history?.[guildId] ?? [];
 
     if (history.length === 0) {
-      return ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
-        content: `📁 User **${targetName}** has no cases recorded on this server.`,
+        content: `User **${targetName}** has no cases recorded on this server.`,
       });
+      return;
     }
 
     // Sort by date descending (most recent first)
-    const sortedHistory = [...history].reverse().slice(0, 15); // Limit to 15
+    const sortedHistory = [...history].reverse().slice(0, 15);
 
     const description = sortedHistory
       .map((entry, index) => {
@@ -89,7 +102,7 @@ export default class CasesCommand extends Command {
       timestamp: new Date().toISOString(),
     });
 
-    await ctx.write({
+    await ctx.editOrReply({
       flags: MessageFlags.Ephemeral,
       embeds: [embed],
     });
@@ -105,6 +118,8 @@ export default class CasesCommand extends Command {
         return "🔇";
       case "WARN":
         return "⚠️";
+      case "RESTRICT":
+        return "🚫";
       default:
         return "📝";
     }

@@ -15,6 +15,7 @@ import {
     type GuildCommandContext,
 } from "seyfert";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { getItemDefinition } from "@/modules/inventory/items";
 import { rpgProcessingService } from "@/modules/rpg/processing/service";
@@ -52,6 +53,14 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg process",
+    category: HelpCategory.RPG,
+    description: "Process raw materials into refined materials (2 raw → 1 processed) for crafting",
+    usage: "/rpg process <material> [quantity]",
+    examples: ["/rpg process raw_wood 10"],
+    notes: "Processing has a success chance. Refined materials are required for higher-tier crafting.",
+})
 @Declare({
     name: "process",
     description: "⚗️ Process raw materials into refined materials (2 raw -> 1 processed)",

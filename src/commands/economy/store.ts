@@ -28,6 +28,7 @@ import {
 import { storeRotationService } from "@/modules/economy/store/rotation";
 import { currencyRegistry } from "@/modules/economy/transactions";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import type { StoreError } from "@/modules/economy/store";
 
@@ -57,6 +58,13 @@ const sellOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "store",
+  category: HelpCategory.Economy,
+  description: "Browse, buy, and sell items at the guild store with featured item rotation",
+  usage: "/store",
+  notes: "Use the interactive menu to browse, buy, or sell. Featured items rotate daily.",
+})
 @Declare({
   name: "store",
   description: "Guild store - buy and sell items",
@@ -74,6 +82,12 @@ export default class StoreCommand extends Command {
   }
 }
 
+@HelpDoc({
+  command: "store-buy",
+  category: HelpCategory.Economy,
+  description: "Buy an item from the guild store",
+  usage: "/store-buy <item> [quantity]",
+})
 @Declare({
   name: "store-buy",
   description: "Buy an item from the store",
@@ -157,7 +171,8 @@ export class StoreBuyCommand extends Command {
 
     const purchase = result.unwrap();
     const currency = currencyRegistry.get(purchase.guildId) ?? {
-      display: (v: number) => `${v} coins`,
+      display: (v: unknown) => `${v} coins`,
+      displayAmount: (v: number) => `${v} coins`,
     };
 
     let levelUpLine = "";
@@ -188,7 +203,7 @@ export class StoreBuyCommand extends Command {
       content:
         `✅ **Purchase successful!**\n` +
         `📦 ${purchase.quantity}x ${itemDef.name}\n` +
-        `💰 Total: ${currency.display(purchase.totalPaid as any)} (tax: ${currency.display(purchase.tax as any)})\n` +
+        `💰 Total: ${currency.displayAmount(purchase.totalPaid)} (tax: ${currency.displayAmount(purchase.tax)})\n` +
         `📊 Remaining stock: ${purchase.remainingStock === Infinity ? "Unlimited" : purchase.remainingStock}\n` +
         `📦 Inventory: ${purchase.capacity.currentSlots}/${purchase.capacity.maxSlots} slots, ` +
         `${purchase.capacity.currentWeight}/${purchase.capacity.maxWeight} weight${levelUpLine}`,
@@ -196,6 +211,12 @@ export class StoreBuyCommand extends Command {
   }
 }
 
+@HelpDoc({
+  command: "store-sell",
+  category: HelpCategory.Economy,
+  description: "Sell an item from your inventory to the guild store",
+  usage: "/store-sell <item> [quantity]",
+})
 @Declare({
   name: "store-sell",
   description: "Sell an item to the store",
@@ -278,11 +299,12 @@ export class StoreSellCommand extends Command {
 
     const sale = result.unwrap();
     const currency = currencyRegistry.get(sale.guildId) ?? {
-      display: (v: number) => `${v} coins`,
+      display: (v: unknown) => `${v} coins`,
+      displayAmount: (v: number) => `${v} coins`,
     };
 
     const taxInfo =
-      sale.tax > 0 ? ` (tax: ${currency.display(sale.tax as any)})` : "";
+      sale.tax > 0 ? ` (tax: ${currency.displayAmount(sale.tax)})` : "";
     let levelUpLine = "";
     const configResult = await guildEconomyService.getConfig(guildId);
     if (configResult.isOk()) {
@@ -311,13 +333,19 @@ export class StoreSellCommand extends Command {
       content:
         `✅ **Sale successful!**\n` +
         `📦 Sold: ${sale.quantity}x ${itemDef.name}\n` +
-        `💰 Received: ${currency.display(sale.totalReceived as any)}${taxInfo}\n` +
-        `💵 Unit price: ${currency.display(sale.unitPrice as any)} (~85% of base value)` +
+        `💰 Received: ${currency.displayAmount(sale.totalReceived)}${taxInfo}\n` +
+        `💵 Unit price: ${currency.displayAmount(sale.unitPrice)} (~85% of base value)` +
         levelUpLine,
     });
   }
 }
 
+@HelpDoc({
+  command: "store-list",
+  category: HelpCategory.Economy,
+  description: "List all available items currently in the guild store",
+  usage: "/store-list",
+})
 @Declare({
   name: "store-list",
   description: "List available items in the store",
@@ -328,6 +356,12 @@ export class StoreListCommand extends Command {
   }
 }
 
+@HelpDoc({
+  command: "store-featured",
+  category: HelpCategory.Economy,
+  description: "View today's featured store items with special discounts",
+  usage: "/store-featured",
+})
 @Declare({
   name: "store-featured",
   description: "View today's featured items with special discounts",

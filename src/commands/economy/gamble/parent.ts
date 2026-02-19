@@ -6,7 +6,14 @@
  */
 import { AutoLoad, Command, Declare } from "seyfert";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
+@HelpDoc({
+  command: "gamble",
+  category: HelpCategory.Economy,
+  description: "Gambling minigames — coinflip, dice, and more",
+  usage: "/gamble coinflip <amount> [side]",
+})
 @Declare({
     name: "gamble",
     description: "🎰 Gambling games - coinflip, dice, and more",

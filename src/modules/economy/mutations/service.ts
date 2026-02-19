@@ -129,7 +129,7 @@ function validateTransferInput(
     return ErrResult(
       new CurrencyMutationError(
         "SELF_TRANSFER",
-        "No puedes transferirte a ti mismo.",
+        "You cannot transfer to yourself.",
       ),
     );
   }
@@ -143,10 +143,6 @@ function validateTransferInput(
     reason,
     correlationId,
   });
-}
-
-function computeTaxAndNet(amount: number): { tax: number; netAmount: number } {
-  return { tax: 0, netAmount: amount };
 }
 
 async function executeTransferTransaction(
@@ -259,7 +255,7 @@ async function executeTransferTransaction(
   const transferId =
     correlationId ??
     `xfer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-  const { netAmount } = computeTaxAndNet(amount);
+  const netAmount = amount;
 
   let senderAfter: unknown;
   let recipientAfter: unknown;
@@ -303,7 +299,7 @@ async function executeTransferTransaction(
         return ErrResult(
           new CurrencyMutationError(
             "UPDATE_FAILED",
-            "Error en la transferencia. Intenta nuevamente.",
+            "Transfer failed. Please try again.",
           ),
         );
       }
@@ -320,7 +316,7 @@ async function executeTransferTransaction(
       return ErrResult(
         new CurrencyMutationError(
           "UPDATE_FAILED",
-          "Error de base de datos durante la transferencia.",
+          "Database error during transfer.",
         ),
       );
     }
@@ -367,7 +363,7 @@ async function executeTransferTransaction(
       return ErrResult(
         new CurrencyMutationError(
           "UPDATE_FAILED",
-          "Error en la transferencia. Intenta nuevamente.",
+          "Transfer failed. Please try again.",
         ),
       );
     }
@@ -609,7 +605,7 @@ export class CurrencyMutationService {
           return ErrResult(
             new CurrencyMutationError(
               "UPDATE_FAILED",
-              "Error de base de datos.",
+              "Database error.",
             ),
           );
         }
@@ -657,41 +653,17 @@ export class CurrencyMutationService {
           );
         }
 
-        const newCurrency = txResult.unwrap();
-        const afterBalance = newCurrency[currencyId];
-
-        // Create audit entry
-        const auditResult = await economyAuditRepo.create({
-          operationType: "currency_adjust",
-          actorId,
-          targetId,
-          guildId,
-          source: "give-currency",
-          reason,
-          currencyData: {
-            currencyId,
-            delta,
-            beforeBalance,
-            afterBalance,
-          },
-        });
-
-        if (auditResult.isErr()) {
-          console.error(
-            "[CurrencyMutationService] Failed to create audit entry:",
-            auditResult.error,
+        // Re-fetch to get full user doc for the shared audit path
+        const refreshedTx = await UserStore.get(targetId);
+        if (refreshedTx.isErr() || !refreshedTx.unwrap()) {
+          return ErrResult(
+            new CurrencyMutationError(
+              "UPDATE_FAILED",
+              "Error getting updated state.",
+            ),
           );
-          // Don't fail the operation if audit fails, but log it
         }
-
-        return OkResult({
-          targetId,
-          currencyId,
-          delta,
-          before: beforeBalance,
-          after: afterBalance,
-          timestamp: new Date(),
-        });
+        updateResult = refreshedTx;
       }
     }
 

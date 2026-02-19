@@ -66,6 +66,45 @@ export class DailyService {
         // 2. Prepare RNG factor
         const rngFactor = 0.9 + Math.random() * 0.2;
 
+        // A. Check/Acquire Cooldown Atomic Lock — MUST be outside the transaction.
+        // tryClaim uses findOneAndUpdate with upsert, which is already atomic.
+        // Running it inside withTransaction causes E11000 on retry because the
+        // upserted document already exists when MongoDB retries the transaction body.
+        const claimResult = await dailyClaimRepo.tryClaim(guildId, userId, dailyCooldownHours);
+        if (claimResult.isErr()) return ErrResult(claimResult.error);
+
+        const claim = claimResult.unwrap();
+        if (!claim.granted) {
+            const db = await getDb();
+            const existing = await db.collection("economy_daily_claims").findOne({ _id: `${guildId}:${userId}` as any });
+            let cooldownEndsAt: Date | undefined;
+            if (existing && (existing as any).lastClaimAt) {
+                cooldownEndsAt = new Date((existing as any).lastClaimAt.getTime() + (dailyCooldownHours * 60 * 60 * 1000));
+            }
+            return OkResult({
+                granted: false,
+                reason: "cooldown" as const,
+                cooldownEndsAt,
+                baseMint: 0,
+                bonusFromTreasury: 0,
+                streakBonus: 0,
+                totalBeforeFee: 0,
+                fee: 0,
+                totalPaid: 0,
+                currencyId,
+                streak: (existing as any)?.currentStreak || 0,
+                bestStreak: (existing as any)?.bestStreak || 0,
+                userBalanceBefore: 0,
+                userBalanceAfter: 0,
+                correlationId,
+                levelUp: false,
+                newLevel: 0,
+            });
+        }
+
+        const streakAfter = claim.streakAfter ?? 1;
+        const bestStreakAfter = claim.bestStreakAfter ?? streakAfter;
+
         const client = await getMongoClient();
         const session = client.startSession();
 
@@ -75,43 +114,6 @@ export class DailyService {
             await session.withTransaction(async () => {
                 const db = await getDb();
                 const now = new Date();
-
-                // A. Check/Acquire Cooldown Atomic Lock
-                const claimResult = await dailyClaimRepo.tryClaim(guildId, userId, dailyCooldownHours);
-                if (claimResult.isErr()) throw claimResult.error;
-
-                const claim = claimResult.unwrap();
-                if (!claim.granted) {
-                    const existing = await db.collection("economy_daily_claims").findOne({ _id: `${guildId}:${userId}` as any }, { session });
-                    let cooldownEndsAt: Date | undefined;
-                    if (existing && (existing as any).lastClaimAt) {
-                        cooldownEndsAt = new Date((existing as any).lastClaimAt.getTime() + (dailyCooldownHours * 60 * 60 * 1000));
-                    }
-
-                    finalResult = {
-                        granted: false,
-                        reason: "cooldown",
-                        cooldownEndsAt,
-                        baseMint: 0,
-                        bonusFromTreasury: 0,
-                        streakBonus: 0,
-                        totalBeforeFee: 0,
-                        fee: 0,
-                        totalPaid: 0,
-                        currencyId,
-                        streak: (existing as any)?.streak || 0,
-                        bestStreak: (existing as any)?.bestStreak || 0,
-                        userBalanceBefore: 0,
-                        userBalanceAfter: 0,
-                        correlationId,
-                        levelUp: false,
-                        newLevel: 0,
-                    };
-                    throw new Error("CLAIM_DENIED");
-                }
-
-                const streakAfter = claim.streakAfter ?? 1;
-                const bestStreakAfter = claim.bestStreakAfter ?? streakAfter;
 
                 // B. Calculate Rewards
                 const baseMint = Math.round(rewardBaseMint * rngFactor);
@@ -268,9 +270,6 @@ export class DailyService {
 
             return OkResult(finalResult!);
         } catch (e) {
-            if ((e as Error).message === "CLAIM_DENIED") {
-                return OkResult(finalResult!);
-            }
             return ErrResult(e instanceof Error ? e : new Error(String(e)));
         } finally {
             await session.endSession();

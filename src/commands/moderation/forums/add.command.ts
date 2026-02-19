@@ -12,6 +12,7 @@ import {
   Middlewares,
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
@@ -24,6 +25,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "forums add",
+  category: HelpCategory.Moderation,
+  description: "Add a forum channel for AI-powered automatic replies",
+  usage: "/forums add <channel>",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "add",
   description: "Add a monitored forum for automatic replies (AI)",

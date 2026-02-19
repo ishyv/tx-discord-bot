@@ -9,6 +9,7 @@ import {
 import { MessageFlags } from "seyfert/lib/types";
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Middlewares } from "seyfert";
 
 const options = {
@@ -33,6 +34,13 @@ const options = {
 const DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 @Options(options)
+@HelpDoc({
+  command: "automod shorteners",
+  category: HelpCategory.Moderation,
+  description: "Configure link shortener detection — enable/disable and set URL resolution",
+  usage: "/automod shorteners [enabled] [resolve_final_url]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "shorteners",
   description: "Configure link shortener detection",

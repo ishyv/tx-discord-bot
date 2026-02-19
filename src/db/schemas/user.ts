@@ -24,7 +24,7 @@ export const WarnSchema = z.object({
   timestamp: z.string(),
 });
 
-export const SanctionType = z.enum(["BAN", "KICK", "TIMEOUT", "WARN"]);
+export const SanctionType = z.enum(["BAN", "KICK", "TIMEOUT", "WARN", "RESTRICT"]);
 export type SanctionType = z.infer<typeof SanctionType>;
 
 export const SanctionHistoryEntrySchema = z.object({

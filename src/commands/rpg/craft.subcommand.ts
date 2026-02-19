@@ -17,11 +17,11 @@ import {
 import { MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
     craftingService,
-    economyAccountRepo,
-    createEconomyAccountService,
+    economyAccountService,
     guildEconomyRepo,
 } from "@/modules/economy";
 import { getItemDefinition } from "@/modules/inventory";
@@ -40,6 +40,14 @@ const craftOptions = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg craft",
+    category: HelpCategory.RPG,
+    description: "Craft items from recipes using gathered materials",
+    usage: "/rpg craft [recipe] [quantity]",
+    examples: ["/rpg craft", "/rpg craft iron_sword 1"],
+    notes: "Omit recipe to see all available recipes and their requirements.",
+})
 @Declare({
     name: "craft",
     description: "🔨 Craft items using recipes",
@@ -79,7 +87,7 @@ export default class RpgCraftSubcommand extends SubCommand {
             return;
         }
 
-        const accountService = createEconomyAccountService(economyAccountRepo);
+        const accountService = economyAccountService;
         const ensureResult = await accountService.ensureAccount(userId);
         if (ensureResult.isErr()) {
             await ctx.write({

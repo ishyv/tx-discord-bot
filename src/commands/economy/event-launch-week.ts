@@ -11,6 +11,7 @@ import {
   Embed,
   type CommandContext,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import {
@@ -19,8 +20,15 @@ import {
   LAUNCH_WEEK_EVENT,
   getModifierSummary,
 } from "@/modules/economy";
-import { buildErrorEmbed, checkEconomyPermission } from "@/modules/economy";
+import { buildErrorEmbed, checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy";
 
+@HelpDoc({
+  command: "event-launch-week",
+  category: HelpCategory.Economy,
+  description: "Start the Launch Week event with preset economy bonuses (admin only)",
+  usage: "/event-launch-week",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "event-launch-week",
   description: "Start the Launch Week event with preset bonuses (Admin only)",
@@ -50,9 +58,6 @@ export default class EventLaunchWeekCommand extends Command {
     }
 
     // Check admin permission
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

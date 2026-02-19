@@ -9,6 +9,7 @@ import {
 import { MessageFlags } from "seyfert/lib/types";
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Middlewares } from "seyfert";
 
 const options = {
@@ -29,6 +30,14 @@ const options = {
 const DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 @Options(options)
+@HelpDoc({
+  command: "automod whitelist",
+  category: HelpCategory.Moderation,
+  description: "Configure the AutoMod domain whitelist — add or remove allowed domains",
+  usage: "/automod whitelist [enabled] [add] [remove]",
+  examples: ["/automod whitelist add github.com"],
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "whitelist",
   description: "Configure domain whitelist for AutoMod",

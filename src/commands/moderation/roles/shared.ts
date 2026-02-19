@@ -10,7 +10,7 @@ import {
   DEFAULT_MODERATION_ACTIONS,
   type ModerationActionDefinition,
 } from "@/modules/guild-roles"; // only for constants/types
-import { Features } from "@/modules/features";
+import { Features, isFeatureEnabled } from "@/modules/features";
 import type {
   LimitWindow,
   RoleCommandOverride,
@@ -54,9 +54,7 @@ export async function requireGuildContext(
     return null;
   }
 
-  const enabled = await import("@/modules/features").then((m) =>
-    m.isFeatureEnabled(guildId, Features.Roles),
-  );
+  const enabled = await isFeatureEnabled(guildId, Features.Roles);
   if (!enabled) {
     await ctx.write({
       content:

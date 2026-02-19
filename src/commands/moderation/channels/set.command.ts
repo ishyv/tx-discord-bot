@@ -13,6 +13,7 @@ import {
   createStringOption,
   Middlewares,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { UIColors } from "@/modules/ui/design-system";
 import {
   CORE_CHANNEL_DEFINITIONS,
@@ -43,6 +44,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "channels set",
+  category: HelpCategory.Moderation,
+  description: "Update one of the required core channels used by the bot",
+  usage: "/channels set <name> <channel>",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "set",
   description: "Update one of the required channels",

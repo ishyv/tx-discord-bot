@@ -17,6 +17,7 @@ import {
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { Button } from "@/modules/ui";
 import {
@@ -24,8 +25,7 @@ import {
   getSlotDisplayName,
   SLOT_DISPLAY_NAMES,
   EQUIPMENT_SLOTS,
-  economyAccountRepo,
-  createEconomyAccountService,
+  economyAccountService,
   getEquipableItemDefinition,
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
@@ -70,6 +70,13 @@ const slotOption = {
   }),
 };
 
+@HelpDoc({
+  command: "trinkets",
+  category: HelpCategory.Economy,
+  description: "Manage magical trinkets, rings, and necklaces that grant passive boons",
+  usage: "/trinkets",
+  notes: "Trinkets provide passive bonuses. Not combat equipment — use /rpg equipment for weapons/armor.",
+})
 @Declare({
   name: "trinkets",
   description: "🔮 Manage your magical trinkets, rings, and necklaces (boons)",
@@ -95,7 +102,7 @@ export default class TrinketsCommand extends Command {
       return;
     }
 
-    const accountService = createEconomyAccountService(economyAccountRepo);
+    const accountService = economyAccountService;
     const ensureResult = await accountService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.editOrReply({ content: "Could not load your account.", flags: MessageFlags.Ephemeral });

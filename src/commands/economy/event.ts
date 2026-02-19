@@ -5,6 +5,7 @@
  * Commands: /event (view), /event start, /event stop
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Command,
   Declare,
@@ -24,6 +25,7 @@ import {
   economyAuditRepo,
   buildErrorEmbed,
   checkEconomyPermission,
+  EconomyPermissionLevel,
 } from "@/modules/economy";
 import { getModifierSummary } from "@/modules/economy/events/types";
 
@@ -88,6 +90,12 @@ const startOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "event",
+  category: HelpCategory.Economy,
+  description: "View or manage guild economy events with special modifiers",
+  usage: "/event",
+})
 @Declare({
   name: "event",
   description: "View or manage guild events with special modifiers",
@@ -107,6 +115,13 @@ export default class EventCommand extends Command {
   }
 }
 
+@HelpDoc({
+  command: "event-start",
+  category: HelpCategory.Economy,
+  description: "Start a new guild economy event with custom modifiers (admin only)",
+  usage: "/event-start [work_multiplier] [daily_bonus] [crafting_reduction]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "event-start",
   description: "Start a new guild event (Admin only)",
@@ -126,9 +141,6 @@ export class EventStartCommand extends Command {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,
@@ -241,6 +253,13 @@ export class EventStartCommand extends Command {
   }
 }
 
+@HelpDoc({
+  command: "event-stop",
+  category: HelpCategory.Economy,
+  description: "Stop the currently active guild economy event (admin only)",
+  usage: "/event-stop",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "event-stop",
   description: "Stop the current guild event (Admin only)",
@@ -259,9 +278,6 @@ export class EventStopCommand extends Command {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

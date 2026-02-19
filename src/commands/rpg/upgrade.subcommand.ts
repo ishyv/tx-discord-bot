@@ -15,6 +15,7 @@ import {
     type GuildCommandContext,
 } from "seyfert";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { rpgUpgradeService } from "@/modules/rpg/upgrades/service";
 import { rpgGatheringService } from "@/modules/rpg/gathering/service";
@@ -37,6 +38,14 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg upgrade",
+    category: HelpCategory.RPG,
+    description: "Upgrade a tool to the next tier using materials and coins",
+    usage: "/rpg upgrade [instance] [equipped]",
+    examples: ["/rpg upgrade equipped:true"],
+    notes: "Tools have 4 tiers. Higher tiers gather more resources and access better locations.",
+})
 @Declare({
     name: "upgrade",
     description: "⬆️ Upgrade a tool to the next tier",

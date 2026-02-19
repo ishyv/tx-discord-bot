@@ -13,6 +13,7 @@ import {
   SubCommand,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import {
@@ -44,6 +45,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "roles set-limit",
+  category: HelpCategory.Moderation,
+  description: "Configure a rate limit for a moderation action on a managed role",
+  usage: "/roles set-limit <role> <action> <limit> <window>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-limit",
   description: "Configure a usage limit for an action",

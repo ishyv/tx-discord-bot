@@ -9,7 +9,15 @@ import { UIColors } from "@/modules/ui/design-system";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
+@HelpDoc({
+  command: "forums list",
+  category: HelpCategory.Moderation,
+  description: "List all forum channels currently monitored by the AI",
+  usage: "/forums list",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "list",
   description: "List monitored forums",

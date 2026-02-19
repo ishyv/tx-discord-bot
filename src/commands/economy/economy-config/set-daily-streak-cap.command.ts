@@ -4,6 +4,7 @@
  * Purpose: Admin command to set the maximum streak bonus cap.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   createIntegerOption,
   Declare,
@@ -17,7 +18,7 @@ import {
   guildEconomyRepo,
   guildEconomyService,
 } from "@/modules/economy";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 
 const options = {
   cap: createIntegerOption({
@@ -28,6 +29,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-daily-streak-cap",
+  category: HelpCategory.Economy,
+  description: "Set the daily streak cap (maximum days counted for bonus calculation)",
+  usage: "/economy-config set-daily-streak-cap <days>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-daily-streak-cap",
   description: "Set the daily streak cap (max days for bonus calculation)",
@@ -43,9 +51,6 @@ export default class SetDailyStreakCapCommand extends SubCommand {
       });
       return;
     }
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

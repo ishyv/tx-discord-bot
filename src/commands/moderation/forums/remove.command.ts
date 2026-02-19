@@ -12,6 +12,7 @@ import {
   Middlewares,
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
@@ -24,6 +25,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "forums remove",
+  category: HelpCategory.Moderation,
+  description: "Remove a forum channel from AI monitoring",
+  usage: "/forums remove <channel>",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "remove",
   description: "Remove a monitored forum",

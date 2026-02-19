@@ -4,6 +4,7 @@
  * Purpose: Admin command to set bonus scale mode (flat | percent) for /work.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
     Declare,
     Options,
@@ -12,7 +13,7 @@ import {
     createStringOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 
 const options = {
@@ -26,6 +27,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+  command: "economy-config set-work-bonus-mode",
+  category: HelpCategory.Economy,
+  description: "Set the bonus scale mode for /work: flat amount or percentage",
+  usage: "/economy-config set-work-bonus-mode <mode>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
     name: "set-work-bonus-mode",
     description: "Set bonus scale mode for /work (flat or percent)",
@@ -42,9 +50,6 @@ export default class EconomyConfigSetWorkBonusModeCommand extends SubCommand {
             return;
         }
 
-        const { EconomyPermissionLevel } = await import(
-            "@/modules/economy/permissions"
-        );
         const isAdmin = await checkEconomyPermission(
             ctx.member,
             EconomyPermissionLevel.ADMIN,

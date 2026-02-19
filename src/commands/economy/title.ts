@@ -16,6 +16,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
   achievementService,
@@ -26,6 +27,13 @@ import {
   buildAchievementSuccessEmbed,
 } from "@/modules/economy/achievements";
 
+@HelpDoc({
+  command: "title",
+  category: HelpCategory.Economy,
+  description: "Manage your equipped titles and display badges earned from achievements",
+  usage: "/title",
+  notes: "Titles are earned through achievements. Use /title list to see what you have.",
+})
 @Declare({
   name: "title",
   description: "🏷️ Manage your titles and badges",
@@ -111,6 +119,12 @@ const setOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "title set",
+  category: HelpCategory.Economy,
+  description: "Equip a title you have earned from achievements",
+  usage: "/title set <title_id>",
+})
 @Declare({
   name: "set",
   description: "Equip a title",
@@ -179,6 +193,12 @@ export class TitleSetSubCommand extends SubCommand {
 }
 
 // Subcommand: list
+@HelpDoc({
+  command: "title list",
+  category: HelpCategory.Economy,
+  description: "List all titles you have unlocked and are available to equip",
+  usage: "/title list",
+})
 @Declare({
   name: "list",
   description: "List all your available titles",
@@ -233,6 +253,12 @@ export class TitleListSubCommand extends SubCommand {
 }
 
 // Subcommand: clear
+@HelpDoc({
+  command: "title clear",
+  category: HelpCategory.Economy,
+  description: "Remove your currently equipped title",
+  usage: "/title clear",
+})
 @Declare({
   name: "clear",
   description: "Remove the equipped title",
@@ -293,6 +319,12 @@ const badgeOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "title badges",
+  category: HelpCategory.Economy,
+  description: "View or manage your earned achievement badges",
+  usage: "/title badges [action]",
+})
 @Declare({
   name: "badges",
   description: "View or manage your badges",

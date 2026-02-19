@@ -12,6 +12,7 @@ import {
   ActionRow,
 } from "seyfert";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { EmbedColors } from "seyfert/lib/common";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
@@ -21,8 +22,7 @@ import {
   getSlotDisplayName,
   SLOT_DISPLAY_NAMES,
   EQUIPMENT_SLOTS,
-  economyAccountRepo,
-  createEconomyAccountService,
+  economyAccountService,
   getEquipableItemDefinition,
 } from "@/modules/economy";
 import type { EquipmentSlot } from "@/modules/economy";
@@ -51,6 +51,12 @@ const slotOption = {
   }),
 };
 
+@HelpDoc({
+  command: "trinkets-unequip",
+  category: HelpCategory.Economy,
+  description: "Remove an equipped trinket, ring, or necklace from your loadout",
+  usage: "/trinkets-unequip <slot>",
+})
 @Declare({
   name: "trinkets-unequip",
   description: "🔮 Remove an equipped trinket, ring, or necklace",
@@ -76,7 +82,7 @@ export default class TrinketsUnequipCommand extends Command {
       return;
     }
 
-    const accountService = createEconomyAccountService(economyAccountRepo);
+    const accountService = economyAccountService;
     const ensureResult = await accountService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.editOrReply({ content: "Could not load your account.", flags: MessageFlags.Ephemeral });

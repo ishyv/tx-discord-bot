@@ -6,6 +6,7 @@
  *          Triggers onboarding flow for new users without a starter kit.
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Embed } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { rpgProfileService } from "@/modules/rpg/profile/service";
@@ -32,6 +33,13 @@ const SLOT_EMOJIS: Record<EquipmentSlot, string> = {
   necklace: "📿",
 };
 
+@HelpDoc({
+  command: "rpg profile",
+  category: HelpCategory.RPG,
+  description: "Show your RPG character profile: stats, loadout, HP, and combat record",
+  usage: "/rpg profile",
+  notes: "First use triggers onboarding to create your character.",
+})
 @Declare({
   name: "profile",
   description: "🎮 Show your RPG profile",

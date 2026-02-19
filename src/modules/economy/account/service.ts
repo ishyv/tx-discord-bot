@@ -138,8 +138,36 @@ export interface EconomyAccountService {
   repairAccount(userId: UserId): Promise<Result<AccountRepairResult, Error>>;
 }
 
+import type { User } from "@/db/schemas/user";
+
+type LoadedUser = { account: EconomyAccount; user: User };
+
 export class EconomyAccountService {
   constructor(private repo: EconomyAccountRepo) { }
+
+  /**
+   * Ensure account exists, gate on status, load user data.
+   * Shared pipeline used by all read methods.
+   */
+  private async loadUserWithGate(
+    userId: UserId,
+  ): Promise<Result<LoadedUser, Error>> {
+    const ensureResult = await this.repo.ensure(userId);
+    if (ensureResult.isErr()) return ErrResult(ensureResult.error);
+    const { account } = ensureResult.unwrap();
+
+    const gate = checkGate(account.status);
+    if (gate.isErr()) return ErrResult(gate.error);
+
+    const userResult = await UserStore.get(userId);
+    if (userResult.isErr()) return ErrResult(userResult.error);
+    const user = userResult.unwrap();
+    if (!user) {
+      return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
+    }
+
+    return OkResult({ account, user });
+  }
 
   async ensureAccount(
     userId: UserId,
@@ -157,103 +185,42 @@ export class EconomyAccountService {
     userId: UserId,
     options?: BalanceViewOptions,
   ): Promise<Result<BalanceView, Error>> {
-    // Step 1: Ensure account exists (creates if needed, repairs if corrupted)
-    const ensureResult = await this.repo.ensure(userId);
-    if (ensureResult.isErr()) {
-      return ErrResult(ensureResult.error);
-    }
-    const { account } = ensureResult.unwrap();
-
-    // Step 2: Gate on status
-    const gate = checkGate(account.status);
-    if (gate.isErr()) {
-      return ErrResult(gate.error);
-    }
-
-    // Step 3: Load data and build view
-    const userResult = await UserStore.get(userId);
-    if (userResult.isErr()) {
-      return ErrResult(userResult.error);
-    }
-    const user = userResult.unwrap();
-    if (!user) {
-      return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
-    }
+    const loaded = await this.loadUserWithGate(userId);
+    if (loaded.isErr()) return ErrResult(loaded.error);
+    const { user } = loaded.unwrap();
 
     const inventory = (user.currency ?? {}) as CurrencyInventory;
     const view = buildBalanceView(inventory, options);
 
-    // Step 4: Touch activity (fire-and-forget)
     this.repo.touchActivity(userId);
-
     return OkResult(view);
   }
 
   async getBankBreakdown(
     userId: UserId,
   ): Promise<Result<BankBreakdownView | null, Error>> {
-    // Step 1: Ensure account exists
-    const ensureResult = await this.repo.ensure(userId);
-    if (ensureResult.isErr()) {
-      return ErrResult(ensureResult.error);
-    }
-    const { account } = ensureResult.unwrap();
-
-    // Step 2: Gate on status
-    const gate = checkGate(account.status);
-    if (gate.isErr()) {
-      return ErrResult(gate.error);
-    }
-
-    // Step 3: Load data and build view
-    const userResult = await UserStore.get(userId);
-    if (userResult.isErr()) {
-      return ErrResult(userResult.error);
-    }
-    const user = userResult.unwrap();
-    if (!user) {
-      return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
-    }
+    const loaded = await this.loadUserWithGate(userId);
+    if (loaded.isErr()) return ErrResult(loaded.error);
+    const { user } = loaded.unwrap();
 
     const inventory = (user.currency ?? {}) as CurrencyInventory;
     const view = buildBankBreakdown(inventory);
 
     this.repo.touchActivity(userId);
-
     return OkResult(view);
   }
 
   async getInventorySummary(
     userId: UserId,
   ): Promise<Result<InventorySummaryView, Error>> {
-    // Step 1: Ensure account exists
-    const ensureResult = await this.repo.ensure(userId);
-    if (ensureResult.isErr()) {
-      return ErrResult(ensureResult.error);
-    }
-    const { account } = ensureResult.unwrap();
-
-    // Step 2: Gate on status
-    const gate = checkGate(account.status);
-    if (gate.isErr()) {
-      return ErrResult(gate.error);
-    }
-
-    // Step 3: Load data and build view
-    const userResult = await UserStore.get(userId);
-    if (userResult.isErr()) {
-      return ErrResult(userResult.error);
-    }
-    const user = userResult.unwrap();
-    if (!user) {
-      return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
-    }
+    const loaded = await this.loadUserWithGate(userId);
+    if (loaded.isErr()) return ErrResult(loaded.error);
+    const { user } = loaded.unwrap();
 
     const inventory = normalizeModernInventory(user.inventory);
     const view = buildInventorySummary(inventory);
 
     this.repo.touchActivity(userId);
-
     return OkResult(view);
   }
 
@@ -261,34 +228,14 @@ export class EconomyAccountService {
     userId: UserId,
     options: InventoryPaginationOptions,
   ): Promise<Result<InventoryPageView, Error>> {
-    // Step 1: Ensure account exists
-    const ensureResult = await this.repo.ensure(userId);
-    if (ensureResult.isErr()) {
-      return ErrResult(ensureResult.error);
-    }
-    const { account } = ensureResult.unwrap();
-
-    // Step 2: Gate on status
-    const gate = checkGate(account.status);
-    if (gate.isErr()) {
-      return ErrResult(gate.error);
-    }
-
-    // Step 3: Load data and build view
-    const userResult = await UserStore.get(userId);
-    if (userResult.isErr()) {
-      return ErrResult(userResult.error);
-    }
-    const user = userResult.unwrap();
-    if (!user) {
-      return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
-    }
+    const loaded = await this.loadUserWithGate(userId);
+    if (loaded.isErr()) return ErrResult(loaded.error);
+    const { user } = loaded.unwrap();
 
     const inventory = normalizeModernInventory(user.inventory);
     const view = buildInventoryPage(inventory, options);
 
     this.repo.touchActivity(userId);
-
     return OkResult(view);
   }
 
@@ -296,30 +243,9 @@ export class EconomyAccountService {
     userId: UserId,
     options?: { balanceOptions?: BalanceViewOptions; guildId?: string },
   ): Promise<Result<ProfileSummaryView, Error>> {
-    // Step 1: Ensure account exists (already did this correctly)
-    const ensureResult = await this.repo.ensure(userId);
-    if (ensureResult.isErr()) {
-      return ErrResult(ensureResult.error);
-    }
-
-    const { account } = ensureResult.unwrap();
-
-    // Step 2: Gate on status
-    const gate = checkGate(account.status);
-    if (gate.isErr()) {
-      return ErrResult(gate.error);
-    }
-
-    // Step 3: Load user data
-    const userResult = await UserStore.get(userId);
-    if (userResult.isErr()) {
-      return ErrResult(userResult.error);
-    }
-
-    const user = userResult.unwrap();
-    if (!user) {
-      return ErrResult(new EconomyError("ACCOUNT_NOT_FOUND", "User not found"));
-    }
+    const loaded = await this.loadUserWithGate(userId);
+    if (loaded.isErr()) return ErrResult(loaded.error);
+    const { account, user } = loaded.unwrap();
 
     const currencyInventory = (user.currency ?? {}) as CurrencyInventory;
     const itemInventory = normalizeModernInventory(user.inventory);
@@ -345,7 +271,6 @@ export class EconomyAccountService {
     );
 
     this.repo.touchActivity(userId);
-
     return OkResult(view);
   }
 
@@ -380,8 +305,3 @@ export class EconomyAccountService {
 
 /** Singleton instance wired with the default repository. */
 export const economyAccountService = new EconomyAccountService(economyAccountRepo);
-
-// Deprecated: use economyAccountService singleton directly
-export function createEconomyAccountService(repo: EconomyAccountRepo): EconomyAccountService {
-  return new EconomyAccountService(repo);
-}

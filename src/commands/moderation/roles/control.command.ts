@@ -13,6 +13,7 @@ import {
   SubCommand,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import {
   DEFAULT_MODERATION_ACTIONS,
@@ -170,6 +171,13 @@ function buildUpdateEmbed(
   );
 }
 
+@HelpDoc({
+  command: "roles control",
+  category: HelpCategory.Moderation,
+  description: "Configure moderation overrides for managed roles",
+  usage: "/roles control <role> [option]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "control",
   description: "Configure moderation overrides",

@@ -4,6 +4,7 @@
  * Purpose: Admin command to set cooldown for /work.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -12,7 +13,7 @@ import {
   createIntegerOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 
 const options = {
@@ -24,6 +25,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-work-cooldown-minutes",
+  category: HelpCategory.Economy,
+  description: "Set the cooldown duration for /work in minutes (admin only)",
+  usage: "/economy-config set-work-cooldown-minutes <minutes>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-work-cooldown-minutes",
   description: "Set cooldown for /work in minutes (admin only)",
@@ -40,9 +48,6 @@ export default class EconomyConfigSetWorkCooldownMinutesCommand extends SubComma
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

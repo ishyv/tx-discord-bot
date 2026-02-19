@@ -19,7 +19,15 @@ import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { economyModerationService, formatFreezeDuration } from "@/modules/economy/moderation";
 import { MAX_FREEZE_HOURS } from "@/modules/economy/moderation";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
+@HelpDoc({
+  command: "economy-freeze",
+  category: HelpCategory.Economy,
+  description: "Freeze a user's economy account for a specified duration (mod only)",
+  usage: "/economy-freeze <user> [hours] [reason]",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "economy-freeze",
   description: "Freeze a user's economy account (mod only)",

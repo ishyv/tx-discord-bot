@@ -13,6 +13,7 @@ import {
   createStringOption,
   Middlewares,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { UIColors } from "@/modules/ui/design-system";
 import {
   addManagedChannel,
@@ -31,6 +32,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "channels add",
+  category: HelpCategory.Moderation,
+  description: "Register an optional auxiliary channel for the bot",
+  usage: "/channels add <name> <channel>",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "add",
   description: "Register an optional channel",

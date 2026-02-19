@@ -15,6 +15,7 @@ import {
 import { Button, UI } from "@/modules/ui";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { getItemDefinition } from "@/modules/inventory/items";
 import {
@@ -217,6 +218,13 @@ async function loadMyListingsData(
   return { listings: result.unwrap() };
 }
 
+@HelpDoc({
+  command: "market",
+  category: HelpCategory.Economy,
+  description: "Interactive player-to-player marketplace for buying and selling items",
+  usage: "/market",
+  notes: "Listings are finite-supply. Use the interactive UI to browse, list, or buy.",
+})
 @Declare({
   name: "market",
   description: "Player marketplace (finite-supply listings)",

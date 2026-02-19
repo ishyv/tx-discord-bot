@@ -172,3 +172,4 @@ AGENTS.md
 .agentrc.*
 !agentrc.example
 !agentrc.template
+.opencode/

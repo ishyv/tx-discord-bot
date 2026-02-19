@@ -13,11 +13,11 @@ import {
 	SubCommand,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
-	economyAccountRepo,
+	economyAccountService,
 	guildEconomyRepo,
 } from "@/modules/economy";
 import {
@@ -49,6 +49,13 @@ const coinflipOptions = {
 	}),
 };
 
+@HelpDoc({
+  command: "gamble coinflip",
+  category: HelpCategory.Economy,
+  description: "Bet currency on a 50/50 coin flip — pick heads or tails",
+  usage: "/gamble coinflip <amount> [side]",
+  examples: ["/gamble coinflip 100 heads"],
+})
 @Declare({
 	name: "coinflip",
 	description: "🪙 Bet on a coin flip",
@@ -99,7 +106,7 @@ export default class GambleCoinflipSubcommand extends SubCommand {
 		}
 
 		// Check account
-		const accountService = createEconomyAccountService(economyAccountRepo);
+		const accountService = economyAccountService;
 		const ensureResult = await accountService.ensureAccount(userId);
 		if (ensureResult.isErr()) {
 			await ctx.write({
@@ -196,7 +203,7 @@ export default class GambleCoinflipSubcommand extends SubCommand {
 		const game = result.unwrap();
 		const currencyObj = currencyRegistry.get(currencyId);
 		const display = (n: number) =>
-			currencyObj?.display(n as any) ?? `${n} ${currencyId}`;
+			currencyObj?.displayAmount(n) ?? `${n} ${currencyId}`;
 
 		const embed = buildCoinflipEmbed({
 			won: game.won,

@@ -13,6 +13,7 @@ import {
   Embed,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { UIColors } from "@/modules/ui/design-system";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
@@ -36,6 +37,12 @@ const leaderboardOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "vote-leaderboard",
+  category: HelpCategory.Economy,
+  description: "View the top users by love, hate, or net votes in this server",
+  usage: "/vote-leaderboard [type] [limit]",
+})
 @Declare({
   name: "vote-leaderboard",
   description: "View voting rankings for this server",

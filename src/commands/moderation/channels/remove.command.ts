@@ -13,6 +13,7 @@ import {
   Middlewares,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   removeInvalidChannels,
   removeManagedChannel,
@@ -26,6 +27,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "channels remove",
+  category: HelpCategory.Moderation,
+  description: "Remove a previously registered optional channel from the bot",
+  usage: "/channels remove <name>",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "remove",
   description: "Remove an optional channel",

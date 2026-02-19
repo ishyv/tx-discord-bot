@@ -12,8 +12,10 @@ import {
   Middlewares,
 } from "seyfert";
 import { ChannelType } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { GuildStore } from "@/db/repositories/guilds";
+import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
 import { ensureTicketMessage } from "@/systems/tickets";
 
@@ -40,6 +42,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "tickets config",
+  category: HelpCategory.Moderation,
+  description: "Configure the ticket system channels and category",
+  usage: "/tickets config [channel] [category]",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "config",
   description: "Configure the ticket system",
@@ -63,8 +72,6 @@ export default class ConfigTicketsCommand extends SubCommand {
 
     // Ensure guild row exists
     await GuildStore.ensure(guildId);
-
-    const { configStore, ConfigurableModule } = await import("@/configuration");
 
     // Save using the new config store
     // The schema expects { tickets: {channelId: string}, ... }

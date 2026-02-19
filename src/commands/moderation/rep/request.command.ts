@@ -13,6 +13,7 @@ import { CoreChannelNames } from "@/modules/guild-channels/constants";
 import { fetchStoredChannel } from "@/utils/channelGuard";
 import { sendReputationRequest } from "./shared";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Features } from "@/modules/features";
 
 const options = {
@@ -28,6 +29,13 @@ const options = {
  * - Forwards the request to that channel with staff buttons (aceptar/set/rechazar/cerrar/penalizar).
  * - Enforces a per-user cooldown (5m base) to avoid spam.
  */
+@HelpDoc({
+  command: "rep request",
+  category: HelpCategory.Moderation,
+  description: "Request a reputation review from staff with a reason",
+  usage: "/rep request <reason>",
+  notes: "Has a cooldown to prevent spam.",
+})
 @Declare({
   name: "request",
   description: "Request a reputation review from the staff",

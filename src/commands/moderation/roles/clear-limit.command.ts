@@ -12,6 +12,7 @@ import {
   SubCommand,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import {
   findManagedRole,
@@ -32,6 +33,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "roles clear-limit",
+  category: HelpCategory.Moderation,
+  description: "Remove a configured rate limit from a managed role action",
+  usage: "/roles clear-limit <role> <action>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "clear-limit",
   description: "Delete the limit of an action",

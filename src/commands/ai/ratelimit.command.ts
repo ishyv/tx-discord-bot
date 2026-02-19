@@ -13,6 +13,7 @@ import {
 } from "seyfert";
 import type { GuildCommandContext } from "seyfert";
 import { configStore, ConfigurableModule } from "@/configuration";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Guard } from "@/middlewares/guards/decorator";
 
 const options = {
@@ -32,6 +33,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "ai ratelimit",
+  category: HelpCategory.AI,
+  description: "Configure the AI rate limit settings for this server",
+  usage: "/ai ratelimit [enabled] [limit]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "ratelimit",
   description: "Configure AI rate limit",

@@ -6,6 +6,7 @@ import {
     createStringOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { buildSuccessEmbed, buildErrorEmbed } from "@/modules/ui/design-system";
 import { storeService, economyAuditRepo } from "@/modules/economy";
 import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
@@ -17,6 +18,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+  command: "store-admin remove",
+  category: HelpCategory.Economy,
+  description: "Remove an item listing from the guild store",
+  usage: "/store-admin remove <item_id>",
+  permissions: ["Administrator"],
+})
 @Declare({
     name: "remove",
     description: "Remove an item from the store",

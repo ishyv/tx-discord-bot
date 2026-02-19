@@ -13,7 +13,8 @@ import {
   type CommandContext,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { HelpDoc, HelpCategory } from "@/modules/help";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { rollbackByCorrelationId } from "@/modules/economy";
 
 const options = {
@@ -27,6 +28,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-rollback",
+  category: HelpCategory.Economy,
+  description: "Roll back audited economy operations by correlation ID (admin only)",
+  usage: "/economy-rollback <correlation_id> [dry_run]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "economy-rollback",
   description: "Rollback economy operations by correlationId (admin only)",
@@ -46,9 +54,6 @@ export default class EconomyRollbackCommand extends Command {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

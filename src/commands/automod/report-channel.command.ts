@@ -9,6 +9,7 @@ import {
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Middlewares } from "seyfert";
 import { isSnowflake } from "@/utils/snowflake";
 
@@ -25,6 +26,13 @@ const options = {
 };
 
 @Options(options)
+@HelpDoc({
+  command: "automod reportchannel",
+  category: HelpCategory.Moderation,
+  description: "Set the channel where AutoMod violation reports are sent",
+  usage: "/automod reportchannel [channel] [enabled]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "reportchannel",
   description: "Configure the AutoMod reports channel",

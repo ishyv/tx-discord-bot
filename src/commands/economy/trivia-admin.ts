@@ -4,6 +4,7 @@
  * Purpose: Admin tools for managing trivia questions - stats and list.
  * Note: Adding questions is done via the trivia-add-modal interaction.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Command,
   Declare,
@@ -22,6 +23,7 @@ import {
   CATEGORY_INFO,
   DIFFICULTY_CONFIG,
   getCategoryStats,
+  getQuestionsByCategory,
   type TriviaCategory,
   type TriviaDifficulty,
 } from "@/modules/economy/minigames";
@@ -52,6 +54,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "trivia-admin",
+  category: HelpCategory.Economy,
+  description: "Admin tools for managing trivia questions — view stats and list questions",
+  usage: "/trivia-admin [action] [page]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "trivia-admin",
   description: "Trivia question management (stats and listing)",
@@ -163,8 +172,6 @@ export default class TriviaAdminCommand extends Command {
   }
 
   private async handleList(ctx: GuildCommandContext) {
-    const { getQuestionsByCategory } = await import("@/modules/economy/minigames/trivia");
-
     const category = (ctx.options as any).category as TriviaCategory | undefined;
     const difficultyFilter = (ctx.options as any).difficulty as TriviaDifficulty | undefined;
 

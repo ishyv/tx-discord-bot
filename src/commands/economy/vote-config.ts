@@ -13,6 +13,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
@@ -34,6 +35,12 @@ const configOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "vote-config",
+  category: HelpCategory.Economy,
+  description: "Configure your voting preferences, including opt-out",
+  usage: "/vote-config [opt_out]",
+})
 @Declare({
   name: "vote-config",
   description: "Configure your voting preferences",

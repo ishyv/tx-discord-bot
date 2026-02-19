@@ -13,6 +13,7 @@ import {
   Options,
   type CommandContext,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 import { economyReportService } from "@/modules/economy/reports";
@@ -21,6 +22,13 @@ import type { EconomyReportWithRecommendations } from "@/modules/economy/reports
 const MAX_REPORT_DAYS = 30;
 const DEFAULT_REPORT_DAYS = 7;
 
+@HelpDoc({
+  command: "economy-report",
+  category: HelpCategory.Economy,
+  description: "Generate an economy telemetry report with insights and recommendations (admin only)",
+  usage: "/economy-report [days]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "economy-report",
   description: "Generate economy telemetry report with recommendations (admin only)",

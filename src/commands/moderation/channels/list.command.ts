@@ -12,11 +12,19 @@ import {
   removeInvalidChannels,
 } from "@/modules/guild-channels";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 function formatChannelMention(channelId: string): string {
   return channelId ? `<#${channelId}>` : "No channel";
 }
 
+@HelpDoc({
+  command: "channels list",
+  category: HelpCategory.Moderation,
+  description: "Show the status of all configured core and optional channels",
+  usage: "/channels list",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "list",
   description: "Show the status of configured channels",

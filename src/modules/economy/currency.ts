@@ -20,6 +20,15 @@ export interface Currency<TValue> {
   /** Nicely formatted for UI/logs. */
   display(value: TValue): string;
 
+  /** Format a plain number for UI (e.g. "100 coins"). */
+  displayAmount(value: number): string;
+
+  /** Convert a plain number into this currency's value type (e.g. 50 → { hand:50, bank:0 }). */
+  toValue(amount: number): TValue;
+
+  /** Extract a plain number total from this currency's value type (e.g. { hand:30, bank:20 } → 50). */
+  toAmount(value: TValue): number;
+
   /** a + b. Must be pure (do not mutate inputs). */
   add(a: TValue, b: TValue): TValue;
 

@@ -11,6 +11,8 @@ import { MessageFlags } from "seyfert/lib/types";
 import { setFeatureFlag } from "@/modules/features";
 import { Guard } from "@/middlewares/guards/decorator";
 import { Features } from "@/modules/features";
+import { configStore, ConfigurableModule } from "@/configuration";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const options = {
   keywords: createStringOption({
@@ -19,6 +21,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "rep keywords",
+  category: HelpCategory.Moderation,
+  description: "Configure keywords that trigger automatic reputation detection",
+  usage: "/rep keywords [add] [remove]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "keywords",
   description: "Configure reputation keywords",
@@ -40,7 +49,6 @@ export default class RepConfigKeywordsCommand extends SubCommand {
       .map((w) => w.trim())
       .filter(Boolean);
 
-    const { configStore, ConfigurableModule } = await import("@/configuration");
     await configStore.set(guildId, ConfigurableModule.Reputation, { keywords });
 
     await ctx.write({
@@ -57,6 +65,13 @@ const detectionOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "rep detection",
+  category: HelpCategory.Moderation,
+  description: "Configure automatic reputation detection settings",
+  usage: "/rep detection [enabled]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "detection",
   description: "Configure automatic reputation detection",

@@ -6,10 +6,18 @@
 import type { GuildCommandContext } from "seyfert";
 import { Declare, Embed, SubCommand } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { GuildStore } from "@/db/repositories/guilds";
 import { buildModerationSummary, fetchManagedRoles } from "./shared";
 
+@HelpDoc({
+  command: "roles list",
+  category: HelpCategory.Moderation,
+  description: "List all managed roles and their configured limits",
+  usage: "/roles list",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "list",
   description: "List managed roles and their limits",

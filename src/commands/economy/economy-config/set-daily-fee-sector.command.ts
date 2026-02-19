@@ -5,6 +5,7 @@ import { guildEconomyRepo } from "@/modules/economy";
  * Purpose: Admin command to set the sector for daily claim fee deposit.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -13,7 +14,7 @@ import {
   createStringOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyService, economyAuditRepo } from "@/modules/economy";
 import type { EconomySector } from "@/modules/economy";
 
@@ -27,6 +28,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-daily-fee-sector",
+  category: HelpCategory.Economy,
+  description: "Set the sector where daily claim fees are deposited",
+  usage: "/economy-config set-daily-fee-sector <sector>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-daily-fee-sector",
   description: "Set the sector for daily claim fee deposit",
@@ -42,9 +50,6 @@ export default class SetDailyFeeSectorCommand extends SubCommand {
       });
       return;
     }
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

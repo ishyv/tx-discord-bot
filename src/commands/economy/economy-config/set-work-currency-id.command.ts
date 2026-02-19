@@ -4,6 +4,7 @@
  * Purpose: Admin command to set currency for /work payouts.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -12,7 +13,7 @@ import {
   createStringOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 
 const options = {
@@ -22,6 +23,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-work-currency-id",
+  category: HelpCategory.Economy,
+  description: "Set the currency used for /work payouts (admin only)",
+  usage: "/economy-config set-work-currency-id <currency_id>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-work-currency-id",
   description: "Set currency for /work payouts (admin only)",
@@ -38,9 +46,6 @@ export default class EconomyConfigSetWorkCurrencyIdCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

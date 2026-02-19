@@ -10,9 +10,16 @@
 
 import { Declare, Embed, SubCommand, type GuildCommandContext } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { requireAutoroleContext } from "./shared";
 
+@HelpDoc({
+  command: "autorole help",
+  category: HelpCategory.Moderation,
+  description: "Show contextual help and available options for auto-role rule configuration",
+  usage: "/autorole help",
+})
 @Declare({
   name: "help",
   description: "Show available options for auto-role rules",

@@ -5,6 +5,7 @@
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { editOfferContent, getActiveOffer } from "@/modules/offers";
 import { startEmbedDesigner } from "@/modules/prefabs/embedDesigner";
 import {
@@ -15,6 +16,12 @@ import {
 } from "./shared";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 
+@HelpDoc({
+  command: "offer edit",
+  category: HelpCategory.Offers,
+  description: "Edit your active job offer using the embed designer (returns to review)",
+  usage: "/offer edit",
+})
 @Declare({
   name: "edit",
   description: "Edit your active offer (returns to review)",

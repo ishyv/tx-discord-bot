@@ -5,12 +5,19 @@
  */
 import type { CommandContext } from "seyfert";
 import { Command, Declare } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { generateForGuild } from "@/services/ai";
 import { markAIMessage } from "@/services/ai/messageTracker";
 import type { Message } from "@/utils/userMemory";
 import { Modality } from "@google/genai";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 
+@HelpDoc({
+  command: "joke",
+  category: HelpCategory.Fun,
+  description: "Generate a random AI-powered joke",
+  usage: "/joke",
+})
 @Declare({
   name: "joke",
   description: "Generate a joke",

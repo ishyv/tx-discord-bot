@@ -113,7 +113,22 @@ class DailyClaimRepoImpl implements DailyClaimRepo {
       const col = await DailyClaimStore.collection();
       const docId = `${guildId}:${userId}`;
 
-      // Only match when cooldown expired (or never claimed). Upsert creates doc when none exists.
+      // Step 1: Read the current doc (if any) to compute streak before committing.
+      // This is safe because the actual claim lock is acquired atomically in step 2.
+      const existing = await col.findOne({ _id: docId } as any);
+
+      const streakBefore = Math.max(0, Math.trunc((existing as any)?.currentStreak ?? 0));
+      const prevDayStamp = Math.trunc((existing as any)?.lastClaimDayStamp ?? 0);
+      const streakAfter = computeNextStreak(prevDayStamp, streakBefore, dayStamp);
+      const bestStreakAfter = Math.max(
+        Math.trunc((existing as any)?.bestStreak ?? 0),
+        streakAfter,
+      );
+
+      // Step 2: Atomic claim — only matches when cooldown has expired (or doc doesn't exist).
+      // Uses a standard update (not aggregation pipeline) so $setOnInsert correctly sets _id on upsert.
+      // Aggregation-pipeline upserts do NOT reliably propagate the filter's _id to the new document,
+      // causing E11000 duplicate key errors on retry.
       const result = await col.findOneAndUpdate(
         {
           _id: docId,
@@ -122,93 +137,29 @@ class DailyClaimRepoImpl implements DailyClaimRepo {
             { lastClaimAt: { $lt: cutoff } },
           ],
         } as any,
-        [
-          {
-            $replaceRoot: {
-              newRoot: {
-                $cond: [
-                  { $ne: [{ $ifNull: ["$_id", null] }, null] },
-                  "$$ROOT",
-                  { _id: docId, guildId, userId },
-                ],
-              },
-            },
+        {
+          $set: {
+            lastClaimAt: now,
+            lastClaimDayStamp: dayStamp,
+            currentStreak: streakAfter,
+            bestStreak: bestStreakAfter,
+            guildId,
+            userId,
           },
-          {
-            $set: {
-              lastClaimAt: now,
-              lastClaimDayStamp: dayStamp,
-              currentStreak: {
-                $let: {
-                  vars: {
-                    prevDay: { $ifNull: ["$lastClaimDayStamp", 0] },
-                    prevStreak: { $ifNull: ["$currentStreak", 0] },
-                  },
-                  in: {
-                    $cond: [
-                      { $eq: ["$$prevDay", dayStamp] },
-                      "$$prevStreak",
-                      {
-                        $cond: [
-                          { $eq: ["$$prevDay", dayStamp - 1] },
-                          { $add: ["$$prevStreak", 1] },
-                          1,
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $set: {
-              bestStreak: {
-                $max: [{ $ifNull: ["$bestStreak", 0] }, "$currentStreak"],
-              },
-              guildId,
-              userId,
-            },
-          },
-        ],
+          $setOnInsert: { _id: docId },
+        } as any,
         { upsert: true, returnDocument: "before", includeResultMetadata: true },
       );
 
-      // If we got a doc back, we matched and updated (or inserted) -> claim granted.
-      const beforeDoc = (result as any)?.value ?? null;
+      // Matched and updated an existing doc → value is the before-doc.
+      // Upserted a new doc → value is null but lastErrorObject.upserted is set.
+      const matched = (result as any)?.value != null;
       const upserted = Boolean((result as any)?.lastErrorObject?.upserted);
 
-      if (!beforeDoc && !upserted) {
+      if (!matched && !upserted) {
+        // Filter didn't match → cooldown still active
         return OkResult({ granted: false });
       }
-
-      const before = DailyClaimSchema.safeParse(beforeDoc);
-      const beforeRecord = before.success
-        ? before.data
-        : ({
-            _id: docId,
-            guildId,
-            userId,
-            lastClaimAt: new Date(0),
-            lastClaimDayStamp: 0,
-            currentStreak: 0,
-            bestStreak: 0,
-          } as DailyClaimRecord);
-
-      const streakBefore = Math.max(
-        0,
-        Math.trunc(beforeRecord.currentStreak ?? 0),
-      );
-      const prevDayStamp = Math.trunc(beforeRecord.lastClaimDayStamp ?? 0);
-      const streakAfter = computeNextStreak(
-        prevDayStamp,
-        streakBefore,
-        dayStamp,
-      );
-      const bestStreakAfter = Math.max(
-        Math.trunc(beforeRecord.bestStreak ?? 0),
-        streakAfter,
-      );
 
       return OkResult({
         granted: true,

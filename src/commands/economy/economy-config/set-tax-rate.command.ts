@@ -5,6 +5,7 @@
  * Audited as CONFIG_UPDATE with before/after and correlationId.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -13,7 +14,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 
 const TAX_RATE_MIN = 0;
@@ -28,6 +29,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config tax-rate",
+  category: HelpCategory.Economy,
+  description: "Set the guild tax rate applied to transfers (admin only)",
+  usage: "/economy-config tax-rate <rate>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "tax-rate",
   description: "Set guild tax rate (admin only)",
@@ -44,9 +52,6 @@ export default class EconomyConfigSetTaxRateCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

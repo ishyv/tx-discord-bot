@@ -15,6 +15,7 @@ import {
   Middlewares,
 } from "seyfert";
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import {
   getTopWindow,
@@ -53,6 +54,13 @@ const options = {
 
 const MIN_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos para evitar spam accidental
 
+@HelpDoc({
+  command: "tops config",
+  category: HelpCategory.Moderation,
+  description: "Configure the leaderboard (tops) system — enable, set channel, and adjust settings",
+  usage: "/tops config [enabled] [channel] [interval]",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "config",
   description: "Configure the tops system",

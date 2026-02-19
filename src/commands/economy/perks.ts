@@ -19,8 +19,7 @@ import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
-	economyAccountRepo,
+	economyAccountService,
 	getPerkDefinition,
 	perkService,
 } from "@/modules/economy";
@@ -30,6 +29,7 @@ import {
 } from "@/modules/economy/account/embeds";
 import { currencyRegistry } from "@/modules/economy/transactions";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Button } from "@/modules/ui";
 import { UIColors } from "@/modules/ui/design-system";
 
@@ -40,6 +40,13 @@ const buyOptions = {
 	}),
 };
 
+@HelpDoc({
+	command: "perks",
+	category: HelpCategory.Economy,
+	description: "View and purchase server perks that provide bonuses and special abilities",
+	usage: "/perks",
+	notes: "Use /perks list to see available perks, then /perks buy to purchase one.",
+})
 @Declare({
 	name: "perks",
 	description: "View and purchase perks for this server",
@@ -54,6 +61,12 @@ const buyOptions = {
 })
 export default class PerksParentCommand extends Command {}
 
+@HelpDoc({
+  command: "perks list",
+  category: HelpCategory.Economy,
+  description: "List all available perks and your current perk levels",
+  usage: "/perks list",
+})
 @Declare({
 	name: "list",
 	description: "List available perks and your current levels",
@@ -71,7 +84,7 @@ export class PerksListCommand extends SubCommand {
 			return;
 		}
 
-		const accountService = createEconomyAccountService(economyAccountRepo);
+		const accountService = economyAccountService;
 		const ensureResult = await accountService.ensureAccount(userId);
 		if (ensureResult.isErr()) {
 			await ctx.write({
@@ -209,6 +222,12 @@ export class PerksListCommand extends SubCommand {
 	}
 }
 
+@HelpDoc({
+  command: "perks buy",
+  category: HelpCategory.Economy,
+  description: "Purchase a perk upgrade (use /perks list menu for easier selection)",
+  usage: "/perks buy <perk_id>",
+})
 @Declare({
 	name: "buy",
 	description:
@@ -339,7 +358,7 @@ async function showConfirmation(
 			const purchasedPerk = getPerkDefinition(purchase.perkId);
 			const currencyObj = currencyRegistry.get(purchase.cost.currencyId);
 			const display = (n: number) =>
-				currencyObj?.display(n as any) ?? `${n} ${purchase.cost.currencyId}`;
+				currencyObj?.displayAmount(n) ?? `${n} ${purchase.cost.currencyId}`;
 
 			const resultEmbed = buildPerkPurchaseEmbed({
 				perkName: purchasedPerk?.name ?? purchase.perkId,

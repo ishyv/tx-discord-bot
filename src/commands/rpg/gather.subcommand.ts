@@ -13,6 +13,7 @@ import {
     type GuildCommandContext,
 } from "seyfert";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { rpgGatheringService } from "@/modules/rpg/gathering/service";
 import { rpgProfileService } from "@/modules/rpg/profile/service";
@@ -40,6 +41,14 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg gather",
+    category: HelpCategory.RPG,
+    description: "Gather wood or ore from locations to use in crafting",
+    usage: "/rpg gather <resource> <location>",
+    examples: ["/rpg gather wood forest:pine_grove", "/rpg gather ore mine:copper_mine"],
+    notes: "Higher-tier locations require better tools. Resources are used in crafting.",
+})
 @Declare({
     name: "gather",
     description: "🌲⛏️ Gather wood or ore from locations",

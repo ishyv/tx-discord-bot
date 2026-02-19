@@ -13,12 +13,12 @@
  */
 
 import { Command, Declare, type CommandContext } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
-  economyAccountRepo,
-  createEconomyAccountService,
+  economyAccountService,
   buildProfileEmbed,
   buildAccessDeniedEmbed,
   buildAccountCreatedEmbed,
@@ -33,8 +33,14 @@ import {
 import { achievementService } from "@/modules/economy/achievements";
 
 // Service instance
-const economyService = createEconomyAccountService(economyAccountRepo);
+const economyService = economyAccountService;
 
+@HelpDoc({
+  command: "profile",
+  category: HelpCategory.Economy,
+  description: "Show your full economy profile: balance, reputation, titles, and achievements",
+  usage: "/profile",
+})
 @Declare({
   name: "profile",
   description: "📊 Show your economy profile",
@@ -53,7 +59,7 @@ export default class ProfileCommand extends Command {
     const ensureResult = await economyService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu perfil.")],
+        embeds: [buildErrorEmbed("Could not load your profile.")],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -90,7 +96,7 @@ export default class ProfileCommand extends Command {
       }
 
       await ctx.write({
-        embeds: [buildErrorEmbed("No pude cargar tu perfil.")],
+        embeds: [buildErrorEmbed("Could not load your profile.")],
         flags: MessageFlags.Ephemeral,
       });
       return;

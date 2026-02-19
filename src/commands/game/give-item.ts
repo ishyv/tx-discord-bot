@@ -15,6 +15,7 @@ import {
   createBooleanOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { ITEM_DEFINITIONS } from "@/modules/inventory";
 import {
   itemMutationService,
@@ -46,6 +47,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "give-item",
+  category: HelpCategory.Moderation,
+  description: "Grant an item to a user's inventory (mod-only)",
+  usage: "/give-item <item> <quantity> <user>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "give-item",
   description: "Give an item to a user (mod-only)",

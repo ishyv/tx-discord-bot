@@ -30,6 +30,18 @@ export class Coins implements Currency<CoinValue> {
     return `${hand} coins (hand) / ${bank} coins (bank)`;
   }
 
+  displayAmount(value: number): string {
+    return `${Math.max(0, Math.trunc(value))} coins`;
+  }
+
+  toValue(amount: number): CoinValue {
+    return { hand: Math.max(0, Math.trunc(amount)), bank: 0, use_total_on_subtract: true };
+  }
+
+  toAmount(value: CoinValue): number {
+    return Math.max(0, (value.hand ?? 0)) + Math.max(0, (value.bank ?? 0));
+  }
+
   add(a: CoinValue, b: CoinValue): CoinValue {
     return {
       hand: (a.hand ?? 0) + (b.hand ?? 0),

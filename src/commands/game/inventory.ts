@@ -22,11 +22,11 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { startPagination } from "@/modules/prefabs/pagination";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
-  economyAccountRepo,
-  createEconomyAccountService,
+  economyAccountService,
   buildInventoryPageEmbed,
   buildAccessDeniedEmbed,
   buildErrorEmbed,
@@ -37,7 +37,7 @@ import { getItemDefinition } from "@/modules/inventory/items";
 import { UIColors } from "@/modules/ui/design-system";
 
 // Service instance
-const economyService = createEconomyAccountService(economyAccountRepo);
+const economyService = economyAccountService;
 
 const options = {
   search: createStringOption({
@@ -62,6 +62,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "inventory",
+  category: HelpCategory.Economy,
+  description: "View your item inventory with category filtering and item inspection",
+  usage: "/inventory [category] [page]",
+  examples: ["/inventory", "/inventory materials"],
+})
 @Declare({
   name: "inventory",
   description: "Displays the items you own in your inventory.",

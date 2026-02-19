@@ -16,6 +16,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
     achievementService,
@@ -53,6 +54,12 @@ const achievementOptions = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg achievements",
+    category: HelpCategory.RPG,
+    description: "View your achievement board and track progress toward unlocking new titles",
+    usage: "/rpg achievements [category]",
+})
 @Declare({
     name: "achievements",
     description: "🏆 View your achievements and rewards",

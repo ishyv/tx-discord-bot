@@ -6,12 +6,12 @@
  */
 
 import { type CommandContext, Declare, SubCommand } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
+	economyAccountService,
 	dailyService,
-	economyAccountRepo,
 } from "@/modules/economy";
 import {
 	buildDailyClaimEmbed,
@@ -19,6 +19,13 @@ import {
 } from "@/modules/economy/account/embeds";
 import { currencyRegistry } from "@/modules/economy/transactions";
 
+@HelpDoc({
+	command: "wallet daily",
+	category: HelpCategory.Economy,
+	description: "Claim your daily currency reward with streak bonuses (once per 24h)",
+	usage: "/wallet daily",
+	notes: "Streak bonuses increase your reward the more consecutive days you claim.",
+})
 @Declare({
 	name: "daily",
 	description: "🎁 Claim your daily currency reward (once per 24h)",
@@ -36,7 +43,7 @@ export default class WalletDailySubcommand extends SubCommand {
 			return;
 		}
 
-		const accountService = createEconomyAccountService(economyAccountRepo);
+		const accountService = economyAccountService;
 		const ensureResult = await accountService.ensureAccount(userId);
 		if (ensureResult.isErr()) {
 			await ctx.write({
@@ -106,7 +113,7 @@ export default class WalletDailySubcommand extends SubCommand {
 
 		const currencyObj = currencyRegistry.get(payout.currencyId);
 		const display = (n: number) =>
-			currencyObj?.display(n as any) ?? `${n} ${payout.currencyId}`;
+			currencyObj?.displayAmount(n) ?? `${n} ${payout.currencyId}`;
 
 		const embed = buildDailyClaimEmbed({
 			amount: payout.baseMint + payout.bonusFromTreasury,

@@ -13,6 +13,7 @@ import {
   createStringOption,
   type GuildCommandContext,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { ButtonStyle } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
 
@@ -41,6 +42,13 @@ const options = {
 
 const TTL_MS = 60_000;
 
+@HelpDoc({
+  command: "autorole delete",
+  category: HelpCategory.Moderation,
+  description: "Delete an auto-role rule and optionally revoke all assigned roles",
+  usage: "/autorole delete <rule_id>",
+  permissions: ["ManageRoles"],
+})
 @Declare({
   name: "delete",
   description: "Delete an auto-role rule",

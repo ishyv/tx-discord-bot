@@ -9,6 +9,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   AutoroleService,
   AutoRoleRulesStore,
@@ -29,6 +30,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "autorole disable",
+  category: HelpCategory.Moderation,
+  description: "Temporarily disable an auto-role rule without deleting it",
+  usage: "/autorole disable <rule_id>",
+  permissions: ["ManageRoles"],
+})
 @Declare({
   name: "disable",
   description: "Disable an auto-role rule",

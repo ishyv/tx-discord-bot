@@ -13,6 +13,7 @@ import {
 } from "seyfert";
 
 import { configStore, ConfigurableModule } from "@/configuration";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   getDefaultModelForProvider,
   isProviderAvailable,
@@ -29,6 +30,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "ai set-provider",
+  category: HelpCategory.AI,
+  description: "Set the AI provider used for this server's AI features",
+  usage: "/ai set-provider <provider>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-provider",
   description: "Configure the AI provider",

@@ -7,7 +7,14 @@
  */
 import type { CommandContext } from "seyfert";
 import { Command, Declare } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
+@HelpDoc({
+  command: "ping",
+  category: HelpCategory.Utility,
+  description: "Check the bot's current latency to Discord",
+  usage: "/ping",
+})
 @Declare({
   name: "ping",
   description: "Show latency with Discord",

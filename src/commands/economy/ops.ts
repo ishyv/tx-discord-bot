@@ -5,6 +5,7 @@
  * Permission: ManageGuild (admin).
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Command,
   Declare,
@@ -22,6 +23,13 @@ import { launchOps, opsConfigRepo } from "@/modules/ops";
 const MAX_REPORT_DAYS = 30;
 const MAX_REPORT_HOUR = 23;
 
+@HelpDoc({
+  command: "ops",
+  category: HelpCategory.Economy,
+  description: "Configure launch operations, channels, and scheduled reports (admin only)",
+  usage: "/ops [channel] [report_hour] [soft_launch]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "ops",
   description: "Configure launch operations and scheduled reports (admin only)",

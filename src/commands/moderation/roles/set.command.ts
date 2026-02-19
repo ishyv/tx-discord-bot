@@ -13,6 +13,7 @@ import {
   SubCommand,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { GuildStore } from "@/db/repositories/guilds";
 import { GuildRolesRepo } from "@/db/repositories/guild-roles";
@@ -30,6 +31,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "roles set",
+  category: HelpCategory.Moderation,
+  description: "Register or update a managed role configuration",
+  usage: "/roles set <role> [name]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set",
   description: "Register or update a managed role",

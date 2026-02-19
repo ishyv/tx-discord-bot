@@ -15,8 +15,7 @@ import { MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
-	economyAccountRepo,
+	economyAccountService,
 	guildEconomyRepo,
 } from "@/modules/economy";
 import {
@@ -26,6 +25,7 @@ import {
 } from "@/modules/economy/account/embeds";
 import { type VoteType, votingService } from "@/modules/economy/voting";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const voteOptions = {
 	user: createUserOption({
@@ -42,6 +42,13 @@ const voteOptions = {
 	}),
 };
 
+@HelpDoc({
+	command: "vote",
+	category: HelpCategory.Economy,
+	description: "Cast a love or hate vote on another user to affect their reputation",
+	usage: "/vote <user> <type>",
+	examples: ["/vote @User love", "/vote @User hate"],
+})
 @Declare({
 	name: "vote",
 	description: "Vote for another user (love/hate)",
@@ -103,7 +110,7 @@ export default class VoteCommand extends Command {
 		}
 
 		// Check account
-		const accountService = createEconomyAccountService(economyAccountRepo);
+		const accountService = economyAccountService;
 		const ensureResult = await accountService.ensureAccount(voterId);
 		if (ensureResult.isErr()) {
 			await ctx.write({

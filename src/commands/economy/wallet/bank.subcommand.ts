@@ -6,12 +6,12 @@
  */
 
 import { Declare, SubCommand, type CommandContext } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
-    economyAccountRepo,
-    createEconomyAccountService,
+    economyAccountService,
     buildBankEmbed,
     buildAccessDeniedEmbed,
     buildErrorEmbed,
@@ -20,8 +20,14 @@ import {
 } from "@/modules/economy";
 
 // Service instance
-const economyService = createEconomyAccountService(economyAccountRepo);
+const economyService = economyAccountService;
 
+@HelpDoc({
+    command: "wallet bank",
+    category: HelpCategory.Economy,
+    description: "Show the breakdown of your coins in hand vs. bank with a safety rating",
+    usage: "/wallet bank",
+})
 @Declare({
     name: "bank",
     description: "🏦 Show the breakdown of your coins in hand and bank",

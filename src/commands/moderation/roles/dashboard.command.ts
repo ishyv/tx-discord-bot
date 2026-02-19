@@ -16,6 +16,7 @@ import {
   TextInput,
 } from "seyfert";
 import { Button, UI } from "@/modules/ui";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { ButtonStyle, MessageFlags, TextInputStyle } from "seyfert/lib/types";
 
 import { GuildStore } from "@/db/repositories/guilds";
@@ -148,6 +149,13 @@ async function fetchDashboardRoles(guildId: string): Promise<DashboardRole[]> {
   });
 }
 
+@HelpDoc({
+  command: "roles dashboard",
+  category: HelpCategory.Moderation,
+  description: "Open the visual dashboard to manage moderated roles interactively",
+  usage: "/roles dashboard",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "dashboard",
   description: "Visual dashboard to manage moderated roles",

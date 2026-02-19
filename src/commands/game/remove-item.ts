@@ -14,6 +14,7 @@ import {
   createUserOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { ITEM_DEFINITIONS } from "@/modules/inventory";
 import {
   itemMutationService,
@@ -41,6 +42,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "remove-item",
+  category: HelpCategory.Moderation,
+  description: "Remove an item from a user's inventory (mod-only)",
+  usage: "/remove-item <item> <quantity> <user>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "remove-item",
   description: "Remove an item from a user (mod-only)",

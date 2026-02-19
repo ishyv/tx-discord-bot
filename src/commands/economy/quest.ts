@@ -8,6 +8,7 @@
 import {
   Command,
   Declare,
+  Embed,
   SubCommand,
   type CommandContext,
   Options,
@@ -15,6 +16,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
   questService,
@@ -42,6 +44,13 @@ const boardOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "quest",
+  category: HelpCategory.Economy,
+  description: "View the quest board, track progress, and claim rewards for completed quests",
+  usage: "/quest",
+  notes: "Quests refresh daily and weekly. Use /quest board to see all available quests.",
+})
 @Declare({
   name: "quest",
   description: "📜 Manage your quests and view the quest board",
@@ -113,6 +122,12 @@ export default class QuestCommand extends Command {
 }
 
 // Subcommand: board (explicit access to quest board)
+@HelpDoc({
+  command: "quest board",
+  category: HelpCategory.Economy,
+  description: "Open the interactive Quest Board to browse and track quests",
+  usage: "/quest board",
+})
 @Declare({
   name: "board",
   description: "Open the interactive Quest Board",
@@ -182,6 +197,12 @@ const viewOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "quest view",
+  category: HelpCategory.Economy,
+  description: "View detailed information about a specific quest",
+  usage: "/quest view <quest_id>",
+})
 @Declare({
   name: "view",
   description: "View details of a specific quest",
@@ -287,6 +308,12 @@ const claimOptions = {
   }),
 };
 
+@HelpDoc({
+  command: "quest claim",
+  category: HelpCategory.Economy,
+  description: "Claim rewards from a completed quest",
+  usage: "/quest claim <quest_id>",
+})
 @Declare({
   name: "claim",
   description: "Claim rewards from a completed quest",
@@ -388,6 +415,12 @@ export class QuestClaimSubCommand extends SubCommand {
 }
 
 // Subcommand: progress
+@HelpDoc({
+  command: "quest progress",
+  category: HelpCategory.Economy,
+  description: "View your overall quest progress and completion statistics",
+  usage: "/quest progress",
+})
 @Declare({
   name: "progress",
   description: "View your overall quest progress",
@@ -434,7 +467,6 @@ export class QuestProgressSubCommand extends SubCommand {
       ).length;
     }
 
-    const { Embed } = await import("seyfert");
     const embed = new Embed()
       .setTitle("📊 Your Quest Progress")
       .setColor(0x3498db)
@@ -481,6 +513,12 @@ export class QuestProgressSubCommand extends SubCommand {
 }
 
 // Subcommand: list
+@HelpDoc({
+  command: "quest list",
+  category: HelpCategory.Economy,
+  description: "List all available quests with their status and rewards",
+  usage: "/quest list",
+})
 @Declare({
   name: "list",
   description: "List all available quests",
@@ -534,7 +572,6 @@ export class QuestListSubCommand extends SubCommand {
       byDifficulty.set(template.difficulty, list);
     }
 
-    const { Embed } = await import("seyfert");
     const embed = new Embed()
       .setTitle("📜 Available Quests")
       .setDescription(

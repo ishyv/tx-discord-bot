@@ -11,6 +11,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { PermissionFlagsBits } from "seyfert/lib/types";
 
 import {
@@ -58,6 +59,13 @@ const DANGEROUS_ROLE_PERMISSIONS = [
   PermissionFlagsBits.ManageRoles,
 ] as const;
 
+@HelpDoc({
+  command: "autorole create",
+  category: HelpCategory.Moderation,
+  description: "Create a new auto-role rule that assigns roles based on triggers",
+  usage: "/autorole create <role> <trigger> [mode]",
+  permissions: ["ManageRoles"],
+})
 @Declare({
   name: "create",
   description: "Create a new auto-role rule",

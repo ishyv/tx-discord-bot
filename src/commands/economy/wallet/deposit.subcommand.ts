@@ -12,6 +12,7 @@ import {
     createStringOption,
     type CommandContext,
 } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import { UserStore } from "@/db/repositories/users";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
@@ -27,6 +28,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "wallet deposit",
+    category: HelpCategory.Economy,
+    description: "Deposit coins from your hand into the bank for safekeeping",
+    usage: "/wallet deposit <amount>",
+    examples: ["/wallet deposit 500", "/wallet deposit all", "/wallet deposit 50%"],
+})
 @Declare({
     name: "deposit",
     description: "📥 Deposit coins from your hand to the bank",

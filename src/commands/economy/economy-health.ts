@@ -6,9 +6,10 @@
  */
 
 import { Command, Declare, Embed, type CommandContext } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyService, economyAuditRepo } from "@/modules/economy";
 
 const HOURS_24_MS = 24 * 60 * 60 * 1000;
@@ -26,6 +27,13 @@ const OPERATION_ORDER = [
   "rollback",
 ];
 
+@HelpDoc({
+  command: "economy-health",
+  category: HelpCategory.Economy,
+  description: "Show economy health summary: sector balances, config, and recent audit activity",
+  usage: "/economy-health",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "economy-health",
   description:
@@ -45,9 +53,6 @@ export default class EconomyHealthCommand extends Command {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasMod = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.MOD,

@@ -5,6 +5,7 @@
  * Security: currencyId sanitized, permissions centralized.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Command,
   CommandContext,
@@ -47,6 +48,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "give-currency",
+  category: HelpCategory.Economy,
+  description: "Adjust a user's currency balance with audit logging (mod only)",
+  usage: "/give-currency <user> <amount> [currency] [reason]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "give-currency",
   description: "Adjust a user's currency balance (mod-only)",
@@ -147,8 +155,8 @@ export default class GiveCurrencyCommand extends Command {
 
     await ctx.write({
       content:
-        `✅ Successfully ${actionStr} **${currencyObj.display(amount as any)}** to ${target.toString()}.\n` +
-        `📊 New balance: \`${currencyObj.display(adjustment.after as any)}\``,
+        `✅ Successfully ${actionStr} **${currencyObj.displayAmount(amount)}** to ${target.toString()}.\n` +
+        `📊 New balance: \`${currencyObj.displayAmount(adjustment.after as number)}\``,
     });
 
     // Note: Audit logging is handled by the service layer

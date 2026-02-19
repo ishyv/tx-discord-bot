@@ -12,6 +12,7 @@ import {
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
 import { configStore, ConfigurableModule } from "@/configuration";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const options = {
   enabled: createBooleanOption({
@@ -50,6 +51,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "automod linkspam",
+  category: HelpCategory.Moderation,
+  description: "Configure the link spam filter — enable/disable and set thresholds",
+  usage: "/automod linkspam [enabled] [threshold]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "linkspam",
   description: "Configure link spam filter",

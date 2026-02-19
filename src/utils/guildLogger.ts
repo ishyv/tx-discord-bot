@@ -21,7 +21,7 @@ import {
   isUnknownChannelError,
 } from "@/utils/channelGuard";
 
-type EmbedOptions = {
+export type EmbedOptions = {
   title?: string;
   description?: string;
   color?: ColorResolvable;
@@ -184,5 +184,27 @@ export class GuildLogger {
 
   async banSanctionLog(options: EmbedOptions) {
     return this.sendLog("banSanctions", options);
+  }
+
+  /**
+   * Unified moderation log. Targets `banSanctions` by default.
+   * Accepts an optional `actorId` to display the moderator in the footer,
+   * and an optional `channel` override for non-sanction logs (e.g. `generalLogs`, `pointsLog`).
+   *
+   * Contract: **never throws**. All errors are swallowed and logged.
+   */
+  async moderationLog(
+    options: EmbedOptions & { actorId?: string | null },
+    channel: keyof typeof CHANNELS_ID = "banSanctions",
+  ): Promise<void> {
+    try {
+      return await this.sendLog(channel, options);
+    } catch (error) {
+      this.client?.logger?.warn?.("[GuildLogger] moderationLog failed", {
+        error,
+        guildId: this.guildId,
+        channel: String(channel),
+      });
+    }
   }
 }

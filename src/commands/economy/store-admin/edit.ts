@@ -8,6 +8,7 @@ import {
     createBooleanOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { buildSuccessEmbed, buildErrorEmbed } from "@/modules/ui/design-system";
 import { storeService, economyAuditRepo } from "@/modules/economy";
 import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
@@ -45,6 +46,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+  command: "store-admin edit",
+  category: HelpCategory.Economy,
+  description: "Edit an existing store item's price, stock, or availability",
+  usage: "/store-admin edit <item_id> [price] [stock] [enabled]",
+  permissions: ["Administrator"],
+})
 @Declare({
     name: "edit",
     description: "Edit an existing store item",

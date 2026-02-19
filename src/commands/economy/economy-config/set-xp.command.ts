@@ -5,6 +5,7 @@
  * Audited as config_update with before/after and correlationId.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -15,7 +16,7 @@ import {
   createBooleanOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 import type { ProgressionSourceOp } from "@/modules/economy";
 
@@ -49,6 +50,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-xp",
+  category: HelpCategory.Economy,
+  description: "Set XP amount and cooldown for a progression source (admin only)",
+  usage: "/economy-config set-xp <source> <amount> [cooldown]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-xp",
   description: "Set XP amount/cooldown for a progression source (admin only)",
@@ -65,9 +73,6 @@ export default class EconomyConfigSetXPCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

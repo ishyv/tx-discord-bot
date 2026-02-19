@@ -5,6 +5,7 @@
  * Audited as CONFIG_UPDATE.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -13,7 +14,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 import type { EconomySector } from "@/modules/economy";
 
@@ -32,6 +33,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config tax-sector",
+  category: HelpCategory.Economy,
+  description: "Set the sector where collected taxes are deposited (admin only)",
+  usage: "/economy-config tax-sector <sector>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "tax-sector",
   description: "Set sector for tax deposits (admin only)",
@@ -48,9 +56,6 @@ export default class EconomyConfigSetTaxSectorCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

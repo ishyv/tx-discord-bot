@@ -3,6 +3,7 @@
  */
 import { Declare, Embed, SubCommand, type GuildCommandContext } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { refreshGuildRules } from "@/modules/autorole";
 
@@ -12,6 +13,13 @@ import {
   requireAutoroleContext,
 } from "./shared";
 
+@HelpDoc({
+  command: "autorole list",
+  category: HelpCategory.Moderation,
+  description: "List all configured auto-role rules and their current status",
+  usage: "/autorole list",
+  permissions: ["ManageRoles"],
+})
 @Declare({
   name: "list",
   description: "List the configured auto-role rules",

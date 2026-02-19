@@ -17,8 +17,7 @@ import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
-	economyAccountRepo,
+	economyAccountService,
 	guildEconomyRepo,
 } from "@/modules/economy";
 import {
@@ -27,10 +26,12 @@ import {
 } from "@/modules/economy/account/embeds";
 import {
 	DIFFICULTY_CONFIG,
+	getQuestionById,
 	minigameService,
 	type TriviaQuestion,
 } from "@/modules/economy/minigames";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const triviaOptions = {
 	category: createStringOption({
@@ -50,6 +51,13 @@ const triviaOptions = {
 	}),
 };
 
+@HelpDoc({
+	command: "trivia",
+	category: HelpCategory.Economy,
+	description: "Answer trivia questions to earn currency rewards and build streaks",
+	usage: "/trivia [category] [difficulty]",
+	examples: ["/trivia", "/trivia tech hard"],
+})
 @Declare({
 	name: "trivia",
 	description: "Answer trivia questions and win rewards",
@@ -90,7 +98,7 @@ export default class TriviaCommand extends Command {
 		}
 
 		// Check account
-		const accountService = createEconomyAccountService(economyAccountRepo);
+		const accountService = economyAccountService;
 		const ensureResult = await accountService.ensureAccount(userId);
 		if (ensureResult.isErr()) {
 			await ctx.write({
@@ -261,7 +269,6 @@ export default class TriviaCommand extends Command {
 		questionId: string,
 		expiresAt: Date,
 	) {
-		const { getQuestionById } = await import("@/modules/economy/minigames");
 		const question = getQuestionById(questionId);
 
 		if (!question) {

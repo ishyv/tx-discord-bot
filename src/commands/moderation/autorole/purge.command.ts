@@ -9,6 +9,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   AutoroleService,
   AutoRoleRulesStore,
@@ -24,6 +25,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "autorole purge",
+  category: HelpCategory.Moderation,
+  description: "Revoke all roles that were granted by a specific auto-role rule",
+  usage: "/autorole purge <rule_id>",
+  permissions: ["ManageRoles"],
+})
 @Declare({
   name: "purge",
   description: "Revoke roles granted by a rule",

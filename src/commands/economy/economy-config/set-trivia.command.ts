@@ -5,8 +5,10 @@
  * streak bonuses, cooldowns, and daily limits.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
+  Embed,
   Options,
   SubCommand,
   createIntegerOption,
@@ -16,7 +18,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { UIColors } from "@/modules/ui/design-system";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { economyAuditRepo, buildErrorEmbed } from "@/modules/economy";
 import { minigameRepo } from "@/modules/economy/minigames";
 import { DIFFICULTY_CONFIG } from "@/modules/economy/minigames";
@@ -78,6 +80,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config trivia-settings",
+  category: HelpCategory.Economy,
+  description: "Configure trivia settings: multipliers, streaks, and limits (admin only)",
+  usage: "/economy-config trivia-settings [multiplier] [streak_bonus] [daily_limit]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "trivia-settings",
   description: "Configure trivia settings (multipliers, streaks, limits)",
@@ -94,9 +103,6 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,
@@ -186,8 +192,6 @@ export default class EconomyConfigSetTriviaCommand extends SubCommand {
   }
 
   private async showConfig(ctx: GuildCommandContext, config: any) {
-    const { Embed } = await import("seyfert");
-
     const embed = new Embed()
       .setColor(UIColors.info)
       .setTitle("⚙️ Trivia Configuration")

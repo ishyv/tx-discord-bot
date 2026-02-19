@@ -5,9 +5,16 @@
  */
 import { Declare, SubCommand, type GuildCommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { withdrawOffer, getActiveOffer } from "@/modules/offers";
 import { ensureGuildContext } from "./shared";
 
+@HelpDoc({
+  command: "offer retract",
+  category: HelpCategory.Offers,
+  description: "Retract (withdraw) your currently active job offer",
+  usage: "/offer retract",
+})
 @Declare({
   name: "retract",
   description: "Retract your active offer",

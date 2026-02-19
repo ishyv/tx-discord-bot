@@ -4,6 +4,7 @@
 import type { GuildCommandContext } from "seyfert";
 import { createRoleOption, Declare, Embed, Options, SubCommand } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { applyReputationPreset } from "@/modules/autorole";
 import { botCanManageRole, requireAutoroleContext } from "./shared";
@@ -84,6 +85,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "autorole preset",
+  category: HelpCategory.Moderation,
+  description: "Configure the reputation rank preset by assigning roles to each rank tier",
+  usage: "/autorole preset [novice_role] [apprentice_role] ...",
+  permissions: ["ManageRoles"],
+})
 @Declare({
   name: "preset",
   description: "Configure the reputation preset with specific roles",

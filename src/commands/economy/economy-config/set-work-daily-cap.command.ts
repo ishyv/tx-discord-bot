@@ -4,6 +4,7 @@
  * Purpose: Admin command to set daily cap for /work.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -12,7 +13,7 @@ import {
   createIntegerOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 
 const options = {
@@ -24,6 +25,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-work-daily-cap",
+  category: HelpCategory.Economy,
+  description: "Set the maximum daily earnings cap for /work (admin only)",
+  usage: "/economy-config set-work-daily-cap <amount>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-work-daily-cap",
   description: "Set daily cap for /work (admin only)",
@@ -40,9 +48,6 @@ export default class EconomyConfigSetWorkDailyCapCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

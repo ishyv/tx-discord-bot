@@ -14,8 +14,7 @@ import { MessageFlags } from "seyfert/lib/types";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
-	economyAccountRepo,
+	economyAccountService,
 	guildEconomyRepo,
 } from "@/modules/economy";
 import {
@@ -26,6 +25,7 @@ import {
 import { minigameRepo, minigameService } from "@/modules/economy/minigames";
 import { currencyRegistry } from "@/modules/economy/transactions";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const robOptions = {
 	target: createUserOption({
@@ -34,6 +34,14 @@ const robOptions = {
 	}),
 };
 
+@HelpDoc({
+	command: "rob",
+	category: HelpCategory.Economy,
+	description: "Attempt to steal coins from another user's hand (risky — you can fail and lose coins)",
+	usage: "/rob <user>",
+	examples: ["/rob @User"],
+	notes: "Only coins in the target's hand can be stolen. Bank coins are safe.",
+})
 @Declare({
 	name: "rob",
 	description: "Attempt to steal from another user (risky!)",
@@ -91,7 +99,7 @@ export default class RobCommand extends Command {
 		}
 
 		// Check account
-		const accountService = createEconomyAccountService(economyAccountRepo);
+		const accountService = economyAccountService;
 		const ensureResult = await accountService.ensureAccount(userId);
 		if (ensureResult.isErr()) {
 			await ctx.write({
@@ -201,7 +209,7 @@ export default class RobCommand extends Command {
 		const game = result.unwrap();
 		const currencyObj = currencyRegistry.get("coin");
 		const display = (n: number) =>
-			currencyObj?.display(n as any) ?? `${n} coins`;
+			currencyObj?.displayAmount(n) ?? `${n} coins`;
 
 		const embed = buildRobEmbed({
 			success: game.success,

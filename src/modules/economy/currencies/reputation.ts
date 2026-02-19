@@ -25,6 +25,18 @@ export class Reputation implements Currency<number> {
     return `${normalized} rep`;
   }
 
+  displayAmount(value: number): string {
+    return `${Math.max(0, Math.trunc(value))} rep`;
+  }
+
+  toValue(amount: number): number {
+    return Math.max(0, Math.trunc(amount));
+  }
+
+  toAmount(value: number): number {
+    return Math.max(0, normalizeRep(value));
+  }
+
   add(a: number, b: number): number {
     const next = normalizeRep(a) + normalizeRep(b);
     return Math.max(0, next);

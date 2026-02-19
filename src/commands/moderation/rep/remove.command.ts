@@ -10,10 +10,10 @@ import {
 import { adjustUserReputation } from "@/db/repositories/users";
 import { recordReputationChange } from "@/systems/tops";
 import { AutoroleService } from "@/modules/autorole";
-import { logModerationAction } from "@/utils/moderationLogger";
 import { normalizeRepAmount, buildRepChangeMessage } from "./shared";
 import { Guard } from "@/middlewares/guards/decorator";
 import { Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const options = {
   user: createUserOption({
@@ -26,6 +26,12 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "rep remove",
+  category: HelpCategory.Moderation,
+  description: "Remove reputation points from a user",
+  usage: "/rep remove <user> <amount>",
+})
 @Declare({
   name: "remove",
   description: "Remove reputation from a user",
@@ -67,10 +73,9 @@ export default class RepRemoveCommand extends SubCommand {
       content: buildRepChangeMessage("remove", amount, target.id, total),
     });
 
-    await logModerationAction(
-      ctx.client,
-      guildId,
-      {
+    try {
+      const logger = await ctx.getGuildLogger();
+      await logger.moderationLog({
         title: "Reputation removed",
         description: `Removed ${amount} points from <@${target.id}>`,
         fields: [
@@ -78,8 +83,9 @@ export default class RepRemoveCommand extends SubCommand {
           { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
         ],
         actorId: ctx.author.id,
-      },
-      "pointsLog",
-    );
+      }, "pointsLog");
+    } catch {
+      ctx.client.logger?.warn?.("[rep remove] channel log failed", { guildId });
+    }
   }
 }

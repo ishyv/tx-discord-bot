@@ -3,11 +3,18 @@
  * Responsibility: launch the designer and echo the resulting embed and JSON back to the user.
  */
 import { Command, Declare, type CommandContext, type Embed } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import { startEmbedDesigner } from "@/modules/prefabs/embedDesigner";
 
 const EPHEMERAL = MessageFlags.Ephemeral;
 
+@HelpDoc({
+  command: "embedplay",
+  category: HelpCategory.Utility,
+  description: "Launch the interactive embed designer to build and preview Discord embeds",
+  usage: "/embedplay",
+})
 @Declare({
   name: "embedplay",
   description: "Test the interactive embed designer",

@@ -4,6 +4,7 @@
  * Purpose: Admin command to set which guild sector funds /work payouts.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -12,7 +13,7 @@ import {
   createStringOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 import type { EconomySector } from "@/modules/economy";
 
@@ -31,6 +32,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-work-pays-from-sector",
+  category: HelpCategory.Economy,
+  description: "Set the sector that funds /work reward payouts (admin only)",
+  usage: "/economy-config set-work-pays-from-sector <sector>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-work-pays-from-sector",
   description: "Set sector that pays /work rewards (admin only)",
@@ -47,9 +55,6 @@ export default class EconomyConfigSetWorkPaysFromSectorCommand extends SubComman
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

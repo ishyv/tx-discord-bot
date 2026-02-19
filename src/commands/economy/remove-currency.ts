@@ -8,6 +8,7 @@ import {
   createUserOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   currencyTransaction,
   currencyRegistry,
@@ -57,6 +58,13 @@ function buildCostValue(currencyId: string, amount: number) {
   return amount;
 }
 
+@HelpDoc({
+  command: "remove-currency",
+  category: HelpCategory.Economy,
+  description: "Withdraw currency from a user's balance, allowing debt (mod only)",
+  usage: "/remove-currency <user> <amount> [currency] [reason]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "remove-currency",
   description: "Withdraw currency from a user (allows debt)",
@@ -103,7 +111,7 @@ export default class RemoveCurrencyCommand extends Command {
       }
 
       await ctx.write({
-        content: `Removed **${currencyObj.display(amount as any)}** from ${target.toString()}. Current balance: \`${currencyObj.display(newBalance as any)}\`.`,
+        content: `Removed **${currencyObj.displayAmount(amount)}** from ${target.toString()}. Current balance: \`${currencyObj.displayAmount(newBalance as number)}\`.`,
       });
 
       const logger = new GuildLogger();
@@ -116,7 +124,7 @@ export default class RemoveCurrencyCommand extends Command {
           { name: "Amount", value: `${amount}`, inline: true },
           {
             name: "New Balance",
-            value: currencyObj.display(newBalance as any),
+            value: currencyObj.displayAmount(newBalance as number),
             inline: true,
           },
           { name: "Reason", value: reason ?? "Not specified", inline: false },
@@ -151,7 +159,7 @@ export default class RemoveCurrencyCommand extends Command {
     const newBalance = result.unwrap()[currency] ?? currencyObj.zero();
 
     await ctx.write({
-      content: `Removed **${currencyObj.display(costValue as any)}** from ${target.toString()}. Current balance: \`${currencyObj.display(newBalance as any)}\`.`,
+      content: `Removed **${currencyObj.displayAmount(amount)}** from ${target.toString()}. Current balance: \`${currencyObj.displayAmount(newBalance as number)}\`.`,
     });
 
     const logger = new GuildLogger();
@@ -164,7 +172,7 @@ export default class RemoveCurrencyCommand extends Command {
         { name: "Amount", value: `${amount}`, inline: true },
         {
           name: "New Balance",
-          value: currencyObj.display(newBalance as any),
+          value: currencyObj.displayAmount(newBalance as number),
           inline: true,
         },
         { name: "Reason", value: reason ?? "Not specified", inline: false },

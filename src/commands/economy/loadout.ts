@@ -7,14 +7,20 @@ import { Command, Declare, type GuildCommandContext, Embed } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
   equipmentService,
   getSlotDisplayName,
   EQUIPMENT_SLOTS,
-  economyAccountRepo,
-  createEconomyAccountService,
+  economyAccountService,
 } from "@/modules/economy";
+@HelpDoc({
+  command: "trinkets-loadout",
+  category: HelpCategory.Economy,
+  description: "View your currently equipped trinkets and their passive boon stats",
+  usage: "/trinkets-loadout",
+})
 @Declare({
   name: "trinkets-loadout",
   description: "🔮 View your equipped trinkets and their boons",
@@ -42,7 +48,7 @@ export default class TrinketsLoadoutCommand extends Command {
       return;
     }
 
-    const accountService = createEconomyAccountService(economyAccountRepo);
+    const accountService = economyAccountService;
     const ensureResult = await accountService.ensureAccount(userId);
     if (ensureResult.isErr()) {
       await ctx.write({

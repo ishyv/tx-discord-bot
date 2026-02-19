@@ -220,7 +220,7 @@ class ItemMutationServiceImpl implements ItemMutationService {
       return ErrResult(
         new ItemMutationError(
           "INVALID_QUANTITY",
-          `No se pueden remover más items de los que posee (${beforeQuantity}).`,
+          `Cannot remove more items than owned (${beforeQuantity}).`,
         ),
       );
     }

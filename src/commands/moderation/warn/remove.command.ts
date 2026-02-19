@@ -13,11 +13,12 @@ import {
   SubCommand,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { UIColors } from "@/modules/ui/design-system";
 import { isValidWarnId } from "@/utils/warnId";
 import { listWarns, removeWarn } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";
-import { logModerationAction } from "@/utils/moderationLogger";
+import { safeModerationRun } from "@/modules/moderation/executeSanction";
 
 const options = {
   user: createUserOption({
@@ -30,6 +31,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "warn remove",
+  category: HelpCategory.Moderation,
+  description: "Remove a specific warning from a user by warning ID",
+  usage: "/warn remove <user> <warn_id>",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "remove",
   description: "Remove a warning from a user",
@@ -39,20 +47,17 @@ const options = {
 @BindDisabled(Features.Warns)
 export default class RemoveWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
+    await safeModerationRun(ctx, () => this.execute(ctx));
+  }
+
+  private async execute(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
-    if (!guildId) {
-      await ctx.write({
-        flags: MessageFlags.Ephemeral,
-        content: "This command only works in a server.",
-      });
-      return;
-    }
 
     const { user, warn_id } = ctx.options;
     const warnId = warn_id.toLowerCase();
 
     if (!isValidWarnId(warnId)) {
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content:
           "Invalid warn ID. It must be 5 alphanumeric characters (e.g. pyebt).",
@@ -62,7 +67,7 @@ export default class RemoveWarnCommand extends SubCommand {
 
     const warnsResult = await listWarns(user.id);
     if (warnsResult.isErr()) {
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content: "Could not read user warnings.",
       });
@@ -71,7 +76,7 @@ export default class RemoveWarnCommand extends SubCommand {
     const warns = warnsResult.unwrap();
 
     if (warns.length === 0) {
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content: "The user has no warnings to remove.",
       });
@@ -80,7 +85,7 @@ export default class RemoveWarnCommand extends SubCommand {
 
     const exists = warns.some((warn) => warn.warn_id === warnId);
     if (!exists) {
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content: `No warning found with ID ${warnId.toUpperCase()}.`,
       });
@@ -90,7 +95,7 @@ export default class RemoveWarnCommand extends SubCommand {
     const removeResult = await removeWarn(user.id, warnId);
     if (removeResult.isErr()) {
       const message = removeResult.error?.message ?? "Unknown error";
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content: `Error removing warning: ${message}`,
       });
@@ -107,19 +112,24 @@ export default class RemoveWarnCommand extends SubCommand {
       },
     });
 
-    await ctx.write({
+    await ctx.editOrReply({
       flags: MessageFlags.Ephemeral,
       embeds: [successEmbed],
     });
 
-    await logModerationAction(ctx.client, guildId, {
-      title: "Warning Removed",
-      description: `Warning ${warnId.toUpperCase()} removed from <@${user.id}>`,
-      fields: [
-        { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
-        { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
-      ],
-      actorId: ctx.author.id,
-    });
+    try {
+      const logger = await ctx.getGuildLogger();
+      await logger.moderationLog({
+        title: "Warning Removed",
+        description: `Warning ${warnId.toUpperCase()} removed from <@${user.id}>`,
+        fields: [
+          { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
+          { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
+        ],
+        actorId: ctx.author.id,
+      }, "generalLogs");
+    } catch {
+      ctx.client.logger?.warn?.("[warn remove] channel log failed", { guildId });
+    }
   }
 }

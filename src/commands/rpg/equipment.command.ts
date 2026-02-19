@@ -14,6 +14,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { Button, UI } from "@/modules/ui";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { rpgEquipmentService } from "@/modules/rpg/equipment/service";
 import { rpgProfileRepo } from "@/modules/rpg/profile/repository";
@@ -23,6 +24,7 @@ import { getItemDefinition, getToolMaxDurability } from "@/modules/inventory/ite
 import { EQUIPMENT_SLOTS } from "@/modules/rpg/config";
 import type { EquipmentSlot, Loadout } from "@/db/schemas/rpg-profile";
 import { UIColors } from "@/modules/ui/design-system";
+import { UserStore } from "@/db/repositories/users";
 import { renderProgressBar } from "@/modules/economy/account/formatting";
 
 type Screen = "slot_picker" | "slot_actions" | "item_view";
@@ -275,7 +277,6 @@ async function loadSlotData(userId: string, slot: EquipmentSlot): Promise<SlotDa
     };
   }
 
-  const { UserStore } = await import("@/db/repositories/users");
   const userResult = await UserStore.get(userId);
   if (userResult.isErr() || !userResult.unwrap()) {
     const equipped = getEquippedData(profile.loadout[slot]);
@@ -359,6 +360,13 @@ function actionErrorMessage(error: { code?: string; message: string }, slot: Equ
   return messages[error.code ?? ""] ?? `❌ ${error.message}`;
 }
 
+@HelpDoc({
+  command: "rpg equipment",
+  category: HelpCategory.RPG,
+  description: "Manage your RPG equipment slots — equip and unequip weapons, armor, and tools",
+  usage: "/rpg equipment",
+  notes: "Cannot change equipment while in combat.",
+})
 @Declare({
   name: "equipment",
   description: "⚔️ Manage RPG equipment slots, equip items, and unequip",

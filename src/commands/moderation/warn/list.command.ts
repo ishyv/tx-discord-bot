@@ -11,6 +11,8 @@ import type { Warn } from "@/db/schemas/user";
 import { getMemberName } from "@/utils/guild";
 import { listWarns } from "@/db/repositories";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
+import { safeModerationRun } from "@/modules/moderation/executeSanction";
 
 const options = {
   user: createUserOption({
@@ -19,6 +21,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "warn list",
+  category: HelpCategory.Moderation,
+  description: "View all active warnings for a user",
+  usage: "/warn list <user>",
+  permissions: ["ViewAuditLog"],
+})
 @Declare({
   name: "list",
   description: "View all warnings for a user",
@@ -28,21 +37,16 @@ const options = {
 @BindDisabled(Features.Warns)
 export default class ListWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
-    const guildId = ctx.guildId;
-    if (!guildId) {
-      await ctx.write({
-        flags: MessageFlags.Ephemeral,
-        content: "This command only works in a server.",
-      });
-      return;
-    }
+    await safeModerationRun(ctx, () => this.execute(ctx));
+  }
 
+  private async execute(ctx: GuildCommandContext<typeof options>) {
     const { user } = ctx.options;
 
     const guild = await ctx.guild();
     const warnsResult = await listWarns(user.id);
     if (warnsResult.isErr()) {
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content: "Could not read user warnings.",
       });
@@ -51,7 +55,7 @@ export default class ListWarnCommand extends SubCommand {
     const warns = warnsResult.unwrap();
 
     if (warns.length === 0) {
-      await ctx.write({
+      await ctx.editOrReply({
         flags: MessageFlags.Ephemeral,
         content: "The user has no warnings to view.",
       });
@@ -66,7 +70,7 @@ export default class ListWarnCommand extends SubCommand {
       color: UIColors.info,
     });
 
-    await ctx.write({
+    await ctx.editOrReply({
       flags: MessageFlags.Ephemeral,
       embeds: [embed],
     });

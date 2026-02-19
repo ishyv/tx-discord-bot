@@ -10,6 +10,7 @@ import { ErrResult, OkResult, type Result } from "@/utils/result";
 import { runUserTransition } from "@/db/user-transition";
 import type { CurrencyInventory } from "@/modules/economy/currency";
 import { currencyEngine } from "@/modules/economy/transactions";
+import { currencyRegistry } from "@/modules/economy/currencyRegistry";
 import { economyAccountRepo } from "@/modules/economy/account/repository";
 import { economyAuditRepo } from "@/modules/economy/audit/repository";
 import { progressionService } from "@/modules/economy/progression/service";
@@ -40,6 +41,31 @@ import {
 // =============================================================================
 // Utility Functions
 // =============================================================================
+
+/**
+ * Extract a plain number from any currency value using the registry.
+ * Handles complex types like CoinValue { hand, bank } correctly.
+ */
+function getCurrencyAmount(
+  currency: CurrencyInventory,
+  currencyId: string,
+): number {
+  const raw = currency[currencyId];
+  if (raw === undefined || raw === null) return 0;
+  const def = currencyRegistry.get(currencyId);
+  if (def) return def.toAmount(raw as never);
+  return typeof raw === "number" ? raw : 0;
+}
+
+/**
+ * Convert a plain number into the correct value type for a currency.
+ * e.g. 50 coins → { hand: 50, bank: 0, use_total_on_subtract: false }
+ */
+function makeCurrencyValue(currencyId: string, amount: number): unknown {
+  const def = currencyRegistry.get(currencyId);
+  if (def) return def.toValue(amount);
+  return amount;
+}
 
 /** Check if a cooldown has expired. */
 function isCooldownExpired(
@@ -103,7 +129,7 @@ export class MinigameService {
     // Validate choice
     if (choice !== "heads" && choice !== "tails") {
       return ErrResult(
-        new MinigameErrorClass("INVALID_CHOICE", "Elige 'cara' o 'cruz'."),
+        new MinigameErrorClass("INVALID_CHOICE", "Choose 'heads' or 'tails'."),
       );
     }
 
@@ -181,7 +207,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "DAILY_LIMIT_REACHED",
-          `Límite diario de ${config.dailyMaxBets} apuestas alcanzado.`,
+          `Daily limit of ${config.dailyMaxBets} bets reached.`,
         ),
       );
     }
@@ -197,7 +223,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "COOLDOWN_ACTIVE",
-          `Espera ${remaining}s antes de apostar de nuevo.`,
+          `Wait ${remaining}s before betting again.`,
         ),
       );
     }
@@ -207,7 +233,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "BET_TOO_LOW",
-          `Apuesta mínima: ${config.minBet} ${config.currencyId}`,
+          `Minimum bet: ${config.minBet} ${config.currencyId}`,
         ),
       );
     }
@@ -215,7 +241,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "BET_TOO_HIGH",
-          `Apuesta máxima: ${config.maxBet} ${config.currencyId}`,
+          `Maximum bet: ${config.maxBet} ${config.currencyId}`,
         ),
       );
     }
@@ -231,15 +257,14 @@ export class MinigameService {
       }),
       computeNext: (snapshot) => {
         // Check balance
-        const currentBalance =
-          (snapshot.currency[config.currencyId] as number) ?? 0;
+        const currentBalance = getCurrencyAmount(snapshot.currency, config.currencyId);
         if (currentBalance < amount) {
           return ErrResult(new Error("INSUFFICIENT_FUNDS"));
         }
 
         // Deduct bet
         const currencyResult = currencyEngine.apply(snapshot.currency, {
-          costs: [{ currencyId: config.currencyId, value: amount }],
+          costs: [{ currencyId: config.currencyId, value: makeCurrencyValue(config.currencyId, amount) }],
           allowDebt: false,
         });
 
@@ -263,7 +288,7 @@ export class MinigameService {
 
           // Add winnings
           const winResult = currencyEngine.apply(finalCurrency, {
-            rewards: [{ currencyId: config.currencyId, value: winnings }],
+            rewards: [{ currencyId: config.currencyId, value: makeCurrencyValue(config.currencyId, winnings) }],
           });
           finalCurrency = winResult.unwrap();
         }
@@ -347,6 +372,7 @@ export class MinigameService {
       };
 
       // Audit
+      const afterBalance = getCurrencyAmount(commit.currency, config.currencyId);
       await economyAuditRepo.create({
         operationType: "currency_adjust",
         actorId: userId,
@@ -357,10 +383,8 @@ export class MinigameService {
         currencyData: {
           currencyId: config.currencyId,
           delta: commit.netProfit,
-          beforeBalance:
-            (commit.currency[config.currencyId] as number) ??
-            0 - commit.netProfit,
-          afterBalance: (commit.currency[config.currencyId] as number) ?? 0,
+          beforeBalance: afterBalance - commit.netProfit,
+          afterBalance,
         },
         metadata: {
           correlationId,
@@ -395,7 +419,7 @@ export class MinigameService {
         winnings: commit.winnings,
         houseFee: commit.houseFee,
         netProfit: commit.netProfit,
-        newBalance: (commit.currency[config.currencyId] as number) ?? 0,
+        newBalance: getCurrencyAmount(commit.currency, config.currencyId),
         correlationId,
         timestamp: new Date(),
       });
@@ -456,7 +480,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "DAILY_LIMIT_REACHED",
-          `Límite diario de ${config.dailyMaxPlays} trivia alcanzado.`,
+          `Daily limit of ${config.dailyMaxPlays} trivia plays reached.`,
         ),
       );
     }
@@ -472,7 +496,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "COOLDOWN_ACTIVE",
-          `Espera ${remaining}s antes de jugar de nuevo.`,
+          `Wait ${remaining}s before playing again.`,
         ),
       );
     }
@@ -640,7 +664,7 @@ export class MinigameService {
           // Grant reward
           const rewardResult = currencyEngine.apply(snapshot.currency, {
             rewards: [
-              { currencyId: config.currencyId, value: rewards.total.currency },
+              { currencyId: config.currencyId, value: makeCurrencyValue(config.currencyId, rewards.total.currency) },
             ],
           });
           newCurrency = rewardResult.unwrap();
@@ -728,21 +752,20 @@ export class MinigameService {
       }
 
       // Audit
+      const triviaAfterBalance = getCurrencyAmount(commit.currency, config.currencyId);
       await economyAuditRepo.create({
         operationType: correct ? "currency_adjust" : "daily_claim",
         actorId: userId,
         targetId: userId,
         guildId,
         source: "minigames:trivia",
-        reason: `Trivia ${correct ? "correct" : "incorrect"} answer (dificultad ${question.difficulty})`,
+        reason: `Trivia ${correct ? "correct" : "incorrect"} answer (difficulty: ${question.difficulty})`,
         currencyData: correct
           ? {
               currencyId: config.currencyId,
               delta: rewards.total.currency,
-              beforeBalance:
-                (commit.currency[config.currencyId] as number) ??
-                0 - rewards.total.currency,
-              afterBalance: (commit.currency[config.currencyId] as number) ?? 0,
+              beforeBalance: triviaAfterBalance - rewards.total.currency,
+              afterBalance: triviaAfterBalance,
             }
           : undefined,
         metadata: {
@@ -770,7 +793,7 @@ export class MinigameService {
         rewards,
         streakBefore,
         streakAfter,
-        newBalance: (commit.currency[config.currencyId] as number) ?? 0,
+        newBalance: getCurrencyAmount(commit.currency, config.currencyId),
         correlationId,
         timestamp: new Date(),
       });
@@ -895,7 +918,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "DAILY_LIMIT_REACHED",
-          `Límite diario de ${config.dailyMaxAttempts} robos alcanzado.`,
+          `Daily limit of ${config.dailyMaxAttempts} rob attempts reached.`,
         ),
       );
     }
@@ -913,7 +936,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "COOLDOWN_ACTIVE",
-          `Espera ${remaining}s antes de robar de nuevo.`,
+          `Wait ${remaining}s before robbing again.`,
         ),
       );
     }
@@ -928,7 +951,7 @@ export class MinigameService {
       return ErrResult(
         new MinigameErrorClass(
           "PAIR_COOLDOWN",
-          `Debes esperar ${Math.ceil(remaining / 60)}m antes de robar a este user de nuevo.`,
+          `Wait ${Math.ceil(remaining / 60)}m before robbing this user again.`,
         ),
       );
     }
@@ -958,8 +981,8 @@ export class MinigameService {
     const robberCurrency = (robberUser.currency ?? {}) as CurrencyInventory;
     const targetCurrency = (targetUser.currency ?? {}) as CurrencyInventory;
 
-    const robberBalance = (robberCurrency[config.currencyId] as number) ?? 0;
-    const targetBalance = (targetCurrency[config.currencyId] as number) ?? 0;
+    const robberBalance = getCurrencyAmount(robberCurrency, config.currencyId);
+    const targetBalance = getCurrencyAmount(targetCurrency, config.currencyId);
 
     // Anti-abuse: Check minimum balances
     if (robberBalance < config.minRobberBalance) {
@@ -1026,7 +1049,7 @@ export class MinigameService {
           const targetDeductResult = currencyEngine.apply(
             snapshot.targetCurrency,
             {
-              costs: [{ currencyId: config.currencyId, value: stealAmount }],
+              costs: [{ currencyId: config.currencyId, value: makeCurrencyValue(config.currencyId, stealAmount) }],
               allowDebt: false,
             },
           );
@@ -1039,7 +1062,7 @@ export class MinigameService {
           const robberAddResult = currencyEngine.apply(
             snapshot.robberCurrency,
             {
-              rewards: [{ currencyId: config.currencyId, value: stealAmount }],
+              rewards: [{ currencyId: config.currencyId, value: makeCurrencyValue(config.currencyId, stealAmount) }],
             },
           );
           newRobberCurrency = robberAddResult.unwrap();
@@ -1057,7 +1080,7 @@ export class MinigameService {
 
           if (fineAmount > 0) {
             const fineResult = currencyEngine.apply(snapshot.robberCurrency, {
-              costs: [{ currencyId: config.currencyId, value: fineAmount }],
+              costs: [{ currencyId: config.currencyId, value: makeCurrencyValue(config.currencyId, fineAmount) }],
               allowDebt: false,
             });
             if (fineResult.isOk()) {
@@ -1164,6 +1187,7 @@ export class MinigameService {
       }
 
       // Audit
+      const robberAfterBalance = getCurrencyAmount(commit.robberCurrency, config.currencyId);
       await economyAuditRepo.create({
         operationType: "currency_transfer",
         actorId: userId,
@@ -1175,12 +1199,9 @@ export class MinigameService {
           currencyId: config.currencyId,
           delta: commit.success ? commit.amountStolen : -commit.fineAmount,
           beforeBalance: commit.success
-            ? ((commit.robberCurrency[config.currencyId] as number) ??
-              0 - commit.amountStolen)
-            : ((commit.robberCurrency[config.currencyId] as number) ??
-              0 + commit.fineAmount),
-          afterBalance:
-            (commit.robberCurrency[config.currencyId] as number) ?? 0,
+            ? robberAfterBalance - commit.amountStolen
+            : robberAfterBalance + commit.fineAmount,
+          afterBalance: robberAfterBalance,
         },
         metadata: {
           correlationId,
@@ -1199,11 +1220,9 @@ export class MinigameService {
         success: commit.success,
         amountStolen: commit.amountStolen,
         targetBalanceBefore: targetBalance,
-        targetBalanceAfter:
-          (commit.targetCurrency[config.currencyId] as number) ?? 0,
+        targetBalanceAfter: getCurrencyAmount(commit.targetCurrency, config.currencyId),
         robberBalanceBefore: robberBalance,
-        robberBalanceAfter:
-          (commit.robberCurrency[config.currencyId] as number) ?? 0,
+        robberBalanceAfter: getCurrencyAmount(commit.robberCurrency, config.currencyId),
         fineAmount: commit.fineAmount || undefined,
         taxPaid: commit.taxPaid || undefined,
         correlationId,

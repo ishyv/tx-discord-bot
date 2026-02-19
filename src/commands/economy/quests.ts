@@ -9,6 +9,7 @@ import {
 import { Button, UI } from "@/modules/ui";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
   buildQuestActionErrorEmbed,
@@ -68,6 +69,12 @@ async function reloadBoard(
   return { board: boardResult.unwrap() };
 }
 
+@HelpDoc({
+  command: "quests",
+  category: HelpCategory.RPG,
+  description: "Interactive RPG quest board — browse available quests, accept, and track active ones",
+  usage: "/quests",
+})
 @Declare({
   name: "quests",
   description: "RPG quest board",

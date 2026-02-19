@@ -15,6 +15,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { rpgProfileRepo } from "@/modules/rpg/profile/repository";
 import { getItemDefinition, getToolMaxDurability } from "@/modules/inventory/items";
@@ -30,6 +31,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg loadout",
+    category: HelpCategory.RPG,
+    description: "View your current RPG equipment loadout with stat totals and durability",
+    usage: "/rpg loadout [user]",
+    examples: ["/rpg loadout", "/rpg loadout @User"],
+})
 @Declare({
     name: "loadout",
     description: "🎒 View your RPG equipment loadout",

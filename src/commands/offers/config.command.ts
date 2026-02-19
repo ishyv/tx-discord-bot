@@ -7,6 +7,7 @@
  */
 import "./config";
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   createChannelOption,
   Declare,
@@ -17,6 +18,7 @@ import {
 import { ChannelType, MessageFlags } from "seyfert/lib/types";
 
 import { GuildStore } from "@/db/repositories/guilds";
+import { configStore, ConfigurableModule } from "@/configuration";
 import { ensureGuildContext } from "./shared";
 
 const options = {
@@ -32,6 +34,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "offer config",
+  category: HelpCategory.Offers,
+  description: "Configure the offers system channels for review and publishing",
+  usage: "/offer config [review_channel] [approved_channel]",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "config",
   description: "Configure the offers system",
@@ -48,7 +57,6 @@ export default class OfferConfigCommand extends SubCommand {
     // Ensure guild document to persist `channels.core`.
     await GuildStore.ensure(guildId);
 
-    const { configStore, ConfigurableModule } = await import("@/configuration");
     await configStore.set(guildId, ConfigurableModule.Offers, {
       offersReview: { channelId: revision.id },
       approvedOffers: { channelId: approved.id },

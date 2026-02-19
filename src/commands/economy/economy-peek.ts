@@ -17,7 +17,15 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { economyModerationService, getRemainingFreezeHours } from "@/modules/economy/moderation";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
+@HelpDoc({
+  command: "economy-peek",
+  category: HelpCategory.Economy,
+  description: "View a user's economy data for moderation review (mod only)",
+  usage: "/economy-peek <user>",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "economy-peek",
   description: "View user economy data for moderation (mod only)",

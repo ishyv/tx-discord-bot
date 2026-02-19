@@ -12,6 +12,7 @@ import {
   SubCommand,
 } from "seyfert";
 import { UIColors } from "@/modules/ui/design-system";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 import { GuildRolesRepo } from "@/db/repositories/guild-roles";
 import { requireGuildContext } from "./shared";
@@ -23,6 +24,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "roles remove",
+  category: HelpCategory.Moderation,
+  description: "Remove a managed role configuration from the bot",
+  usage: "/roles remove <role_name>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "remove",
   description: "Remove a managed role",

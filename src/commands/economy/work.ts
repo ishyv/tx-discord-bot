@@ -6,11 +6,11 @@
  */
 
 import { Command, type CommandContext, Declare } from "seyfert";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { MessageFlags } from "seyfert/lib/types";
 import {
 	buildErrorEmbed,
-	createEconomyAccountService,
-	economyAccountRepo,
+	economyAccountService,
 	guildEconomyService,
 	workService,
 } from "@/modules/economy";
@@ -20,6 +20,13 @@ import {
 } from "@/modules/economy/account/embeds";
 import { currencyRegistry } from "@/modules/economy/transactions";
 
+@HelpDoc({
+	command: "work",
+	category: HelpCategory.Economy,
+	description: "Earn a small payout from the guild work sector (cooldown + daily cap)",
+	usage: "/work",
+	notes: "Has a cooldown and a daily cap configured per server.",
+})
 @Declare({
 	name: "work",
 	description:
@@ -43,7 +50,7 @@ export default class WorkCommand extends Command {
 				return;
 			}
 
-			const accountService = createEconomyAccountService(economyAccountRepo);
+			const accountService = economyAccountService;
 			const ensureResult = await accountService.ensureAccount(userId);
 			if (ensureResult.isErr()) {
 				await ctx.write({
@@ -163,7 +170,7 @@ export default class WorkCommand extends Command {
 
 			const currencyObj = currencyRegistry.get(claim.currencyId);
 			const display = (n: number) =>
-				currencyObj?.display(n as any) ?? `${n} ${claim.currencyId}`;
+				currencyObj?.displayAmount(n) ?? `${n} ${claim.currencyId}`;
 
 			const levelUpLine =
 				claim.levelUp && claim.newLevel > 0

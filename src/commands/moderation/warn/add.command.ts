@@ -13,14 +13,14 @@ import {
   SubCommand,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { UIColors } from "@/modules/ui/design-system";
 import type { Warn } from "@/db/schemas/user";
 import { generateWarnId } from "@/utils/warnId";
 import { addWarn, listWarns } from "@/db/repositories";
 import { registerCase } from "@/modules/moderation/service";
+import { safeModerationRun } from "@/modules/moderation/executeSanction";
 import { BindDisabled, Features } from "@/modules/features";
-import { logModerationAction } from "@/utils/moderationLogger";
-import { isSnowflake } from "@/utils/snowflake";
 
 const options = {
   user: createUserOption({
@@ -33,6 +33,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "warn add",
+  category: HelpCategory.Moderation,
+  description: "Add a warning to a user with an optional reason",
+  usage: "/warn add <user> [reason]",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "add",
   description: "Add a warning to a user",
@@ -42,21 +49,11 @@ const options = {
 @BindDisabled(Features.Warns)
 export default class AddWarnCommand extends SubCommand {
   async run(ctx: GuildCommandContext<typeof options>) {
+    await safeModerationRun(ctx, () => this.execute(ctx));
+  }
+
+  private async execute(ctx: GuildCommandContext<typeof options>) {
     const guildId = ctx.guildId;
-    if (!guildId) {
-      await ctx.editOrReply({
-        content: "This command only works in a server.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
-    if (!isSnowflake(guildId) || !isSnowflake(ctx.options.user.id)) {
-      await ctx.editOrReply({
-        content: "Invalid IDs. Try again.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
 
     const { user, reason } = ctx.options;
     const warnsResult = await listWarns(user.id);
@@ -113,17 +110,26 @@ export default class AddWarnCommand extends SubCommand {
       flags: MessageFlags.Ephemeral,
     });
 
-    await registerCase(user.id, guildId, "WARN", finalReason);
+    try {
+      await registerCase(user.id, guildId, "WARN", finalReason);
+    } catch {
+      ctx.client.logger?.warn?.("[warn add] registerCase failed", { guildId });
+    }
 
-    await logModerationAction(ctx.client, guildId, {
-      title: "Warning Applied",
-      description: `A warning was added to <@${user.id}>`,
-      fields: [
-        { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
-        { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
-        { name: "Reason", value: finalReason },
-      ],
-      actorId: ctx.author.id,
-    });
+    try {
+      const logger = await ctx.getGuildLogger();
+      await logger.moderationLog({
+        title: "Warning Applied",
+        description: `A warning was added to <@${user.id}>`,
+        fields: [
+          { name: "Warn ID", value: warnId.toUpperCase(), inline: true },
+          { name: "Moderator", value: `<@${ctx.author.id}>`, inline: true },
+          { name: "Reason", value: finalReason },
+        ],
+        actorId: ctx.author.id,
+      }, "generalLogs");
+    } catch {
+      ctx.client.logger?.warn?.("[warn add] channel log failed", { guildId });
+    }
   }
 }

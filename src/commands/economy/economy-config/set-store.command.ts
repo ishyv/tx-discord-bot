@@ -4,6 +4,7 @@
  * Purpose: Admin-only configuration for store rotation, featured items, and pricing modifiers.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -15,7 +16,7 @@ import {
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { EmbedColors } from "seyfert/lib/common";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { economyAuditRepo, buildErrorEmbed } from "@/modules/economy";
 import { storeRotationService } from "@/modules/economy/store/rotation";
 
@@ -45,6 +46,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config store-settings",
+  category: HelpCategory.Economy,
+  description: "Configure store rotation, featured items, and pricing settings",
+  usage: "/economy-config store-settings [rotation] [featured] [markup]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "store-settings",
   description: "Configure store rotation, featured items, and pricing",
@@ -61,9 +69,6 @@ export default class EconomyConfigSetStoreCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

@@ -9,7 +9,7 @@ import {
   GUILD_ONLY_MESSAGE,
   requireGuildPermission,
 } from "@/utils/commandGuards";
-import { Features } from "@/modules/features";
+import { Features, isFeatureEnabled } from "@/modules/features";
 
 export interface RepCommandContext {
   guildId: string;
@@ -43,9 +43,7 @@ export async function requireRepContext(
     }
   }
 
-  const enabled = await import("@/modules/features").then((m) =>
-    m.isFeatureEnabled(ctx.guildId!, Features.Reputation),
-  );
+  const enabled = await isFeatureEnabled(ctx.guildId!, Features.Reputation);
   if (!enabled) {
     await ctx.write({
       content: "The reputation system is disabled on this server.",

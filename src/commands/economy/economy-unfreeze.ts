@@ -17,7 +17,15 @@ import {
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
 import { economyModerationService } from "@/modules/economy/moderation";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
+@HelpDoc({
+  command: "economy-unfreeze",
+  category: HelpCategory.Economy,
+  description: "Unfreeze a user's economy account (mod only)",
+  usage: "/economy-unfreeze <user> [reason]",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "economy-unfreeze",
   description: "Unfreeze a user's economy account (mod only)",

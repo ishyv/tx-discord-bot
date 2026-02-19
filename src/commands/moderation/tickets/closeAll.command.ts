@@ -12,12 +12,20 @@ import {
 } from "seyfert";
 
 import { GuildStore, updateGuildPaths } from "@/db/repositories/guilds";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { closeTicket } from "@/systems/tickets/shared";
 import { create_transcription } from "@/systems/tickets/transcription";
 import { fetchStoredChannel } from "@/utils/channelGuard";
 import { Guard } from "@/middlewares/guards/decorator";
 
+@HelpDoc({
+  command: "tickets close-all",
+  category: HelpCategory.Moderation,
+  description: "Forcefully close and delete all active ticket channels in the server",
+  usage: "/tickets close-all",
+  permissions: ["ManageChannels"],
+})
 @Declare({
   name: "close-all",
   description: "Close all open tickets in the server",

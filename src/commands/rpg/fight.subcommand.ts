@@ -17,6 +17,7 @@ import {
 } from "seyfert";
 import { ButtonStyle, MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import { Button } from "@/modules/ui";
 import { rpgFightService } from "@/modules/rpg/combat/fight-service";
@@ -46,6 +47,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+    command: "rpg fight",
+    category: HelpCategory.RPG,
+    description: "Challenge another player to combat or submit your move in an active fight",
+    usage: "/rpg fight",
+    notes: "Fights are turn-based. You can attack, block, or crit. Equipment affects your stats.",
+})
 @Declare({
     name: "fight",
     description: "⚔️ Battle other players",

@@ -5,6 +5,7 @@
  * Permission: mod or admin.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Embed,
@@ -17,7 +18,7 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { economyAuditRepo } from "@/modules/economy";
 import type { AuditOperationType } from "@/modules/economy/audit/types";
 
@@ -73,6 +74,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-audit recent",
+  category: HelpCategory.Economy,
+  description: "Show recent economy audit entries with optional filters",
+  usage: "/economy-audit recent [user] [operation] [limit] [page]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "recent",
   description: "Show recent audit entries with optional filters",
@@ -89,9 +97,6 @@ export default class EconomyAuditRecentCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasMod = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.MOD,

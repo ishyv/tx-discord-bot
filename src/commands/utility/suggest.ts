@@ -12,6 +12,7 @@ import { CHANNELS_ID } from "@/constants/guild";
 import { updateGuildPaths } from "@/db/repositories/guilds";
 import { getGuildChannels } from "@/modules/guild-channels";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { fetchStoredChannel } from "@/utils/channelGuard";
 
 const options = {
@@ -22,6 +23,12 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "suggest",
+  category: HelpCategory.Utility,
+  description: "Submit a suggestion for the server to be reviewed by moderators",
+  usage: "/suggest <suggestion>",
+})
 @Declare({
   name: "suggest",
   description: "Submit a suggestion for the server",

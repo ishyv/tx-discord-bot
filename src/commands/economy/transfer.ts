@@ -15,6 +15,7 @@ import {
   createUserOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { currencyRegistry } from "@/modules/economy/transactions";
 import { currencyMutationService } from "@/modules/economy/mutations";
 import { sanitizeCurrencyId } from "@/modules/economy/mutations/validation";
@@ -48,6 +49,14 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "transfer",
+  category: HelpCategory.Economy,
+  description: "Transfer currency to another user (subject to server tax)",
+  usage: "/transfer <currency> <amount> <recipient> [reason]",
+  examples: ["/transfer coins 500 @User"],
+  notes: "Large transfers may trigger a server alert. Tax rate is configured per server.",
+})
 @Declare({
   name: "transfer",
   description: "Transfer currency to another user",
@@ -118,8 +127,7 @@ export default class TransferCommand extends Command {
 
       if (alertResult.isOk() && alertResult.unwrap()) {
         const alert = alertResult.unwrap()!;
-        // Log the alert (could also send to a log channel)
-        console.log(`[LargeTransferAlert] ${alert.level}: ${alert.message}`);
+        // Large transfer detected — send to log channel if available
 
         try {
           const channels = await getGuildChannels(guildId);
@@ -190,13 +198,13 @@ export default class TransferCommand extends Command {
     // Build success message
     let taxInfo = "";
     if (taxAmount > 0) {
-      taxInfo = `\n📊 Tax (${(taxRate * 100).toFixed(0)}%): ${currencyObj.display(taxAmount as any)}`;
+      taxInfo = `\n📊 Tax (${(taxRate * 100).toFixed(0)}%): ${currencyObj.displayAmount(taxAmount)}`;
     }
 
     await ctx.write({
       content:
-        `✅ You transferred **${currencyObj.display(transferAmount as any)}** to ${recipient.toString()}.${taxInfo}\n` +
-        `📤 Your new balance: \`${currencyObj.display(transfer.senderAfter as any)}\``,
+        `✅ You transferred **${currencyObj.displayAmount(transferAmount)}** to ${recipient.toString()}.${taxInfo}\n` +
+        `📤 Your new balance: \`${currencyObj.displayAmount(transfer.senderAfter as number)}\``,
     });
 
     // Note: Recipient notification could be added here (DM or mention)

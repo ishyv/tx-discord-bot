@@ -8,6 +8,7 @@ import {
     createBooleanOption,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { buildSuccessEmbed, buildErrorEmbed } from "@/modules/ui/design-system";
 import { ITEM_DEFINITIONS } from "@/modules/inventory";
 import { storeService, economyAuditRepo } from "@/modules/economy";
@@ -46,6 +47,13 @@ const options = {
     }),
 };
 
+@HelpDoc({
+  command: "store-admin add",
+  category: HelpCategory.Economy,
+  description: "Add a new item listing to the guild store",
+  usage: "/store-admin add <item_id> <price> [stock] [enabled]",
+  permissions: ["Administrator"],
+})
 @Declare({
     name: "add",
     description: "Add an item to the store",

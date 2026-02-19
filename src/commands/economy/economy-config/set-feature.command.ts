@@ -5,6 +5,7 @@
  * Audited as CONFIG_UPDATE with before/after and correlationId.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -14,7 +15,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 import type { EconomyFeatureFlags } from "@/modules/economy/guild/types";
 
@@ -39,6 +40,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config feature",
+  category: HelpCategory.Economy,
+  description: "Enable or disable individual economy features (admin kill switches)",
+  usage: "/economy-config feature <feature> <enabled>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "feature",
   description: "Enable/disable economy features (admin kill switches)",
@@ -55,9 +63,6 @@ export default class EconomyConfigSetFeatureCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

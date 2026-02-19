@@ -5,6 +5,7 @@
  * Audited as CONFIG_UPDATE.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Options,
@@ -13,7 +14,7 @@ import {
   type GuildCommandContext,
 } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyRepo, economyAuditRepo } from "@/modules/economy";
 
 const options = {
@@ -34,6 +35,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config thresholds",
+  category: HelpCategory.Economy,
+  description: "Set transfer alert thresholds for audit logging (admin only)",
+  usage: "/economy-config thresholds <warn> <flag>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "thresholds",
   description: "Set transfer alert thresholds (admin only)",
@@ -50,9 +58,6 @@ export default class EconomyConfigSetThresholdsCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,

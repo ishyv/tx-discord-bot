@@ -7,10 +7,10 @@
 import { Command, Declare, type CommandContext } from "seyfert";
 import { MessageFlags } from "seyfert/lib/types";
 import { BindDisabled, Features } from "@/modules/features";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import { Cooldown, CooldownType } from "@/modules/cooldown";
 import {
-  economyAccountRepo,
-  createEconomyAccountService,
+  economyAccountService,
   buildProgressEmbed,
   buildAccessDeniedEmbed,
   buildAccountCreatedEmbed,
@@ -19,8 +19,14 @@ import {
   dailyClaimRepo,
 } from "@/modules/economy";
 
-const economyService = createEconomyAccountService(economyAccountRepo);
+const economyService = economyAccountService;
 
+@HelpDoc({
+  command: "progress",
+  category: HelpCategory.Economy,
+  description: "View your XP and level progression for the current server",
+  usage: "/progress",
+})
 @Declare({
   name: "progress",
   description: "View your XP and level progress in this server.",

@@ -5,6 +5,7 @@
  * Permission: mod or admin.
  */
 
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   Declare,
   Embed,
@@ -14,9 +15,16 @@ import {
 } from "seyfert";
 import { EmbedColors } from "seyfert/lib/common";
 import { MessageFlags } from "seyfert/lib/types";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 import { guildEconomyService, storeRepo } from "@/modules/economy";
 
+@HelpDoc({
+  command: "economy-config view",
+  category: HelpCategory.Economy,
+  description: "Show current guild economy config: tax, sectors, thresholds, and store settings",
+  usage: "/economy-config view",
+  permissions: ["KickMembers"],
+})
 @Declare({
   name: "view",
   description:
@@ -34,9 +42,6 @@ export default class EconomyConfigViewCommand extends SubCommand {
       return;
     }
 
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const hasMod = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.MOD,

@@ -21,6 +21,7 @@ import {
 } from "@/modules/features";
 import { AutoroleService, refreshGuildRules } from "@/modules/autorole";
 import { Guard } from "@/middlewares/guards/decorator";
+import { HelpDoc, HelpCategory } from "@/modules/help";
 
 const featureChoices = GUILD_FEATURES.map((feature) => ({
   name: feature,
@@ -47,6 +48,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "features",
+  category: HelpCategory.Moderation,
+  description: "Enable or disable main bot features for this server",
+  usage: "/features [feature] [enabled]",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "features",
   description: "Enable or disable main bot features",

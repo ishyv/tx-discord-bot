@@ -4,6 +4,7 @@
  * Purpose: Admin command to set the per-day streak bonus amount.
  * Audited as config_update with before/after and correlationId.
  */
+import { HelpDoc, HelpCategory } from "@/modules/help";
 import {
   createIntegerOption,
   Declare,
@@ -17,7 +18,7 @@ import {
   guildEconomyRepo,
   guildEconomyService,
 } from "@/modules/economy";
-import { checkEconomyPermission } from "@/modules/economy/permissions";
+import { checkEconomyPermission, EconomyPermissionLevel } from "@/modules/economy/permissions";
 
 const options = {
   amount: createIntegerOption({
@@ -28,6 +29,13 @@ const options = {
   }),
 };
 
+@HelpDoc({
+  command: "economy-config set-daily-streak-bonus",
+  category: HelpCategory.Economy,
+  description: "Set the bonus amount added per daily streak day (0–1000)",
+  usage: "/economy-config set-daily-streak-bonus <amount>",
+  permissions: ["ManageGuild"],
+})
 @Declare({
   name: "set-daily-streak-bonus",
   description: "Set the daily streak bonus amount per day (0-1000)",
@@ -43,9 +51,6 @@ export default class SetDailyStreakBonusCommand extends SubCommand {
       });
       return;
     }
-    const { EconomyPermissionLevel } = await import(
-      "@/modules/economy/permissions"
-    );
     const isAdmin = await checkEconomyPermission(
       ctx.member,
       EconomyPermissionLevel.ADMIN,
