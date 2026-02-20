@@ -233,15 +233,17 @@ export class AutoroleService {
       }
     }
 
-    let revocations = 0;
-    for (const pair of uniquePairs.values()) {
-      const remainingRes = await AutoRoleGrantsStore.find({
-        guildId,
-        userId: pair.userId,
-        roleId: pair.roleId,
-      });
+    // Fetch all remaining grants for this guild in one query, then check
+    // per-pair in memory — avoids N individual DB round-trips.
+    const remainingAllRes = await AutoRoleGrantsStore.find({ guildId });
+    const remainingAll = remainingAllRes.isOk() ? remainingAllRes.unwrap() : [];
+    const remainingSet = new Set(
+      remainingAll.map((g) => `${g.userId}:${g.roleId}`),
+    );
 
-      if (remainingRes.isOk() && remainingRes.unwrap().length === 0) {
+    let revocations = 0;
+    for (const [key, pair] of uniquePairs) {
+      if (!remainingSet.has(key)) {
         revocations += 1;
         await enqueueRoleRevoke(client, {
           guildId,
@@ -274,6 +276,7 @@ export class AutoroleService {
     if (!cache.repThresholds.length) return;
 
     for (const rule of cache.repThresholds) {
+      if (!rule.enabled) continue;
       if (rule.trigger.type !== "REPUTATION_THRESHOLD") continue;
       const meets = rep >= rule.trigger.args.minRep;
 

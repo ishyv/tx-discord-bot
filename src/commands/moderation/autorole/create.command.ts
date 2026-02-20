@@ -166,28 +166,41 @@ export default class AutoroleCreateCommand extends SubCommand {
     });
 
     if (rule.trigger.type === "ANTIQUITY_THRESHOLD" && rule.enabled) {
-      // Apply role to existing members who meet the antiquity threshold
-      // In a real implementation, this could be heavy, so it's done asynchronously
-      ctx.client.members
-        .list(context.guildId)
-        .then(async (members) => {
-          for (const member of members) {
-            await AutoroleService.syncUserAntiquityRoles(
-              ctx.client,
-              context.guildId,
-              {
+      const guildId = context.guildId;
+      const client = ctx.client;
+      (async () => {
+        try {
+          const sleep = (ms: number) =>
+            new Promise((r) => setTimeout(r, ms));
+          let after: string | undefined;
+          let pages = 0;
+          while (pages < 100) {
+            const members = await client.members.list(
+              guildId,
+              { limit: 1000, after },
+              true,
+            );
+            if (!members.length) break;
+            for (const member of members) {
+              await AutoroleService.syncUserAntiquityRoles(client, guildId, {
                 id: member.id,
                 joinedAt: member.joinedAt,
-              },
-            );
+              });
+            }
+            pages++;
+            if (members.length < 1000) break;
+            const lastId = members[members.length - 1]?.id;
+            if (!lastId || lastId === after) break;
+            after = lastId;
+            await sleep(250);
           }
-        })
-        .catch((e) =>
-          ctx.client.logger?.error?.(
+        } catch (e) {
+          client.logger?.error?.(
             "[autorole] initial antiquity sync failed",
             e,
-          ),
-        );
+          );
+        }
+      })();
     }
 
     const embed = new Embed({

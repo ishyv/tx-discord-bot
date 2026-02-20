@@ -146,7 +146,6 @@ class DailyClaimRepoImpl implements DailyClaimRepo {
             guildId,
             userId,
           },
-          $setOnInsert: { _id: docId },
         } as any,
         { upsert: true, returnDocument: "before", includeResultMetadata: true },
       );
@@ -170,6 +169,11 @@ class DailyClaimRepoImpl implements DailyClaimRepo {
         dayStamp,
       });
     } catch (error) {
+      // E11000: two concurrent first-time claims raced; the other request won.
+      // Treat as cooldown-active so the caller shows the normal cooldown message.
+      if ((error as any)?.code === 11000) {
+        return OkResult({ granted: false });
+      }
       return ErrResult(
         error instanceof Error ? error : new Error(String(error)),
       );

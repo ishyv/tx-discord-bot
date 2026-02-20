@@ -6,10 +6,12 @@ import { AutoroleService } from "../service";
 const INTERVAL = 21600000; // 6 hours
 
 let timer: NodeJS.Timeout | null = null;
+let ticking = false;
 
 export function startAntiquityScheduler(client: UsingClient) {
   if (timer) return;
   timer = setInterval(() => runAntiquityChecks(client), INTERVAL);
+  timer.unref?.();
   // Run once on startup after a small delay to not block boot
   setTimeout(() => runAntiquityChecks(client), 60000);
 }
@@ -28,6 +30,8 @@ export async function runAntiquityChecks(
   client: UsingClient,
   guildId?: string,
 ) {
+  if (ticking) return;
+  ticking = true;
   try {
     const guildsToCheck = new Map<string, string[]>(); // guildId -> rule names
 
@@ -104,5 +108,7 @@ export async function runAntiquityChecks(
     }
   } catch (error) {
     client.logger?.error?.("[autorole] antiquity scheduler failed", { error });
+  } finally {
+    ticking = false;
   }
 }

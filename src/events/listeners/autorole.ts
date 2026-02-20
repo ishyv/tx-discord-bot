@@ -17,6 +17,8 @@ import {
   onMessageDeleteBulk,
 } from "@/events/hooks/messageDelete";
 import { onGuildRoleDelete } from "@/events/hooks/guildRole";
+import { onMessageCreate } from "@/events/hooks/messageCreate";
+import { onGuildMemberAdd } from "@/events/hooks/guildMember";
 
 import {
   AutoroleService,
@@ -28,7 +30,6 @@ import {
   loadRulesIntoCache,
   startTimedGrantScheduler,
   startAntiquityScheduler,
-  autoroleKeys,
   markPresence as trackPresence,
   clearPresence as clearTrackedPresence,
   ensureAutoroleIndexes,
@@ -120,29 +121,29 @@ onMessageReactionAdd(async (payload: ReactionPayload, client: UsingClient) => {
     const thresholdRules = cache.reactedByEmoji.get(emojiKey) ?? [];
     if (thresholdRules.length) {
       const authorId = await resolveMessageAuthorId(payload, client);
-      if (!authorId) return;
+      if (authorId) {
+        const tally = await AutoroleService.incrementReactionTally(
+          {
+            guildId,
+            messageId: payload.messageId,
+            emojiKey,
+          },
+          authorId,
+        );
 
-      const tally = await AutoroleService.incrementReactionTally(
-        {
-          guildId,
-          messageId: payload.messageId,
-          emojiKey,
-        },
-        authorId,
-      );
+        const next = tally.count;
 
-      const next = tally.count;
-
-      for (const rule of thresholdRules) {
-        if (rule.trigger.type !== "REACTED_THRESHOLD") continue;
-        const target = rule.trigger.args.count;
-        if (next === target) {
-          await AutoroleService.grantByRule({
-            client,
-            rule,
-            userId: authorId,
-            reason: THRESHOLD_REASON(rule.name),
-          });
+        for (const rule of thresholdRules) {
+          if (rule.trigger.type !== "REACTED_THRESHOLD") continue;
+          const target = rule.trigger.args.count;
+          if (next === target) {
+            await AutoroleService.grantByRule({
+              client,
+              rule,
+              userId: authorId,
+              reason: THRESHOLD_REASON(rule.name),
+            });
+          }
         }
       }
     }
@@ -280,11 +281,7 @@ onGuildRoleDelete(async (payload, client: UsingClient) => {
       .unwrap()
       .filter((rule) => rule.enabled && rule.roleId === roleId);
     for (const rule of affected) {
-      // Logic to disable rule should be in service or store
-      await AutoRoleRulesStore.updatePaths(
-        autoroleKeys.rule(guildId, rule.name),
-        { enabled: false },
-      );
+      await AutoroleService.toggleRule(guildId, rule.name, false);
       client.logger?.info?.("[autorole] disabled rule after role deletion", {
         guildId,
         roleName: rule.name,
@@ -373,10 +370,7 @@ async function handleMessageStateReset(
     );
 
     for (const rule of messageRules) {
-      await AutoRoleRulesStore.updatePaths(
-        autoroleKeys.rule(guildId, rule.name),
-        { enabled: false },
-      );
+      await AutoroleService.toggleRule(guildId, rule.name, false);
 
       if (isLiveRule(rule.durationMs)) {
         const grantsRes = await AutoRoleGrantsStore.find({
@@ -404,6 +398,58 @@ async function handleMessageStateReset(
     });
   }
 }
+
+onGuildMemberAdd(async (member, client: UsingClient) => {
+  try {
+    const guildId = member.guildId;
+    if (!guildId) return;
+
+    if (!(await isFeatureEnabled(guildId, Features.Autoroles))) return;
+
+    const cache = getGuildRules(guildId);
+    if (!cache.antiquityThresholds.length) return;
+
+    await AutoroleService.syncUserAntiquityRoles(client, guildId, {
+      id: member.id,
+      joinedAt: member.joinedAt,
+    });
+  } catch (error: unknown) {
+    client.logger?.error?.("[autorole] guildMemberAdd antiquity check failed", { error });
+  }
+});
+
+onMessageCreate(async (message, client: UsingClient) => {
+  try {
+    if (message.author?.bot) return;
+    const guildId = message.guildId;
+    if (!guildId) return;
+
+    if (!(await isFeatureEnabled(guildId, Features.Autoroles))) return;
+
+    const content = message.content?.toLowerCase();
+    if (!content) return;
+
+    const cache = getGuildRules(guildId);
+    if (!cache.messageContains.length) return;
+
+    for (const rule of cache.messageContains) {
+      if (rule.trigger.type !== "MESSAGE_CONTAINS") continue;
+      const matched = rule.trigger.args.keywords.some((kw) =>
+        content.includes(kw),
+      );
+      if (matched) {
+        await AutoroleService.grantByRule({
+          client,
+          rule,
+          userId: message.author.id,
+          reason: `autorole:${rule.name}:message_contains`,
+        });
+      }
+    }
+  } catch (error: unknown) {
+    client.logger?.error?.("[autorole] message_contains check failed", { error });
+  }
+});
 
 function isBotUser(payload: ReactionPayload): boolean {
   return payload.member?.user?.bot === true;
